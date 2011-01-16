@@ -6,6 +6,7 @@ data ComplexRational = Double :+: Double
 instance Num ComplexRational where
     (x :+: y) + (x' :+: y') = (x + x') :+: (y + y')
     (x :+: y) * (x' :+: y') = (x*x' - y*y') :+: (x*y' + y*x')
+    negate (x :+: y)        = negate x :+: negate y
     abs    = error "abs on ComplexRational"
     signum = error "signum on ComplexRational"
     fromInteger i = fromInteger i :+: 0

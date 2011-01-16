@@ -1,11 +1,14 @@
 module ComplexRational where
 
+import Data.List (genericIndex)
+
 data ComplexRational = Rational :+: Rational
     deriving (Show,Eq)
 
 instance Num ComplexRational where
     (x :+: y) + (x' :+: y') = (x + x') :+: (y + y')
     (x :+: y) * (x' :+: y') = (x*x' - y*y') :+: (x*y' + y*x')
+    negate (x :+: y)        = negate x :+: negate y
     abs    = error "abs on ComplexRational"
     signum = error "signum on ComplexRational"
     fromInteger i = fromInteger i :+: 0
@@ -26,8 +29,8 @@ magnitudeBound = succ . round . sqrt . fromRational . magnitudeSq
 
 -- konvergiert viel zu schnell!, |a_n - a| < 1/2^n
 goldenRatioSeq :: Integer -> ComplexRational
-goldenRatioSeq n = iterate ((1 +) . recip) 1 !! fromInteger n
+goldenRatioSeq n = iterate ((1 +) . recip) 1 `genericIndex` n
 
 sqrt2Seq :: Integer -> ComplexRational
-sqrt2Seq n = iterate (\x -> (x + 2/x) / 2) 1 !! fromInteger n
+sqrt2Seq n = iterate (\x -> (x + 2/x) / 2) 1 `genericIndex` n
 -- konvergiert wie schnell?

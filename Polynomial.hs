@@ -60,7 +60,7 @@ zipWithDefault (#) zero = go
     go (x:xs) (y:ys) = (x#y) : go xs ys
 
 degree :: (Num a) => Poly a -> Int
-degree = length . unPoly . canonForm
+degree = pred . length . unPoly . canonForm
 
 -- bottom fürs Nullpolynom
 leadingCoeff :: (Num a) => Poly a -> a

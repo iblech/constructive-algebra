@@ -4,9 +4,12 @@ module Complex where
 import Control.Monad (liftM, liftM2)
 import ComplexRationalFake hiding (magnitudeBound)
 import qualified ComplexRationalFake as ComplexRational
+import System.IO.Unsafe
 
 newtype R a = R { runR :: IO a }
     deriving (Functor,Monad)
+unsafeRunR :: R a -> a
+unsafeRunR = unsafePerformIO . runR
 
 type Nat = Integer
 
@@ -22,6 +25,7 @@ instance Num Complex where
 	gBound <- magnitudeBound g
 	let n' = n * (fBound + gBound + 1)
 	liftM2 (*) (unComplex f n') (unComplex g n')
+    negate (MkComplex f) = MkComplex $ liftM negate . f
 
     abs (MkComplex f) = MkComplex $ liftM abs . f
 
@@ -36,6 +40,20 @@ magnitudeBound (MkComplex f) = liftM (succ . ComplexRational.magnitudeBound) $ f
 
 constant :: ComplexRational -> Complex
 constant = MkComplex . const . return
+
+-- Sei x algebraisch und n fest. Dann gilt stets:
+--   |x| > 0 oder |x| < 1/n.
+-- magnitudeZero n x gibt im ersten Fall False, im zweiten True zurück,
+-- es gilt also:
+--     magnitudeZero n x == False  ==>  |x| > 0,
+-- aber die Umkehrung stimmt nicht.
+magnitudeZero :: Nat -> Complex -> R Bool
+magnitudeZero n (MkComplex f) = do
+    approx <- f (2 * n)
+    -- |approx - z| < 1/(2n)
+    if magnitudeSq approx < 1 / (2*fromInteger n)^2
+	then return True
+	else return False  -- sgn z = sgn approx
 
 goldenRatio :: Complex
 goldenRatio = MkComplex $ return . goldenRatioSeq
