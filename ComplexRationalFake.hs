@@ -1,6 +1,6 @@
-module ComplexRational where
+module ComplexRationalFake where
 
-data ComplexRational = Rational :+: Rational
+data ComplexRational = Double :+: Double
     deriving (Show,Eq)
 
 instance Num ComplexRational where
@@ -15,19 +15,17 @@ instance Fractional ComplexRational where
 	| sq == 0   = error "division by zero (ComplexRational)"
 	| otherwise = (x/sq) :+: (-y/sq)
 	where sq = x^2 + y^2
-    fromRational r = r :+: 0
+    fromRational r = fromRational r :+: 0
 
-magnitudeSq :: ComplexRational -> Rational
+magnitudeSq :: ComplexRational -> Double
 magnitudeSq (x :+: y) = x^2 + y^2
 
 magnitudeBound :: ComplexRational -> Integer
-magnitudeBound = succ . round . sqrt . fromRational . magnitudeSq
+magnitudeBound = succ . round . sqrt . magnitudeSq
 -- Hack, sollte ohne sqrt auskommen!
 
--- konvergiert viel zu schnell!, |a_n - a| < 1/2^n
 goldenRatioSeq :: Integer -> ComplexRational
-goldenRatioSeq n = iterate ((1 +) . recip) 1 !! fromInteger n
+goldenRatioSeq n = (phi :+: 0) + 1 / (fromInteger n + 1) where phi = (1 + sqrt 5) / 2
 
 sqrt2Seq :: Integer -> ComplexRational
-sqrt2Seq n = iterate (\x -> (x + 2/x) / 2) 1 !! fromInteger n
--- konvergiert wie schnell?
+sqrt2Seq n = (sqrt 2 :+: 0) + 1 / (fromInteger n + 1)
