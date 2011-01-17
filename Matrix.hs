@@ -39,6 +39,9 @@ unsafeSquare (MkMatrix arr)
 numRows :: (N n, N m) => Matrix n m a -> Int
 numRows = reify . (undefined :: Matrix n m a -> n)
 
+numCols :: (N n, N m) => Matrix n m a -> Int
+numCols = reify . (undefined :: Matrix n m a -> m)
+
 deleteRow :: (N n, N m) => Nat -> Matrix (S n) m a -> Matrix n m a
 deleteRow a (MkMatrix matrix)
     | a <= n    = MkMatrix $ ixmap ((0,0), (n-1,m)) f matrix

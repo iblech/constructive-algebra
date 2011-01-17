@@ -2,8 +2,8 @@
 module Complex where
 
 import Control.Monad (liftM, liftM2)
-import ComplexRationalFake hiding (magnitudeBound)
-import qualified ComplexRationalFake as ComplexRational
+import ComplexRational hiding (magnitudeBound)
+import qualified ComplexRational as ComplexRational
 import System.IO.Unsafe
 
 newtype R a = R { runR :: IO a }
