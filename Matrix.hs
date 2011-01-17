@@ -36,6 +36,19 @@ unsafeSquare (MkMatrix arr)
     where
     ((0,0), (n,m)) = bounds arr
 
+unsafeNonTrivialDim :: Matrix n m a -> (forall n m. (Determinantable n, Determinantable m) => Matrix (S n) (S m) a -> r) -> r
+unsafeNonTrivialDim (MkMatrix arr) cc
+    | n < 0 || m < 0
+    = error "unsafeNonTrivialDim on empty matrix!"
+    | otherwise
+    = reflect' n $ \n' -> reflect' m $ \m' -> cc (MkMatrix arr `asTypeOf` dummy n' m')
+    where
+    dummy = undefined :: n -> m -> Matrix (S n) (S m) a
+    ((0,0), (n,m)) = bounds arr
+    reflect' :: Nat -> (forall n. (Determinantable n) => n -> r) -> r
+    reflect' 0 cc         = cc (undefined :: Z)
+    reflect' n cc | n > 0 = reflect' (pred n) $ cc . (undefined :: m -> S m)
+
 numRows :: (N n, N m) => Matrix n m a -> Int
 numRows = reify . (undefined :: Matrix n m a -> n)
 

@@ -1,5 +1,7 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module NumericHelper where
 
+import Prelude hiding (gcd)
 import Test.QuickCheck
 import Data.List
 import Debug.Trace
@@ -39,28 +41,31 @@ ilogb b n | n < 0      = ilogb b (- n)
                                     then bin b lo av
                                     else bin b av hi
 
-ggT :: Integer -> Integer -> (Integer,Integer,Integer,Integer)
-ggT a b
-    | b == 0
-    = (1, 0, 1, 0)
-    | a < 0
-    = let (u,v,s,t) = ggT (-a) b
-      in  (-u,v,-s,t)
-    | otherwise
-    = (u,v,s,t)
-	where
-	(u',v',s',t') = ggT b r
-	(q,r)         = a `quotRem` b
-	u             = v'
-	v             = u' - q * v'
-	s             = t' + q * s'
-	t             = s'
+class (Num a) => Euclidean a where
+    gcd :: a -> a -> (a,a,a,a)
+
+instance Euclidean Integer where
+    gcd a b
+        | b == 0
+        = (1, 0, 1, 0)
+        | a < 0
+        = let (u,v,s,t) = gcd (-a) b
+          in  (-u,v,-s,t)
+        | otherwise
+        = (u,v,s,t)
+            where
+            (u',v',s',t') = gcd b r
+            (q,r)         = a `quotRem` b
+            u             = v'
+            v             = u' - q * v'
+            s             = t' + q * s'
+            t             = s'
 
 ggTCheck :: Integer -> Integer -> (Integer,Integer,Integer,Integer) -> (Integer,Integer,Integer)
 ggTCheck a b (u,v,s,t) = (d, d*s, d*t) where d = u*a + v*b
 
-prop_ggT :: Property
-prop_ggT = forAll arbitrary $ \a -> forAll arbitrary $ \b ->
-    let (u,v,s,t) = ggT a b
+prop_gcd :: Property
+prop_gcd = forAll arbitrary $ \(a :: Integer) -> forAll arbitrary $ \b ->
+    let (u,v,s,t) = gcd a b
 	d         = u*a + v*b
     in  trace (show (a,b,d)) $ d*s == a && d*t == b
