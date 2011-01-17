@@ -61,8 +61,8 @@ instance Euclidean Integer where
             s             = t' + q * s'
             t             = s'
 
-ggTCheck :: Integer -> Integer -> (Integer,Integer,Integer,Integer) -> (Integer,Integer,Integer)
-ggTCheck a b (u,v,s,t) = (d, d*s, d*t) where d = u*a + v*b
+ggTCheck :: (Euclidean a) => a -> a -> (a,a,a)
+ggTCheck a b = (d, d*s, d*t) where (u,v,s,t) = gcd a b; d = u*a + v*b
 
 prop_gcd :: Property
 prop_gcd = forAll arbitrary $ \(a :: Integer) -> forAll arbitrary $ \b ->

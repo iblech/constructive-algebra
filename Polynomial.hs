@@ -1,8 +1,10 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
 module Polynomial where
 
+import Prelude hiding (gcd)
 import Test.QuickCheck
 import Data.List (intersperse)
+import NumericHelper
 
 newtype Poly a = MkPoly { unPoly :: [a] }
   deriving (Functor)
@@ -72,8 +74,39 @@ coeffs = unPoly . canonForm
 
 quotrem :: (Fractional a) => Poly a -> Poly a -> (Poly a, Poly a)
 quotrem f g
-  | degree f < degree g = (MkPoly [], f)
-  | otherwise
-  = let (q,r) = quotrem (f - q' * g) g
-	q'    = leadingCoeff f / leadingCoeff g .* (iX^(degree f - degree g))
-    in  (q + q', r)
+    | degree f < degree g = (MkPoly [], f)
+    | otherwise
+    = let (q,r) = quotrem (f - q' * g) g
+          q'    = leadingCoeff f / leadingCoeff g .* (iX^(degree f - degree g))
+      in  (q + q', r)
+
+instance (Fractional a) => Euclidean (Poly a) where
+    gcd a b
+        | b == 0
+        = (1, 0, 1, 0)
+        | Just x <- areAssociated a b
+        = (1, 0, 1, constant x)
+        | leadingCoeff b /= 1
+        = let x = leadingCoeff b
+              (u,v,s,t) = gcd a (recip x .* b)
+          in (u, recip x .* v, s, x .* t)
+        | leadingCoeff a /= 1
+        = let x = leadingCoeff a
+              (u,v,s,t) = gcd (recip x .* a) b
+          in (recip x .* u, v, x .* s, t)
+        | otherwise
+        = (u,v,s,t)
+            where
+            (u',v',s',t') = gcd b r
+            (q,r)         = a `quotrem` b
+            u             = v'
+            v             = u' - q * v'
+            s             = t' + q * s'
+            t             = s'
+
+areAssociated :: (Fractional a) => Poly a -> Poly a -> Maybe a
+areAssociated p q
+    | q == 0 = Nothing  --XXX
+    | otherwise =
+        let x = leadingCoeff q / leadingCoeff p
+        in  if x .* p == q then Just x else Nothing

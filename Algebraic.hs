@@ -7,6 +7,7 @@ import qualified Complex
 import NumericHelper
 import Polynomial hiding (constant)
 import Matrix hiding ((!!))
+import Smith
 
 import Data.Array
 
@@ -34,8 +35,8 @@ instance Num Algebraic where
 --    recip = error "recip"
 
 -- müssen normiert sein
-sumPolynomial :: (Num a) => Poly a -> Poly a -> Poly a
-sumPolynomial f g = fromArray (charPoly . unsafeSquare) $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
+sumPolynomial :: (Fractional a) => Poly a -> Poly a -> Poly a
+sumPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
     where
     elems = [arr ij kl | ij <- indices, kl <- indices ]
     arr (i,j) (k,l) = arr1 (i,j) (k,l) + arr2 (i,j) (k,l)
@@ -49,26 +50,8 @@ sumPolynomial f g = fromArray (charPoly . unsafeSquare) $ listArray ((0,0), (len
     (n,m)   = (length xs - 1, length ys - 1)
     (xs,ys) = (coeffs f, coeffs g)
 
--- müssen normiert sein
---paua :: (Num a) => Poly a -> Poly a -> Poly a
-paua f g = listArray ((0,0), (length indices - 1, length indices - 1)) elems
-    where
-    elems = [arr ij kl | ij <- indices, kl <- indices ]
-    arr (i,j) (k,l)
-	| i < n - 1  && j < m - 1
-	= if (k,l) == (i+1,j+1) then 1 else 0
-	| i == n - 1 && j < m - 1
-	= if l == j + 1 then -xs !! k else 0
-	| i < n - 1  && j == m - 1
-	= if k == i + 1 then -ys !! l else 0
-	| i == n - 1 && j == m - 1
-	= xs !! k * ys !! l
-    indices = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
-    (n,m)   = (length xs - 1, length ys - 1)
-    (xs,ys) = (coeffs f, coeffs g)
-
-prodPolynomial :: (Num a) => Poly a -> Poly a -> Poly a
-prodPolynomial f g = fromArray (charPoly . unsafeSquare) $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
+prodPolynomial :: (Fractional a) => Poly a -> Poly a -> Poly a
+prodPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
     where
     elems = [arr ij kl | ij <- indices, kl <- indices ]
     arr (i,j) (k,l)

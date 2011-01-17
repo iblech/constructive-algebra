@@ -5,8 +5,10 @@ import Data.Array
 import TypeLevel
 import Prelude hiding (gcd, (!!))
 import NumericHelper
+import Polynomial
+import Debug.Trace
 
-makeZeroInFirstRow :: (N n, N m, Euclidean a) => Nat -> Matrix n m a -> Matrix n m a
+makeZeroInFirstRow :: (Euclidean a) => Nat -> Matrix a -> Matrix a
 makeZeroInFirstRow j mtx@(MkMatrix arr) = MkMatrix (arr // updates) `asTypeOf` mtx
     where
     (u,v,s,t) = gcd (arr ! (0,0)) (arr ! (0,j))
@@ -16,23 +18,57 @@ makeZeroInFirstRow j mtx@(MkMatrix arr) = MkMatrix (arr // updates) `asTypeOf` m
 	[ ((i,0), u*x + v*y), ((i,j), -t*x + s*y) ]
     ((0,0),(n,m)) = bounds arr
 
-makeZeroInFirstCol :: (N n, N m, Euclidean a) => Nat -> Matrix n m a -> Matrix n m a
+makeZeroInFirstCol :: (Euclidean a) => Nat -> Matrix a -> Matrix a
 makeZeroInFirstCol i = transpose . makeZeroInFirstRow i . transpose
 
-smith :: (N n, N m, Euclidean a) => Matrix n m a -> [a]
-smith mtx
+diagonalForm :: (Euclidean a) => Matrix a -> [a]
+diagonalForm mtx = dia mtx --trace (show $ elems . unMatrix $ mtx) $ dia mtx
+
+dia mtx
     | numRows mtx == 0 || numCols mtx == 0
     = []
     | not (null badCols)
-    = smith $ makeZeroInFirstRow (head badCols) mtx
+    = diagonalForm $ makeZeroInFirstRow (head badCols) mtx
     | not (null badRows)
-    = smith $ makeZeroInFirstCol (head badRows) mtx
+    = diagonalForm $ makeZeroInFirstCol (head badRows) mtx
     | otherwise
-    = unsafeNonTrivialDim mtx (\mtx' -> (mtx !! (0,0)) : smith (deleteRow 0 . deleteColumn 0 $ mtx'))
+    = mtx !! (0,0) : diagonalForm mtx'
     where
     badCols = [j | j <- [1..numCols mtx - 1], mtx !! (0,j) /= 0]
     badRows = [i | i <- [1..numRows mtx - 1], mtx !! (i,0) /= 0]
-    deleteTopLeft = deleteRow 0 . deleteColumn 0
+    mtx'    = deleteRow 0 . deleteColumn 0 $ mtx
 
-exMatrix :: Matrix N4 N4 Integer
+{-
+elementaryDivisors :: (Euclidean a) => Matrix a -> [a]
+elementaryDivisors = fixDivisibility . diagonalForm
+    where
+    fixDivisibility as = go as
+        where
+        go []       = as
+        go [a]      = as
+        go (a:b:bs)
+    fixDivisibility (a:as) =
+        where
+        d = foldl gcd' a as
+        gcd' x y = let (u,v,s,t) = gcd x y in u*x + v*y
+
+smith' :: (Fractional a) => SqMatrix a -> [Poly a]
+smith' (MkMatrix arr) = elementaryDivisors (fromArray arr')
+    where
+    arr' = accum (+) (fmap (negate . constant) arr) [((i,i), iX) | i <- [0..fst (snd (bounds arr))]]
+-}
+
+determinant :: (Euclidean a) => SqMatrix a -> a
+determinant = product . diagonalForm
+
+-- XXX: Vor. abschwächen!
+charPoly :: (Fractional a) => SqMatrix a -> Poly a
+charPoly (MkMatrix arr) = determinant (fromArray arr')
+    where
+    arr' = accum (+) (fmap (negate . constant) arr) [((i,i), iX) | i <- [0..fst (snd (bounds arr))]]
+
+exMatrix :: Matrix Rational
 exMatrix = MkMatrix $ listArray ((0,0), (3,3)) [18, 12, 24, 42,  7, 9, 7, 3,  10, 12, 7, 10, 4, -6, 9, 10]
+
+exMatrix2 :: Matrix Rational
+exMatrix2 = MkMatrix $ listArray ((0,0), (3,3)) $ repeat 1 -- [1,1,1, 1,1,1, 1,1,1]
