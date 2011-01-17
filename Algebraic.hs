@@ -30,6 +30,11 @@ instance Num Algebraic where
     abs = undefined
     signum = undefined
 
+rec :: Algebraic -> Algebraic
+rec (MkAlgebraic z p) = MkAlgebraic (recip z) (norm . MkPoly . reverse . coeffs $ p)
+    where
+    norm q = recip (leadingCoeff q) .* q
+
 --instance Fractional Algebraic where
 --    fromRational r = MkAlgebraic (constant $ fromRational r) (iX - fromRational r)
 --    recip = error "recip"

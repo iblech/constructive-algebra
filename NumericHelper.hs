@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, PatternSignatures #-}
 module NumericHelper where
 
 import Prelude hiding (gcd)

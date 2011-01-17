@@ -33,6 +33,11 @@ instance Num Complex where
 
     fromInteger = MkComplex . const . return . fromInteger
 
+-- recip-Problematik...
+instance Fractional Complex where
+    recip        = recip'
+    fromRational = constant . fromRational
+
 magnitudeBound :: Complex -> R Integer
 magnitudeBound (MkComplex f) = liftM (succ . ComplexRational.magnitudeBound) $ f 1
 -- Eigenschaft: Stelle f die komplexe Zahl a dar. Dann gilt:
@@ -54,6 +59,29 @@ magnitudeZero n (MkComplex f) = do
     if magnitudeSq approx < 1 / (2*fromInteger n)^2
 	then return True
 	else return False  -- sgn z = sgn approx
+
+-- Sei (z_n) von 0 entfernt.
+-- Dann ist |z_n| >= 1/N für alle n >= N
+-- und |z| >= 2/N mit N = apartnessBound.
+apartnessBound :: Complex -> R Integer
+apartnessBound (MkComplex f) = go 1
+    where
+    go i = do
+	approx <- f i
+	if magnitudeSq approx >= (3/fromInteger i)^2
+	    then return i
+	    else go (i + 1)
+
+-- Vor.: Argument ist von 0 entfernt
+recip' :: Complex -> Complex
+recip' z@(MkComplex f) = MkComplex $ \n -> do
+    n0 <- apartnessBound z
+    let n' = halve $ n * n0^2
+    liftM recip $ f n'
+    where
+    halve i
+	| i `mod` 2 == 0 = i `div` 2
+	| otherwise      = i `div` 2 + 1
 
 goldenRatio :: Complex
 goldenRatio = MkComplex $ return . goldenRatioSeq
