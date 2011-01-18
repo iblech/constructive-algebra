@@ -20,11 +20,12 @@ instance Show Complex where show = undefined
 
 instance Num Complex where
     MkComplex f + MkComplex g = MkComplex $ \n -> liftM2 (+) (f (2*n)) (g (2*n))
-    f * g = MkComplex $ \n -> do
-	fBound <- magnitudeBound f
-	gBound <- magnitudeBound g
-	let n' = n * (fBound + gBound + 1)
-	liftM2 (*) (unComplex f n') (unComplex g n')
+    f * g = MkComplex $ \n -> liftM2 (*) (unComplex f (n*k)) (unComplex g (n*k))
+	where
+	k = unsafeRunR $ do
+	    fBound <- magnitudeBound f
+	    gBound <- magnitudeBound g
+	    return $ fBound + gBound + 1
     negate (MkComplex f) = MkComplex $ liftM negate . f
 
     abs (MkComplex f) = MkComplex $ liftM abs . f

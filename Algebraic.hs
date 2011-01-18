@@ -34,6 +34,7 @@ rec :: Algebraic -> Algebraic
 rec (MkAlgebraic z p) = MkAlgebraic (recip z) (norm . MkPoly . reverse . coeffs $ p)
     where
     norm q = recip (leadingCoeff q) .* q
+-- XXX mit X kürzen
 
 --instance Fractional Algebraic where
 --    fromRational r = MkAlgebraic (constant $ fromRational r) (iX - fromRational r)
@@ -76,7 +77,7 @@ isZero :: Algebraic -> R Bool
 isZero (MkAlgebraic x p) =
     if null bounds
 	then return True
-	else magnitudeZero (roundDownToRecipN (minimum bounds)) x
+	else trace ((":: " ++) . show $ roundDownToRecipN (minimum bounds)) $ magnitudeZero (roundDownToRecipN (minimum bounds)) x
     where
     as     = coeffs p
     bs     = dropWhile (== 0) as
