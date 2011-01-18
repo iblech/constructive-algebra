@@ -58,8 +58,17 @@ smith' (MkMatrix arr) = elementaryDivisors (fromArray arr')
     arr' = accum (+) (fmap (negate . constant) arr) [((i,i), iX) | i <- [0..fst (snd (bounds arr))]]
 -}
 
+--determinant :: (Euclidean a) => SqMatrix a -> a
+--determinant = product . diagonalForm
+
 determinant :: (Euclidean a) => SqMatrix a -> a
-determinant = product . diagonalForm
+determinant mtx
+    | numRows mtx == 0 = 1
+    | null badCols     = (mtx !! (0,0)) * determinant mtx'
+    | otherwise        = determinant $ makeZeroInFirstRow (head badCols) mtx
+    where
+    badCols = [j | j <- [1..numCols mtx - 1], mtx !! (0,j) /= 0]
+    mtx'    = deleteRow 0 . deleteColumn 0 $ mtx
 
 -- XXX: Vor. abschwächen!
 charPoly :: (Fractional a) => SqMatrix a -> Poly a

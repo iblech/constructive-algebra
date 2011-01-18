@@ -2,6 +2,7 @@ module ComplexRational where
 
 import Data.List (genericIndex)
 
+import Debug.Trace
 import NumericHelper
 
 data ComplexRational = Rational :+: Rational
@@ -34,11 +35,11 @@ magnitudeBound :: ComplexRational -> Integer
 magnitudeBound = succ . round . sqrt . fromRational . magnitudeSq
 -- Hack, sollte ohne sqrt auskommen!
 
--- konvergiert viel zu schnell!, |a_n - a| < 1/2^n
+-- konvergiert viel zu schnell!, |a_n - a| < (4/9)^n
 -- konvergiert jetzt richtig.
 goldenRatioSeq :: Integer -> ComplexRational
 goldenRatioSeq n = iterate ((1 +) . recip) 1 `genericIndex` (ilogb 2 n + 1)
 
 sqrt2Seq :: Integer -> ComplexRational
-sqrt2Seq n = iterate (\x -> (x + 2/x) / 2) 1 `genericIndex` n
--- konvergiert wie schnell?
+sqrt2Seq n = trace (show n) $ iterate (\x -> (x + 2/x) / 2) 1 `genericIndex` (ilogb 2 n + 1)
+-- Konvergenz nur heuristisch überlegt!
