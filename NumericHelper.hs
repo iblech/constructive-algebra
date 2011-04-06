@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, PatternSignatures #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module NumericHelper where
 
 import Prelude hiding (gcd)
@@ -22,9 +22,9 @@ rootSeq' = rootSeq
     xs = iterate (\x -> x - x/p' + (-1)^p * a / (p' * x^(p-1))) (a)
     p' = fromIntegral p-}
 
--- Für x > 0 größtes n mit 1/n < x
+-- Für x > 0 kleinstes n mit 1/n < x und n > 0
 roundDownToRecipN :: Rational -> Integer
-roundDownToRecipN = ceiling . recip
+roundDownToRecipN x = if recip (fromInteger n) == x then n + 1 else n where n = ceiling . recip $ x
 
 -- ilog b n == Abrundung von log_b n
 ilogb :: Integer -> Integer -> Integer
@@ -60,12 +60,3 @@ instance Euclidean Integer where
             v             = u' - q * v'
             s             = t' + q * s'
             t             = s'
-
-ggTCheck :: (Euclidean a) => a -> a -> (a,a,a)
-ggTCheck a b = (d, d*s, d*t) where (u,v,s,t) = gcd a b; d = u*a + v*b
-
-prop_gcd :: Property
-prop_gcd = forAll arbitrary $ \(a :: Integer) -> forAll arbitrary $ \b ->
-    let (u,v,s,t) = gcd a b
-	d         = u*a + v*b
-    in  trace (show (a,b,d)) $ d*s == a && d*t == b
