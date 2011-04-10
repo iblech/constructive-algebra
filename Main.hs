@@ -16,3 +16,4 @@ main = do
     print $ polynomial z4
     print $ polynomial z5
     print $ polynomial z6
+    print $ polynomial $ Algebraic.sqrt2^3 + Algebraic.goldenRatio
