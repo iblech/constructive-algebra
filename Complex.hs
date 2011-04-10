@@ -47,7 +47,7 @@ magnitudeBound (MkComplex f) = liftM (succ . ComplexRational.magnitudeBound) $ f
 constant :: ComplexRational -> Complex
 constant = MkComplex . const . return
 
--- Sei x algebraisch und n fest. Dann gilt stets:
+-- Sei x komplex und n fest. Dann gilt stets:
 --   |x| > 0 oder |x| < 1/n.
 -- magnitudeZero n x gibt im ersten Fall False, im zweiten True zurück,
 -- es gilt also:
@@ -57,13 +57,15 @@ magnitudeZero :: Nat -> Complex -> R Bool
 magnitudeZero n (MkComplex f) = do
     approx <- f (2 * n)
     -- |approx - z| < 1/(2n)
-    if magnitudeSq approx < 1 / (2*fromInteger n)^2
-	then return True
-	else return False  -- sgn z = sgn approx
+    return $ magnitudeSq approx < 1 / (2*fromInteger n)^2
+-- Beweis:
+-- Gelte |approx| <  1/(2n). Dann |x| <= |approx| + |x - approx| < 1/n.
+-- Gelte |approx| >= 1/(2n). Dann |x| >= |approx| - |approx - x| > 0.
 
--- Sei (z_n) von 0 entfernt.
--- Dann ist |z_n| >= 1/N für alle n >= N
--- und |z| >= 2/N mit N = apartnessBound.
+-- Sei (z_n) von 0 entfernt in dem Sinn, dass
+-- es eine rationale Zahl q > 0 mit |z_n| > q gibt.
+-- Dann ist |z_n| > 1/N für alle n >= N
+-- und |z| > 2/N mit N = apartnessBound.
 apartnessBound :: Complex -> R Integer
 apartnessBound (MkComplex f) = go 1
     where
@@ -72,8 +74,19 @@ apartnessBound (MkComplex f) = go 1
 	if magnitudeSq approx >= (3/fromInteger i)^2
 	    then return i
 	    else go (i + 1)
+{-
+  Beh.:
+    a) |x_N| >= 3/N  ==>  |x_n| >= 1/N f.a. n >= N  und  |x| >= 2/N.
+    b) x # 0  ==>  es gibt ein N wie in a)
 
--- Vor.: Argument ist von 0 entfernt
+  Bew.:
+    a) nachrechnen
+    b) Sei |x| >= q > 0. Sei q >= 1/k.
+       Setze dann N := 4k.
+-}
+
+-- Vor.: Argument z ist von 0 entfernt
+-- Dann: recip' z stellt 1/z dar.
 recip' :: Complex -> Complex
 recip' z@(MkComplex f) = MkComplex $ \n -> do
     n0 <- apartnessBound z
@@ -83,6 +96,7 @@ recip' z@(MkComplex f) = MkComplex $ \n -> do
     halve i
 	| i `mod` 2 == 0 = i `div` 2
 	| otherwise      = i `div` 2 + 1
+    -- Eigenschaft: halve i = Aufrundung(i / 2).
 
 goldenRatio :: Complex
 goldenRatio = MkComplex $ return . goldenRatioSeq
