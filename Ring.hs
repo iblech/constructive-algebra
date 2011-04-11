@@ -17,6 +17,12 @@ class Ring a where
     infixl 6 -
     infixl 7 *
 
+    -- Zur Effizienzsteigerung, damit Null-Koeffizienten bei Polynomen
+    -- gestrichen werden können.
+    -- Es muss gelten: couldBeNonZero x == False  ==>  x == zero.
+    couldBeNonZero :: a -> P.Bool
+    couldBeNonZero = P.const P.True
+
 class (Ring a) => IntegralDomain a
 
 -- x ~ y :<=> ex. u inv'bar: y = u x
@@ -42,6 +48,7 @@ instance Ring P.Int where
     unit   = 1
     negate = P.negate
     fromInteger = P.fromInteger
+    couldBeNonZero = (/= 0)
 
 instance Ring P.Integer where
     (+)    = (P.+)
@@ -50,6 +57,7 @@ instance Ring P.Integer where
     unit   = 1
     negate = P.negate
     fromInteger = P.fromInteger
+    couldBeNonZero = (/= 0)
 instance IntegralDomain P.Integer
 instance TestableAssociatedness P.Integer where
     areAssociated x y
@@ -63,6 +71,7 @@ instance (IntegralDomain a, P.Integral a) => Ring (Ratio a) where
     unit   = 1
     negate = P.negate
     fromInteger = P.fromInteger
+    couldBeNonZero = (/= 0)
 instance (IntegralDomain a, P.Integral a) => IntegralDomain (Ratio a)
 instance (IntegralDomain a, P.Integral a) => TestableAssociatedness (Ratio a) where
     areAssociated x y

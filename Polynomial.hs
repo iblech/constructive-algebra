@@ -19,6 +19,9 @@ mkPoly = canonForm . MkPoly
 canonForm :: (Ring a, Eq a) => Poly a -> Poly a
 canonForm = MkPoly . reverse . dropWhile (== zero) . reverse . unPoly
 
+simplify :: (Ring a) => Poly a -> Poly a
+simplify = MkPoly . reverse . dropWhile (not . couldBeNonZero) . reverse . unPoly
+
 eval :: (Ring a) => a -> Poly a -> a
 eval x = foldr (\c val -> c + x*val) zero . unPoly
 
@@ -27,7 +30,7 @@ instance (Ring a, Eq a, Show a) => Show (Poly a) where
       where
       vars = "" : "X" : map (("X^" ++) . show) [2..]
       join x v
-	| x == zero = ""
+        | x == zero = ""
 	| x == unit = if null v then "1" else v
 	| otherwise = show x ++ (if null v then "" else "*" ++ v)
       addZero s
@@ -38,8 +41,8 @@ instance (Ring a, Eq a) => Eq (Poly a) where
     p == q = unPoly (canonForm p) == unPoly (canonForm q)
     
 instance (Ring a) => Ring (Poly a) where
-    MkPoly xs + MkPoly ys = MkPoly (zipWithDefault (+) zero xs ys)
-    MkPoly xs * MkPoly ys = MkPoly $ go xs ys
+    MkPoly xs + MkPoly ys = simplify $ MkPoly (zipWithDefault (+) zero xs ys)
+    MkPoly xs * MkPoly ys = simplify . MkPoly $ go xs ys
 	where
 	go []     ys = []
 	go (x:xs) ys = zipWithDefault (+) zero (map (x *) ys) (zero:go xs ys)

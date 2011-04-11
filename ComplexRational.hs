@@ -24,6 +24,7 @@ instance Ring ComplexRational where
     fromInteger i = fromInteger i :+: 0
     zero = fromInteger 0
     unit = fromInteger 1
+    couldBeNonZero = (/= zero)
 
 instance Field ComplexRational where
     recip (x :+: y)
