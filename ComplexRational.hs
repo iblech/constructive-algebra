@@ -3,6 +3,7 @@ module ComplexRational where
 import Data.List (genericIndex)
 import qualified Prelude as P
 import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (/), (^), negate, recip)
+import qualified Data.Complex as C
 
 import NumericHelper
 import Ring
@@ -33,6 +34,9 @@ instance Field ComplexRational where
 
 instance AllowsRationalEmbedding ComplexRational where
     fromRational = (:+: 0)
+
+instance ApproxFloating ComplexRational where
+    approx (x :+: y) = P.fromRational x C.:+ P.fromRational y
 
 instance Num ComplexRational where
     (+) = (+)

@@ -4,6 +4,7 @@ module Ring where
 import qualified Prelude as P
 import Prelude (Maybe, (&&), (||), (==), (/=), abs, signum, otherwise)
 import Data.Ratio
+import qualified Data.Complex as C
 
 class Ring a where
     (+) :: a -> a -> a
@@ -34,6 +35,9 @@ class (Ring a) => TestableAssociatedness a where
 class (Ring a) => AllowsRationalEmbedding a where
     fromRational :: Rational -> a
 
+class ApproxFloating a where
+    approx :: a -> C.Complex P.Double
+
 -- direkt ausm Prelude kopiert
 (^) :: (Ring a) => a -> P.Integer -> a
 x ^ 0           = unit
@@ -53,6 +57,8 @@ instance Ring P.Int where
     negate = P.negate
     fromInteger = P.fromInteger
     couldBeNonZero = (/= 0)
+instance ApproxFloating P.Int where
+    approx = P.fromIntegral
 
 instance Ring P.Integer where
     (+)    = (P.+)
@@ -67,6 +73,8 @@ instance TestableAssociatedness P.Integer where
     areAssociated x y
         | abs x == abs y = P.Just (signum x * signum y)
         | otherwise      = P.Nothing
+instance ApproxFloating P.Integer where
+    approx = P.fromIntegral
 
 instance (IntegralDomain a, P.Integral a) => Ring (Ratio a) where
     (+)    = (P.+)
@@ -84,3 +92,7 @@ instance (IntegralDomain a, P.Integral a) => TestableAssociatedness (Ratio a) wh
         | otherwise              = P.Nothing
 instance AllowsRationalEmbedding (Ratio P.Integer) where
     fromRational = P.fromRational
+instance (IntegralDomain a, P.Integral a, ApproxFloating a) => ApproxFloating (Ratio a) where
+    approx x =
+        let (p,q) = (numerator x,denominator x)
+        in  approx p P./ approx q

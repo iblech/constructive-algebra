@@ -33,12 +33,15 @@ instance Ring Complex where
     zero = fromInteger zero
     unit = fromInteger unit
 
--- recip-Problematik...
+-- XXX: recip-Problematik...
 instance Field Complex where
     recip = recip'
 
 instance AllowsRationalEmbedding Complex where
     fromRational = MkComplex . const . return . fromRational
+
+instance ApproxFloating Complex where
+    approx = approx . unsafeRunR . ($ 1000) . unComplex
 
 data QinC
 instance RingMorphism QinC where

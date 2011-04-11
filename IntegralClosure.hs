@@ -55,6 +55,10 @@ instance (RingMorphism m, Determinantable (Poly (Domain m)), AllowsRationalEmbed
         mor' = mor ((undefined :: IC m -> m) z)
         z    = MkIC (mor' (fromRational r)) (iX - fromRational r)
 
+instance (RingMorphism m, ApproxFloating (Codomain m)) =>
+    ApproxFloating (IC m) where
+    approx = approx . number
+
 -- Voraussetzung: Polynome müssen normiert sein
 sumPolynomial :: (Ring a, Determinantable (Poly a)) => Poly a -> Poly a -> Poly a
 sumPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
