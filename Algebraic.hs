@@ -19,9 +19,7 @@ newtype (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => Alg m =
 
 deriving instance (Ring (IC m)) => Ring (Alg m)
 deriving instance (AllowsRationalEmbedding (IC m)) => AllowsRationalEmbedding (Alg m)
---deriving instance (Ring (IC m), RingMorphism m, Field (Domain m), Codomain m ~ Complex) => ApproxFloating (Alg m)
-instance (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => ApproxFloating (Alg m) where
-    approx = approx . unAlg
+deriving instance (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => ApproxFloating (Alg m)
 
 instance Field (Alg QinC) where
     recip z = unsafeRunR $ do

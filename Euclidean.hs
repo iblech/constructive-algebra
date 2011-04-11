@@ -17,7 +17,7 @@ class (IntegralDomain a) => EuclideanRing a where
 
 -- Dummytyp, um das Typsystem davon zu überzeugen, dass ein ER-Typ vorliegt
 newtype (EuclideanRing a) => ER a = ER { unER :: a }
-    deriving (Eq,Ring,IntegralDomain,Field,EuclideanRing,Num,Fractional,TestableAssociatedness)
+    deriving (Eq,Ring,IntegralDomain,Field,EuclideanRing,Num,Fractional,TestableAssociatedness,ApproxFloating)
 instance (Show a, EuclideanRing a) => Show (ER a) where
     show        = show . unER
     showsPrec i = showsPrec i . unER
