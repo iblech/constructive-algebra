@@ -3,7 +3,7 @@ module IntegralClosure where
 
 import Debug.Trace
 
-import Prelude hiding (fromInteger, (+), (*), (-), (^), negate)
+import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (^), negate)
 import Complex hiding (goldenRatio, sqrt2)
 import qualified Complex
 import qualified Prelude as P
@@ -33,6 +33,7 @@ instance (RingMorphism m, Determinantable (Poly (Domain m))) => Ring (IC m) wher
     zero = fromInteger zero
     unit = fromInteger unit
 
+{-
 instance Show (IC m) where show = error "show on IC"
 instance Eq   (IC m) where (==) = error "== on IC"
 instance (RingMorphism m, Determinantable (Poly (Domain m))) => P.Num (IC m) where
@@ -42,6 +43,17 @@ instance (RingMorphism m, Determinantable (Poly (Domain m))) => P.Num (IC m) whe
     abs         = error "abs on IC"
     signum      = error "signum on IC"
     fromInteger = fromInteger
+-}
+
+instance (RingMorphism m, IntegralDomain (Codomain m), Determinantable (Poly (Domain m))) =>
+    IntegralDomain (IC m)
+
+instance (RingMorphism m, Determinantable (Poly (Domain m)), AllowsRationalEmbedding (Domain m)) =>
+    AllowsRationalEmbedding (IC m) where
+    fromRational r = z
+        where
+        mor' = mor ((undefined :: IC m -> m) z)
+        z    = MkIC (mor' (fromRational r)) (iX - fromRational r)
 
 -- Voraussetzung: Polynome müssen normiert sein
 sumPolynomial :: (Ring a, Determinantable (Poly a)) => Poly a -> Poly a -> Poly a
@@ -82,47 +94,8 @@ goldenRatio :: IC QinC
 goldenRatio = MkIC Complex.goldenRatio (iX^2 - iX - unit)
 
 sqrt2 :: IC QinC
-sqrt2 = MkIC Complex.sqrt2 (iX^2 - fromInteger 2)
+sqrt2 = MkIC Complex.sqrt2 (iX^2 - unit - unit)
 
 verifyPolynomial :: (RingMorphism m) => IC m -> Codomain m
 verifyPolynomial z@(MkIC x f) = eval x $ fmap mor' f
     where mor' = mor ((undefined :: IC m -> m) z)
-
-
-
-{-
-
-isZero :: IC -> R Bool
-isZero (MkIC x p) =
-    if null bounds
-	then return True
-	else trace ((":: " ++) . show $ roundDownToRecipN (minimum bounds)) $ magnitudeZero (roundDownToRecipN (minimum bounds)) x
-    where
-    as     = coeffs p
-    bs     = dropWhile (== 0) as
-    k      = length bs
-    bounds = zipWith f (tail bs) [1..]
-	where
-	f b j
-	    | b == 0    = 17  --FIXME
-	    | otherwise
-	    = approxRoot j $ abs (head bs) / (fromIntegral k * abs b)
-	approxRoot q a = rootSeq' q a 4
-
-t x = trace (show x) x
-
-
-exCheckZero i x = runR $ unComplex (verifyPolynomial x) i
-
-
-
-rec :: IC -> IC
-rec (MkIC z p) = MkIC (recip z) (norm . MkPoly . reverse . coeffs $ p)
-    where
-    norm q = recip (leadingCoeff q) .* q
--- XXX mit X kürzen
-
---instance Fractional IC where
---    fromRational r = MkIC (constant $ fromRational r) (iX - fromRational r)
---    recip = error "recip"
--}

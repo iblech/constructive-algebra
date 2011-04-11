@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Field where
 
-import Prelude (Show, Eq, (.), map)
+import Prelude (Show, Eq, Ord, (.), map)
 import qualified Prelude as P
 import Ring
 
@@ -13,7 +13,7 @@ class (Ring a) => Field a where
 
 -- Dummytyp, um das Typsystem davon zu überzeugen, dass ein Field-Typ vorliegt
 newtype (Field a) => F a = F { unF :: a }
-    deriving (Eq,Ring,IntegralDomain,Field,P.Num,P.Fractional,TestableAssociatedness)
+    deriving (Eq,Ord,Ring,IntegralDomain,Field,P.Num,P.Fractional,TestableAssociatedness,AllowsRationalEmbedding)
 instance (Show a, Field a) => Show (F a) where
     show        = P.show . unF
     showsPrec i = P.showsPrec i . unF

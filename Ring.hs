@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Ring where
 
 import qualified Prelude as P
@@ -29,6 +30,9 @@ class (Ring a) => IntegralDomain a
 class (Ring a) => TestableAssociatedness a where
     areAssociated :: a -> a -> Maybe a
     -- Nothing, oder Just u (mit y = u x, in der Reihenfolge)
+
+class (Ring a) => AllowsRationalEmbedding a where
+    fromRational :: Rational -> a
 
 -- direkt ausm Prelude kopiert
 (^) :: (Ring a) => a -> P.Integer -> a
@@ -78,3 +82,5 @@ instance (IntegralDomain a, P.Integral a) => TestableAssociatedness (Ratio a) wh
         | x == zero && y == zero = P.Just 1
         | x /= zero && y /= zero = P.Just (y * P.recip x)
         | otherwise              = P.Nothing
+instance AllowsRationalEmbedding (Ratio P.Integer) where
+    fromRational = P.fromRational

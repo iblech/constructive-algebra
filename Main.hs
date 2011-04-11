@@ -19,4 +19,4 @@ main = do
     print $ polynomial z5
     print $ polynomial z6
     print $ polynomial $ IntegralClosure.sqrt2^3 + IntegralClosure.goldenRatio
-    print $ polynomial $ IntegralClosure.sqrt2^3 - IntegralClosure.goldenRatio*3
+    print $ polynomial $ IntegralClosure.sqrt2^3 - IntegralClosure.goldenRatio*fromRational 3

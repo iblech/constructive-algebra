@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
 module Polynomial where
 
-import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, fromInteger, quotRem)
+import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, recip, fromInteger, fromRational, quotRem)
 import qualified Prelude as P
 import Test.QuickCheck
 import Data.List (intersperse, genericLength)
@@ -53,6 +53,9 @@ instance (Ring a) => Ring (Poly a) where
 
 instance (IntegralDomain a) => IntegralDomain (Poly a)
 
+instance (AllowsRationalEmbedding a) => AllowsRationalEmbedding (Poly a) where
+    fromRational = constant . fromRational
+
 instance (Field a, Eq a, IntegralDomain a) => EuclideanRing (Poly a) where
     degree = pred . genericLength . unPoly . canonForm
     quotRem f g
@@ -80,6 +83,9 @@ iX = MkPoly [zero, unit]
 constant :: a -> Poly a
 constant x = MkPoly [x]
 
+norm :: (Field a, Eq a) => Poly a -> Poly a
+norm p = recip (leadingCoeff p) .* p
+
 zipWithDefault :: (a -> a -> b) -> a -> [a] -> [a] -> [b]
 zipWithDefault (#) zero = go
     where
@@ -94,30 +100,3 @@ leadingCoeff = last . unPoly . canonForm
 -- nach aufsteigender Potenz geordnet, Nuller möglich
 coeffs :: Poly a -> [a]
 coeffs = unPoly
-
-{-
-instance (Field a, Eq a) => Euclidean (Poly a) where
-    gcd a b
-        | b == zero
-        = (unit, zero, unit, zero)
-        | Just x <- areAssociated a b
-        = (unit, zero, unit, constant x)
-        | leadingCoeff b /= unit
-        = let x = leadingCoeff b
-              (u,v,s,t) = gcd a (recip x .* b)
-          in (u, recip x .* v, s, x .* t)
-        | leadingCoeff a /= unit
-        = let x = leadingCoeff a
-              (u,v,s,t) = gcd (recip x .* a) b
-          in (recip x .* u, v, x .* s, t)
-        | otherwise
-        = (u,v,s,t)
-            where
-            (u',v',s',t') = gcd b r
-            (q,r)         = a `quotrem` b
-            u             = v'
-            v             = u' - q * v'
-            s             = t' + q * s'
-            t             = s'
-
--}

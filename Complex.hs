@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, EmptyDataDecls, TypeFamilies #-}
 module Complex where
 
-import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, recip, negate)
+import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate)
 import Control.Monad (liftM, liftM2)
 import ComplexRational hiding (magnitudeBound)
 import qualified ComplexRational as ComplexRational
@@ -36,6 +36,9 @@ instance Ring Complex where
 -- recip-Problematik...
 instance Field Complex where
     recip = recip'
+
+instance AllowsRationalEmbedding Complex where
+    fromRational = MkComplex . const . return . fromRational
 
 data QinC
 instance RingMorphism QinC where

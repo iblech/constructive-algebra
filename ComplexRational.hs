@@ -2,9 +2,8 @@ module ComplexRational where
 
 import Data.List (genericIndex)
 import qualified Prelude as P
-import Prelude hiding (fromInteger, (+), (*), (-), (/), (^), negate, recip)
+import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (/), (^), negate, recip)
 
-import Debug.Trace
 import NumericHelper
 import Ring
 import Field
@@ -32,6 +31,9 @@ instance Field ComplexRational where
 	| otherwise = (x/sq) :+: (-y/sq)
 	where sq = x^2 + y^2
 
+instance AllowsRationalEmbedding ComplexRational where
+    fromRational = (:+: 0)
+
 instance Num ComplexRational where
     (+) = (+)
     (*) = (*)
@@ -48,7 +50,7 @@ magnitudeSq :: ComplexRational -> Rational
 magnitudeSq (x :+: y) = x^2 + y^2
 
 magnitudeBound :: ComplexRational -> Integer
-magnitudeBound = succ . round . sqrt . fromRational . magnitudeSq
+magnitudeBound = succ . round . sqrt . P.fromRational . magnitudeSq
 -- Hack, sollte ohne sqrt auskommen!
 
 -- Die Folge mit

@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards, StandaloneDeriving #-}
 module Euclidean where
 
 import Prelude hiding (gcd, quotRem, (+), (*), (-), (/))
@@ -22,9 +22,8 @@ instance (Show a, EuclideanRing a) => Show (ER a) where
     show        = show . unER
     showsPrec i = showsPrec i . unER
     showList    = showList . map unER
-instance (EuclideanRing a, Field a) => EuclideanRing (F a) where
-    degree      = degree . unF
-    quotRem x y = let (p,q) = quotRem (unF x) (unF y) in (F p,F q)
+
+deriving instance (EuclideanRing a, Field a) => EuclideanRing (F a)
 
 instance EuclideanRing Integer where
     degree  = abs
