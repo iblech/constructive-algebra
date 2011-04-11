@@ -13,6 +13,8 @@ import NumericHelper
 import Polynomial
 import Data.Maybe
 import Control.Monad
+import Control.Arrow
+import Data.Ratio
 
 newtype (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => Alg m =
     MkAlg { unAlg :: IC m }
@@ -53,3 +55,15 @@ invert (MkAlg z) =
 	    | b == 0    = 1  --FIXME
 	    | otherwise
 	    = abs (head bs) / (fromIntegral k * abs b)
+
+isRational :: Alg QinC -> Bool
+isRational z =
+    any (== z) nonNegativeCandidates ||
+    any (== z) (map negate nonNegativeCandidates)
+    where
+    p     = polynomial . unAlg $ z
+    (r,s) = (numerator &&& denominator) . unF $ eval 0 p
+    nonNegativeCandidates =
+        [ fromRational (p % q)
+        | p <- positiveDivisors r , q <- positiveDivisors s
+        ]

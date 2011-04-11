@@ -67,8 +67,15 @@ class (Ring a) => Determinantable a where
 instance (EuclideanRing a, Eq a, TestableAssociatedness a) => Determinantable (ER a) where
     determinant = detER
 
-instance (Field a, Eq a, IntegralDomain a) => Determinantable (Poly (F a)) where
-    determinant = unER . determinant . fmap ER
+instance (Show a, Field a, Eq a, IntegralDomain a) => Determinantable (Poly (F a)) where
+    determinant = t . unER . determinant . fmap ER . t'
+
+t x = trace (show x) $ x
+t' x = trace (pretty $ fmap (/= zero) $ unMatrix x) $ x
+    where
+    pretty = map f . elems
+    f True  = '*'
+    f False = ' '
 
 detER :: (EuclideanRing a, Eq a, TestableAssociatedness a) => SqMatrix a -> a
 detER mtx
