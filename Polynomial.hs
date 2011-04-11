@@ -59,6 +59,14 @@ instance (Field a, Eq a, IntegralDomain a) => EuclideanRing (Poly a) where
               q'    = leadingCoeff f / leadingCoeff g .* (iX^(degree f - degree g))
           in  (q + q', r)
 
+instance (Field a, Eq a) => TestableAssociatedness (Poly a) where
+    areAssociated p q
+        | p == zero && q == zero = Just unit
+        | p /= zero && q /= zero =
+            let x = leadingCoeff q / leadingCoeff p
+            in  if x .* p == q then Just (constant x) else Nothing
+        | otherwise        = Nothing
+
 infixl 7 .*
 (.*) :: (Ring a) => a -> Poly a -> Poly a
 x .* f = MkPoly $ map (x *) $ unPoly f
@@ -109,10 +117,4 @@ instance (Field a, Eq a) => Euclidean (Poly a) where
             s             = t' + q * s'
             t             = s'
 
-areAssociated :: (Fractional a) => Poly a -> Poly a -> Maybe a
-areAssociated p q
-    | q == 0 = Nothing  --XXX
-    | otherwise =
-        let x = leadingCoeff q / leadingCoeff p
-        in  if x .* p == q then Just x else Nothing
 -}

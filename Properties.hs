@@ -75,6 +75,15 @@ prop_commutativeGroup (+) zero negate =
 -- XXX: fehlt: magnitudeSq, magnitudeBound
 
 
+-- Ring
+prop_testableAssociatedness :: (TestableAssociatedness a, Eq a, Show a, Arbitrary a) => a -> [Property]
+prop_testableAssociatedness a =
+    [ property $ \x y ->
+        case areAssociated x y of
+            Nothing -> True  -- ungenau
+            Just u  -> y == u * x
+    ]
+
 
 -- Euclidean
 prop_euclideanRing :: (EuclideanRing a, Eq a, Show a, Arbitrary a) => a -> [Property]
@@ -104,6 +113,8 @@ main = do
     mapM_ check  prop_roundDownToRecipN
     mapM_ check  prop_ilogb
     mapM_ check  $ prop_field (undefined :: ComplexRational)
+    mapM_ check  prop_testableAssociatedness (undefined :: Integer)
+    mapM_ check  prop_testableAssociatedness (undefined :: Rational)
     mapM_ check  prop_euclideanRingInteger
     mapM_ check' $ prop_euclideanRing (undefined :: Poly Rational)
     where

@@ -1,6 +1,7 @@
 module Ring where
 
 import qualified Prelude as P
+import Prelude (Maybe, (&&), (||), (==), (/=), abs, signum, otherwise)
 import Data.Ratio
 
 class Ring a where
@@ -17,6 +18,11 @@ class Ring a where
     infixl 7 *
 
 class (Ring a) => IntegralDomain a
+
+-- x ~ y :<=> ex. u inv'bar: y = u x
+class (Ring a) => TestableAssociatedness a where
+    areAssociated :: a -> a -> Maybe a
+    -- Nothing, oder Just u (mit y = u x, in der Reihenfolge)
 
 -- direkt ausm Prelude kopiert
 (^) :: (Ring a) => a -> P.Integer -> a
@@ -45,6 +51,10 @@ instance Ring P.Integer where
     negate = P.negate
     fromInteger = P.fromInteger
 instance IntegralDomain P.Integer
+instance TestableAssociatedness P.Integer where
+    areAssociated x y
+        | abs x == abs y = P.Just (signum x * signum y)
+        | otherwise      = P.Nothing
 
 instance (IntegralDomain a, P.Integral a) => Ring (Ratio a) where
     (+)    = (P.+)
@@ -54,3 +64,8 @@ instance (IntegralDomain a, P.Integral a) => Ring (Ratio a) where
     negate = P.negate
     fromInteger = P.fromInteger
 instance (IntegralDomain a, P.Integral a) => IntegralDomain (Ratio a)
+instance (IntegralDomain a, P.Integral a) => TestableAssociatedness (Ratio a) where
+    areAssociated x y
+        | x == zero && y == zero = P.Just 1
+        | x /= zero && y /= zero = P.Just (y * P.recip x)
+        | otherwise              = P.Nothing
