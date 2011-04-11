@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, EmptyDataDecls, TypeFamilies #-}
 module Complex where
 
 import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, recip, negate)
@@ -8,6 +8,7 @@ import qualified ComplexRational as ComplexRational
 import Ring
 import Field
 import Apartness
+import RingMorphism
 import System.IO.Unsafe
 
 newtype R a = R { runR :: IO a }
@@ -35,6 +36,12 @@ instance Ring Complex where
 -- recip-Problematik...
 instance Field Complex where
     recip = recip'
+
+data QinC
+instance RingMorphism QinC where
+    type Domain   QinC = F Rational
+    type Codomain QinC = Complex
+    mor _ = MkComplex . const . return . fromRational . unF
 
 magnitudeBound :: Complex -> R Integer
 magnitudeBound (MkComplex f) = liftM (succ . ComplexRational.magnitudeBound) $ f 1

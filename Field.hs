@@ -1,5 +1,7 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Field where
 
+import Prelude (Show, Eq, (.), map)
 import qualified Prelude as P
 import Ring
 
@@ -8,6 +10,14 @@ import Data.Ratio
 class (Ring a) => Field a where
     recip :: a -> a
     -- darf auf der null beliebiges liefern
+
+-- Dummytyp, um das Typsystem davon zu überzeugen, dass ein Field-Typ vorliegt
+newtype (Field a) => F a = F { unF :: a }
+    deriving (Eq,Ring,IntegralDomain,Field,P.Num,P.Fractional,TestableAssociatedness)
+instance (Show a, Field a) => Show (F a) where
+    show        = P.show . unF
+    showsPrec i = P.showsPrec i . unF
+    showList    = P.showList . map unF
 
 infixl 7 /
 (/) :: (Field a) => a -> a -> a

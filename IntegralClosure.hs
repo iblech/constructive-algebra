@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts, UndecidableInstances #-}
 module IntegralClosure where
 
 import Debug.Trace
@@ -5,18 +6,21 @@ import Debug.Trace
 import Prelude hiding (fromInteger, (+), (*), (-), (^), negate)
 import Complex hiding (goldenRatio, sqrt2)
 import qualified Complex
+import qualified Prelude as P
 import NumericHelper
 import Polynomial hiding (constant)
 import Matrix hiding ((!!))
 import Ring
+import RingMorphism
 import Field
 import Smith
 
 import Data.Array
 
-data IC a b = MkIC { number :: b, polynomial :: Poly a }
+data (RingMorphism m) => IC m =
+    MkIC { number :: Codomain m, polynomial :: Poly (Domain m) }
 
-instance (Field a, Eq a, IntegralDomain a, Ring b) => Ring (IC a b) where
+instance (RingMorphism m, Determinantable (Poly (Domain m))) => Ring (IC m) where
     MkIC x p + MkIC x' p' = MkIC (x + x') (sumPolynomial p p')
     MkIC x p * MkIC x' p' = MkIC (x * x') (prodPolynomial p p')
 
@@ -29,8 +33,18 @@ instance (Field a, Eq a, IntegralDomain a, Ring b) => Ring (IC a b) where
     zero = fromInteger zero
     unit = fromInteger unit
 
+instance Show (IC m) where show = error "show on IC"
+instance Eq   (IC m) where (==) = error "== on IC"
+instance (RingMorphism m, Determinantable (Poly (Domain m))) => P.Num (IC m) where
+    (+) = (+)
+    (*) = (*)
+    negate      = negate
+    abs         = error "abs on IC"
+    signum      = error "signum on IC"
+    fromInteger = fromInteger
+
 -- Voraussetzung: Polynome müssen normiert sein
-sumPolynomial :: (IntegralDomain a, Field a, Eq a) => Poly a -> Poly a -> Poly a
+sumPolynomial :: (Ring a, Determinantable (Poly a)) => Poly a -> Poly a -> Poly a
 sumPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
     where
     elems = [arr ij kl | ij <- indices, kl <- indices ]
@@ -46,7 +60,7 @@ sumPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1
     (xs,ys) = (coeffs f, coeffs g)
 
 -- Voraussetzung: Polynome müssen normiert sein
-prodPolynomial :: (IntegralDomain a, Field a, Eq a) => Poly a -> Poly a -> Poly a
+prodPolynomial :: (Ring a, Determinantable (Poly a)) => Poly a -> Poly a -> Poly a
 prodPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
     where
     elems = [arr ij kl | ij <- indices, kl <- indices ]
@@ -64,11 +78,18 @@ prodPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 
     (xs,ys) = (coeffs f, coeffs g)
 
 
-goldenRatio :: IC Rational Complex
+goldenRatio :: IC QinC
 goldenRatio = MkIC Complex.goldenRatio (iX^2 - iX - unit)
 
-sqrt2 :: IC Rational Complex
+sqrt2 :: IC QinC
 sqrt2 = MkIC Complex.sqrt2 (iX^2 - fromInteger 2)
+
+verifyPolynomial :: (RingMorphism m) => IC m -> Codomain m
+verifyPolynomial z@(MkIC x f) = eval x $ fmap mor' f
+    where mor' = mor ((undefined :: IC m -> m) z)
+
+
+
 {-
 
 isZero :: IC -> R Bool
@@ -90,8 +111,6 @@ isZero (MkIC x p) =
 
 t x = trace (show x) x
 
-verifyPolynomial :: IC -> Complex
-verifyPolynomial (MkIC x f) = eval x $ fmap (constant . fromRational) f
 
 exCheckZero i x = runR $ unComplex (verifyPolynomial x) i
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances #-}
 module Smith where
 
 import Matrix
@@ -67,7 +67,7 @@ class (Ring a) => Determinantable a where
 instance (EuclideanRing a, Eq a, TestableAssociatedness a) => Determinantable (ER a) where
     determinant = detER
 
-instance (Field a, Eq a, IntegralDomain a) => Determinantable (Poly a) where
+instance (Field a, Eq a, IntegralDomain a) => Determinantable (Poly (F a)) where
     determinant = unER . determinant . fmap ER
 
 detER :: (EuclideanRing a, Eq a, TestableAssociatedness a) => SqMatrix a -> a

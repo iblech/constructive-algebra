@@ -1,13 +1,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Properties where
 
-import Prelude hiding (gcd, quotRem, (+), (*), (^), fromInteger, negate, recip)
+import Prelude hiding (gcd, quotRem, (+), (*), (^), (/), (-), fromInteger, negate, recip)
 import NumericHelper
 import ComplexRational
 import Euclidean
 import Ring
 import Field
 import Polynomial
+import Complex hiding (goldenRatio, sqrt2)
+import IntegralClosure
 
 import Control.Monad
 import Test.QuickCheck
@@ -110,6 +112,18 @@ prop_euclideanRingInteger = prop_euclideanRing (0 :: Integer) ++
           not (a `mod` d' == 0 && b `mod` d' == 0) || d `mod` d' == 0
     ]
 
+
+-- IntegralClosure
+prop_integralClosure :: [Property]
+prop_integralClosure =
+    map complexNumberTest [sqrt2, goldenRatio, sqrt2 + goldenRatio]
+    where
+    complexNumberTest z = property $
+        let approx = unsafeRunR $ unComplex (verifyPolynomial z) n
+        in  magnitudeSq approx < recip (fromInteger (n^2))
+    n = 1000
+
+
 main = do
     mapM_ check  prop_roundDownToRecipN
     mapM_ check  prop_ilogb
@@ -118,6 +132,7 @@ main = do
     mapM_ check  $ prop_testableAssociatedness (undefined :: Rational)
     mapM_ check  prop_euclideanRingInteger
     mapM_ check' $ prop_euclideanRing (undefined :: Poly Rational)
+    mapM_ check' $ prop_integralClosure
     where
     check  = quickCheckWith (stdArgs { maxSuccess = 1000, maxSize = 10000 })
     check' = quickCheckWith (stdArgs { maxSuccess = 100,  maxSize = 20 })

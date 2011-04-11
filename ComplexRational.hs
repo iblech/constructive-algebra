@@ -25,6 +25,12 @@ instance Ring ComplexRational where
     zero = fromInteger 0
     unit = fromInteger 1
 
+instance Field ComplexRational where
+    recip (x :+: y)
+	| sq == 0   = error "division by zero (ComplexRational)"
+	| otherwise = (x/sq) :+: (-y/sq)
+	where sq = x^2 + y^2
+
 instance Num ComplexRational where
     (+) = (+)
     (*) = (*)
@@ -33,11 +39,9 @@ instance Num ComplexRational where
     signum      = error "signum on ComplexRational"
     abs         = error "abs on ComplexRational"
 
-instance Field ComplexRational where
-    recip (x :+: y)
-	| sq == 0   = error "division by zero (ComplexRational)"
-	| otherwise = (x/sq) :+: (-y/sq)
-	where sq = x^2 + y^2
+instance Fractional ComplexRational where
+    recip          = recip
+    fromRational x = x :+: 0
 
 magnitudeSq :: ComplexRational -> Rational
 magnitudeSq (x :+: y) = x^2 + y^2
@@ -51,16 +55,17 @@ magnitudeBound = succ . round . sqrt . fromRational . magnitudeSq
 -- erfüllt |a_n - a| < (4/9)^n für alle n >= 2.
 -- Diese Folge hier wird künstlich verlangsamt, sie erfüllt |x_n - x| < 1/n für
 -- alle n >= 1.
+-- XXX: Bestimmt kann man die Folge noch viel weiter verlangsamen!
 goldenRatioSeq :: Integer -> ComplexRational
-goldenRatioSeq n = xs `genericIndex` (ilogb 2 n + 2)
+goldenRatioSeq n = xs `genericIndex` (ilogb 2 n)
     where xs = iterate ((1 +) . recip) 1
 
 -- Die Folge mit
---   a_1 = 1, a_(n+1) = 1/2 * (a_n + 2/a_n)
--- erfüllt |a_n - a| < 0.86^n für alle n >= 1.
--- Die Folge hier wird entsprechend künstlich verlangsamt.
--- Der Faktor 5 resultiert von -ld(0.86).
+--   a_1 = 0, a_(n+1) = 1/(2+a_n)
+-- erfüllt |a_n - (sqrt(2) - 1)| <= gamma^n * c für alle n >= 1
+-- mit gamma = 1 / (2 (1 + sqrt(2))) <= 0.2072 und c = 2.
+-- Die Folge hier wird daher entsprechend künstlich verlangsamt.
+-- XXX: Bestimmt kann man die Folge noch viel weiter verlangsamen!
 sqrt2Seq :: Integer -> ComplexRational
-sqrt2Seq n = xs `genericIndex` (5 * ilogb 2 n + 1)
-    where xs = iterate (\x -> (x + 2/x) / 2) 1
--- Konvergenz nur heuristisch überlegt!
+sqrt2Seq n = xs `genericIndex` ((1 + ilogb 2 n) `div` 2)
+    where xs = map (+ 1) $ iterate (\x -> 1 / (2 + x)) 0

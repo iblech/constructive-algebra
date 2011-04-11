@@ -19,9 +19,12 @@ class (IntegralDomain a) => EuclideanRing a where
 newtype (EuclideanRing a) => ER a = ER { unER :: a }
     deriving (Eq,Ring,IntegralDomain,Field,EuclideanRing,Num,Fractional,TestableAssociatedness)
 instance (Show a, EuclideanRing a) => Show (ER a) where
-    show = show . unER
+    show        = show . unER
     showsPrec i = showsPrec i . unER
-    showList = showList . map unER
+    showList    = showList . map unER
+instance (EuclideanRing a, Field a) => EuclideanRing (F a) where
+    degree      = degree . unF
+    quotRem x y = let (p,q) = quotRem (unF x) (unF y) in (F p,F q)
 
 instance EuclideanRing Integer where
     degree  = abs
