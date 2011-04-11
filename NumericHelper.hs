@@ -40,23 +40,3 @@ ilogb b n | n < 0      = ilogb b (- n)
                               in if n < (b ^ av)
                                     then bin b lo av
                                     else bin b av hi
-
-class (Num a) => Euclidean a where
-    gcd :: a -> a -> (a,a,a,a)
-
-instance Euclidean Integer where
-    gcd a b
-        | b == 0
-        = (1, 0, 1, 0)
-        | a < 0
-        = let (u,v,s,t) = gcd (-a) b
-          in  (-u,v,-s,t)
-        | otherwise
-        = (u,v,s,t)
-            where
-            (u',v',s',t') = gcd b r
-            (q,r)         = a `quotRem` b
-            u             = v'
-            v             = u' - q * v'
-            s             = t' + q * s'
-            t             = s'

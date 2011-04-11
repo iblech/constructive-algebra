@@ -4,6 +4,7 @@ module Complex where
 import Control.Monad (liftM, liftM2)
 import ComplexRational hiding (magnitudeBound)
 import qualified ComplexRational as ComplexRational
+import Apartness
 import System.IO.Unsafe
 
 newtype R a = R { runR :: IO a }
@@ -47,14 +48,17 @@ magnitudeBound (MkComplex f) = liftM (succ . ComplexRational.magnitudeBound) $ f
 constant :: ComplexRational -> Complex
 constant = MkComplex . const . return
 
+instance Apartness Complex where
+    magnitudeZeroTest n = unsafeRunR . magnitudeZeroTestR n
+
 -- Sei x komplex und n fest. Dann gilt stets:
 --   |x| > 0 oder |x| < 1/n.
 -- magnitudeZero n x gibt im ersten Fall False, im zweiten True zurück,
 -- es gilt also:
 --     magnitudeZero n x == False  ==>  |x| > 0,
 -- aber die Umkehrung stimmt nicht.
-magnitudeZero :: Nat -> Complex -> R Bool
-magnitudeZero n (MkComplex f) = do
+magnitudeZeroTestR :: Nat -> Complex -> R Bool
+magnitudeZeroTestR n (MkComplex f) = do
     approx <- f (2 * n)
     -- |approx - z| < 1/(2n)
     return $ magnitudeSq approx < 1 / (2*fromInteger n)^2

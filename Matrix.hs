@@ -3,11 +3,13 @@ module Matrix where
 
 import Prelude hiding ((!!))
 
-import TypeLevel
 import Polynomial
 
 import Data.Array
 import Control.Arrow ((***))
+
+type Nat = Int
+-- XXX reicht aus, Benchmarks von Nöten!
 
 newtype Matrix a = MkMatrix { unMatrix :: Array (Nat,Nat) a }
     deriving (Show,Eq,Functor)

@@ -1,9 +1,13 @@
 module ComplexRational where
 
 import Data.List (genericIndex)
+import qualified Prelude as P
+import Prelude hiding (fromInteger, (+), (*), (-), (/), (^), negate, recip)
 
 import Debug.Trace
 import NumericHelper
+import Ring
+import Field
 
 data ComplexRational = Rational :+: Rational
     deriving (Eq)
@@ -13,20 +17,27 @@ instance Show ComplexRational where
 	| y == 0    = show x
 	| otherwise = show x ++ " + i*" ++ show y
 
-instance Num ComplexRational where
+instance Ring ComplexRational where
     (x :+: y) + (x' :+: y') = (x + x') :+: (y + y')
     (x :+: y) * (x' :+: y') = (x*x' - y*y') :+: (x*y' + y*x')
     negate (x :+: y)        = negate x :+: negate y
-    abs    = error "abs on ComplexRational"
-    signum = error "signum on ComplexRational"
     fromInteger i = fromInteger i :+: 0
+    zero = fromInteger 0
+    unit = fromInteger 1
 
-instance Fractional ComplexRational where
+instance Num ComplexRational where
+    (+) = (+)
+    (*) = (*)
+    negate      = negate
+    fromInteger = fromInteger
+    signum      = error "signum on ComplexRational"
+    abs         = error "abs on ComplexRational"
+
+instance Field ComplexRational where
     recip (x :+: y)
 	| sq == 0   = error "division by zero (ComplexRational)"
 	| otherwise = (x/sq) :+: (-y/sq)
 	where sq = x^2 + y^2
-    fromRational r = r :+: 0
 
 magnitudeSq :: ComplexRational -> Rational
 magnitudeSq (x :+: y) = x^2 + y^2

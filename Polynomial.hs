@@ -1,55 +1,70 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
 module Polynomial where
 
-import Prelude hiding (gcd)
+import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, fromInteger, quotRem)
+import qualified Prelude as P
 import Test.QuickCheck
-import Data.List (intersperse)
+import Data.List (intersperse, genericLength)
 import NumericHelper
+import Ring
+import Field
+import Euclidean
 
 newtype Poly a = MkPoly { unPoly :: [a] }
   deriving (Functor)
 
-mkPoly :: (Num a) => [a] -> Poly a
+mkPoly :: (Ring a, Eq a) => [a] -> Poly a
 mkPoly = canonForm . MkPoly
 
-canonForm :: (Num a) => Poly a -> Poly a
-canonForm = MkPoly . reverse . dropWhile (== 0) . reverse . unPoly
+canonForm :: (Ring a, Eq a) => Poly a -> Poly a
+canonForm = MkPoly . reverse . dropWhile (== zero) . reverse . unPoly
 
-eval :: (Num a) => a -> Poly a -> a
-eval x = foldr (\c val -> c + x*val) 0 . unPoly
+eval :: (Ring a) => a -> Poly a -> a
+eval x = foldr (\c val -> c + x*val) zero . unPoly
 
-instance (Num a, Show a) => Show (Poly a) where
+instance (Ring a, Eq a, Show a) => Show (Poly a) where
   show f = addZero $ concat . intersperse " + " $ filter (not . null) $ zipWith join (unPoly $ canonForm f) vars
       where
       vars = "" : "X" : map (("X^" ++) . show) [2..]
       join x v
-	| x == 0    = ""
-	| x == 1    = if null v then "1" else v
+	| x == zero = ""
+	| x == unit = if null v then "1" else v
 	| otherwise = show x ++ (if null v then "" else "*" ++ v)
       addZero s
 	| null s    = "0"
 	| otherwise = s
 
-instance (Num a) => Eq (Poly a) where
+instance (Ring a, Eq a) => Eq (Poly a) where
     p == q = unPoly (canonForm p) == unPoly (canonForm q)
     
-instance (Num a) => Num (Poly a) where
-    MkPoly xs + MkPoly ys = MkPoly (zipWithDefault (+) 0 xs ys)
+instance (Ring a) => Ring (Poly a) where
+    MkPoly xs + MkPoly ys = MkPoly (zipWithDefault (+) zero xs ys)
     MkPoly xs * MkPoly ys = MkPoly $ go xs ys
 	where
 	go []     ys = []
-	go (x:xs) ys = zipWithDefault (+) 0 (map (x *) ys) (0:go xs ys)
+	go (x:xs) ys = zipWithDefault (+) zero (map (x *) ys) (zero:go xs ys)
     negate (MkPoly xs) = MkPoly $ map negate xs
-    abs    = error "abs on Poly a"
-    signum = error "signum on Poly a"
     fromInteger = MkPoly . (:[]) . fromInteger
+    zero = fromInteger zero
+    unit = fromInteger unit
+
+instance (IntegralDomain a) => IntegralDomain (Poly a)
+
+instance (Field a, Eq a, IntegralDomain a) => EuclideanRing (Poly a) where
+    degree = pred . genericLength . unPoly . canonForm
+    quotRem f g
+        | degree f < degree g = (MkPoly [], f)
+        | otherwise
+        = let (q,r) = quotRem (f - q' * g) g
+              q'    = leadingCoeff f / leadingCoeff g .* (iX^(degree f - degree g))
+          in  (q + q', r)
 
 infixl 7 .*
-(.*) :: (Num a) => a -> Poly a -> Poly a
+(.*) :: (Ring a) => a -> Poly a -> Poly a
 x .* f = MkPoly $ map (x *) $ unPoly f
 
-iX :: (Num a) => Poly a
-iX = MkPoly [0,1]
+iX :: (Ring a) => Poly a
+iX = MkPoly [zero, unit]
 
 constant :: a -> Poly a
 constant x = MkPoly [x]
@@ -61,36 +76,26 @@ zipWithDefault (#) zero = go
     go (x:xs) []     = map (# zero) (x:xs)
     go (x:xs) (y:ys) = (x#y) : go xs ys
 
-degree :: (Num a) => Poly a -> Int
-degree = pred . length . unPoly . canonForm
-
 -- bottom fürs Nullpolynom
-leadingCoeff :: (Num a) => Poly a -> a
+leadingCoeff :: (Ring a, Eq a) => Poly a -> a
 leadingCoeff = last . unPoly . canonForm
 
--- nach aufsteigender Potenz geordnet
-coeffs :: (Num a) => Poly a -> [a]
-coeffs = unPoly . canonForm
+-- nach aufsteigender Potenz geordnet, Nuller möglich
+coeffs :: Poly a -> [a]
+coeffs = unPoly
 
-quotrem :: (Fractional a) => Poly a -> Poly a -> (Poly a, Poly a)
-quotrem f g
-    | degree f < degree g = (MkPoly [], f)
-    | otherwise
-    = let (q,r) = quotrem (f - q' * g) g
-          q'    = leadingCoeff f / leadingCoeff g .* (iX^(degree f - degree g))
-      in  (q + q', r)
-
-instance (Fractional a) => Euclidean (Poly a) where
+{-
+instance (Field a, Eq a) => Euclidean (Poly a) where
     gcd a b
-        | b == 0
-        = (1, 0, 1, 0)
+        | b == zero
+        = (unit, zero, unit, zero)
         | Just x <- areAssociated a b
-        = (1, 0, 1, constant x)
-        | leadingCoeff b /= 1
+        = (unit, zero, unit, constant x)
+        | leadingCoeff b /= unit
         = let x = leadingCoeff b
               (u,v,s,t) = gcd a (recip x .* b)
           in (u, recip x .* v, s, x .* t)
-        | leadingCoeff a /= 1
+        | leadingCoeff a /= unit
         = let x = leadingCoeff a
               (u,v,s,t) = gcd (recip x .* a) b
           in (recip x .* u, v, x .* s, t)
@@ -110,3 +115,4 @@ areAssociated p q
     | otherwise =
         let x = leadingCoeff q / leadingCoeff p
         in  if x .* p == q then Just x else Nothing
+-}
