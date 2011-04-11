@@ -82,6 +82,7 @@ prop_testableAssociatedness a =
         case areAssociated x y of
             Nothing -> True  -- ungenau
             Just u  -> y == u * x
+                where _ = x `asTypeOf` a
     ]
 
 
@@ -113,8 +114,8 @@ main = do
     mapM_ check  prop_roundDownToRecipN
     mapM_ check  prop_ilogb
     mapM_ check  $ prop_field (undefined :: ComplexRational)
-    mapM_ check  prop_testableAssociatedness (undefined :: Integer)
-    mapM_ check  prop_testableAssociatedness (undefined :: Rational)
+    mapM_ check  $ prop_testableAssociatedness (undefined :: Integer)
+    mapM_ check  $ prop_testableAssociatedness (undefined :: Rational)
     mapM_ check  prop_euclideanRingInteger
     mapM_ check' $ prop_euclideanRing (undefined :: Poly Rational)
     where

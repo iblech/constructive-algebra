@@ -2,30 +2,27 @@ module IntegralClosure where
 
 import Debug.Trace
 
-import Prelude hiding (fromInteger, (+), (*), negate)
+import Prelude hiding (fromInteger, (+), (*), (-), (^), negate)
 import Complex hiding (goldenRatio, sqrt2)
 import qualified Complex
 import NumericHelper
 import Polynomial hiding (constant)
 import Matrix hiding ((!!))
 import Ring
---import Smith
+import Field
+import Smith
 
 import Data.Array
 
 data IC a b = MkIC { number :: b, polynomial :: Poly a }
 
-instance Eq   (IC a b) where (==) = error "== on IC"
-
-instance Show (IC a b) where show = error "show on IC"
-
-instance (Ring a, Ring b) => Ring (IC a b) where
+instance (Field a, Eq a, IntegralDomain a, Ring b) => Ring (IC a b) where
     MkIC x p + MkIC x' p' = MkIC (x + x') (sumPolynomial p p')
     MkIC x p * MkIC x' p' = MkIC (x * x') (prodPolynomial p p')
 
     negate (MkIC x p) = MkIC (negate x) (MkPoly as)
 	where
-	as = reverse $ zipWith (*) (reverse $ coeffs p) (cycle [1,-1])
+	as = reverse $ zipWith (*) (reverse $ coeffs p) (cycle [unit,negate unit])
 
     fromInteger i = MkIC (fromInteger i) (iX - fromInteger i)
 
@@ -33,39 +30,46 @@ instance (Ring a, Ring b) => Ring (IC a b) where
     unit = fromInteger unit
 
 -- Voraussetzung: Polynome müssen normiert sein
-sumPolynomial :: (Ring a) => Poly a -> Poly a -> Poly a
+sumPolynomial :: (IntegralDomain a, Field a, Eq a) => Poly a -> Poly a -> Poly a
 sumPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
     where
     elems = [arr ij kl | ij <- indices, kl <- indices ]
     arr (i,j) (k,l) = arr1 (i,j) (k,l) + arr2 (i,j) (k,l)
     arr1 (i,j) (k,l)
-	| i < n - 1 = if (k,l) == (i+1,j) then 1 else 0
-	| otherwise = if l == j then -xs !! k else 0
+	| i < n - 1 = if (k,l) == (i+1,j) then unit else zero
+	| otherwise = if l == j then negate (xs !! k) else zero
     arr2 (i,j) (k,l)
-	| j < m - 1 = if (k,l) == (i,j+1) then 1 else 0
-	| otherwise = if k == i then -(ys !! l) else 0
+	| j < m - 1 = if (k,l) == (i,j+1) then unit else zero
+	| otherwise = if k == i then negate (ys !! l) else zero
     indices = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
     (n,m)   = (length xs - 1, length ys - 1)
     (xs,ys) = (coeffs f, coeffs g)
 
-{-
-
-prodPolynomial :: (Fractional a) => Poly a -> Poly a -> Poly a
+-- Voraussetzung: Polynome müssen normiert sein
+prodPolynomial :: (IntegralDomain a, Field a, Eq a) => Poly a -> Poly a -> Poly a
 prodPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
     where
     elems = [arr ij kl | ij <- indices, kl <- indices ]
     arr (i,j) (k,l)
 	| i < n - 1  && j < m - 1
-	= if (k,l) == (i+1,j+1) then 1 else 0
+	= if (k,l) == (i+1,j+1) then unit else zero
 	| i == n - 1 && j < m - 1
-	= if l == j + 1 then -xs !! k else 0
+	= if l == j + 1 then negate (xs !! k) else zero
 	| i < n - 1  && j == m - 1
-	= if k == i + 1 then -ys !! l else 0
+	= if k == i + 1 then negate (ys !! l) else zero
 	| i == n - 1 && j == m - 1
 	= xs !! k * ys !! l
     indices = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
     (n,m)   = (length xs - 1, length ys - 1)
     (xs,ys) = (coeffs f, coeffs g)
+
+
+goldenRatio :: IC Rational Complex
+goldenRatio = MkIC Complex.goldenRatio (iX^2 - iX - unit)
+
+sqrt2 :: IC Rational Complex
+sqrt2 = MkIC Complex.sqrt2 (iX^2 - fromInteger 2)
+{-
 
 isZero :: IC -> R Bool
 isZero (MkIC x p) =
@@ -88,12 +92,6 @@ t x = trace (show x) x
 
 verifyPolynomial :: IC -> Complex
 verifyPolynomial (MkIC x f) = eval x $ fmap (constant . fromRational) f
-
-goldenRatio :: IC
-goldenRatio = MkIC Complex.goldenRatio (iX^2 - iX - 1)
-
-sqrt2 :: IC
-sqrt2 = MkIC Complex.sqrt2 (iX^2 - 2)
 
 exCheckZero i x = runR $ unComplex (verifyPolynomial x) i
 

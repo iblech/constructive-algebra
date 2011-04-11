@@ -1,9 +1,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Complex where
 
+import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, recip, negate)
 import Control.Monad (liftM, liftM2)
 import ComplexRational hiding (magnitudeBound)
 import qualified ComplexRational as ComplexRational
+import Ring
+import Field
 import Apartness
 import System.IO.Unsafe
 
@@ -16,10 +19,7 @@ type Nat = Integer
 
 newtype Complex = MkComplex { unComplex :: Nat -> R ComplexRational }
 
-instance Eq   Complex where (==) = undefined
-instance Show Complex where show = undefined
-
-instance Num Complex where
+instance Ring Complex where
     MkComplex f + MkComplex g = MkComplex $ \n -> liftM2 (+) (f (2*n)) (g (2*n))
     f * g = MkComplex $ \n -> liftM2 (*) (unComplex f (n*k)) (unComplex g (n*k))
 	where
@@ -28,17 +28,13 @@ instance Num Complex where
 	    gBound <- magnitudeBound g
 	    return $ fBound + gBound + 1
     negate (MkComplex f) = MkComplex $ liftM negate . f
-
-    abs (MkComplex f) = MkComplex $ liftM abs . f
-
-    signum = error "signum on Complex"
-
     fromInteger = MkComplex . const . return . fromInteger
+    zero = fromInteger zero
+    unit = fromInteger unit
 
 -- recip-Problematik...
-instance Fractional Complex where
-    recip        = recip'
-    fromRational = constant . fromRational
+instance Field Complex where
+    recip = recip'
 
 magnitudeBound :: Complex -> R Integer
 magnitudeBound (MkComplex f) = liftM (succ . ComplexRational.magnitudeBound) $ f 1

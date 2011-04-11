@@ -1,10 +1,12 @@
 module Main where
 
-import Algebraic
+import Prelude (print, ($))
+import IntegralClosure
+import Ring
 import Complex hiding (goldenRatio)
 
 main = do
-    let z1 = Algebraic.sqrt2
+    let z1 = IntegralClosure.sqrt2
 	z2 = z1 * z1
 	z3 = z2 * z1
 	z4 = z2 * z2
@@ -16,4 +18,4 @@ main = do
     print $ polynomial z4
     print $ polynomial z5
     print $ polynomial z6
-    print $ polynomial $ Algebraic.sqrt2^3 + Algebraic.goldenRatio
+    print $ polynomial $ IntegralClosure.sqrt2^3 + IntegralClosure.goldenRatio
