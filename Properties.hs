@@ -10,6 +10,7 @@ import Field
 import Polynomial
 import Complex hiding (goldenRatio, sqrt2)
 import IntegralClosure
+import RootFinding
 
 import Control.Monad
 import Test.QuickCheck
@@ -23,7 +24,8 @@ positive = do
         else return $ abs x
 
 instance Arbitrary ComplexRational where
-    arbitrary = liftM2 (:+:) arbitrary arbitrary
+    arbitrary = liftM (uncurry (:+:)) arbitrary
+    shrink    = map   (uncurry (:+:)) . shrink . (\(x :+: y) -> (x,y))
 
 instance (Arbitrary a) => Arbitrary (Poly a) where
     arbitrary = liftM MkPoly arbitrary
@@ -54,7 +56,10 @@ prop_ilogb = (:[]) $ forAll positive $ \b -> forAll positive $ \n ->
     let k = ilogb b n
     in  b^k <= n && b^(k+1) > n
 
-
+prop_roundUp =
+    [ property $ \x ->
+        x <= fromInteger (roundUp x)  &&  fromInteger (roundUp x) - x <= 1
+    ]
 
 -- XXX: rootSeq NICHT geprüft!
 
@@ -74,7 +79,7 @@ prop_commutativeGroup (+) zero negate =
     , property $ \x y   -> x + y          == y + x
     ]
 
--- XXX: fehlt: magnitudeSq, magnitudeBound
+-- XXX: fehlt: magnitudeSq, magnitudeUpperBound
 
 
 -- Ring
@@ -122,6 +127,16 @@ prop_integralClosure =
         let approx = unsafeRunR $ unComplex (verifyPolynomial z) n
         in  magnitudeSq approx < recip (fromInteger (n^2))
     n = 1000
+
+
+-- RootFinding
+prop_mesh :: [Property]
+prop_mesh =
+    [ forAll positive $ \r -> forAll positive $ \delta -> r / delta < 15 ==>
+        let ps = mesh delta r
+        in  property $ \z ->
+            magnitudeSq z <= r^2  ==>  any (\p -> magnitudeSq (p - z) < delta^2) ps
+    ]
 
 
 main = do

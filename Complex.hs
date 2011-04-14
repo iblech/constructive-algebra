@@ -1,14 +1,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, EmptyDataDecls, TypeFamilies #-}
 module Complex where
 
-import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate)
+import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, abs)
 import Control.Monad (liftM, liftM2)
-import ComplexRational hiding (magnitudeBound)
+import ComplexRational hiding (magnitudeUpperBound)
 import qualified ComplexRational as ComplexRational
 import Ring
 import Field
 import Apartness
 import RingMorphism
+import NumericHelper
 import System.IO.Unsafe
 
 newtype R a = R { runR :: IO a }
@@ -25,9 +26,9 @@ instance Ring Complex where
     f * g = MkComplex $ \n -> liftM2 (*) (unComplex f (n*k)) (unComplex g (n*k))
 	where
 	k = unsafeRunR $ do
-	    fBound <- magnitudeBound f
-	    gBound <- magnitudeBound g
-	    return $ fBound + gBound + 1
+	    fBound <- magnitudeUpperBound f
+	    gBound <- magnitudeUpperBound g
+	    return $ roundUp $ fBound + gBound + 1
     negate (MkComplex f) = MkComplex $ liftM negate . f
     fromInteger = MkComplex . const . return . fromInteger
     zero = fromInteger zero
@@ -49,13 +50,16 @@ instance RingMorphism QinC where
     type Codomain QinC = Complex
     mor _ = MkComplex . const . return . fromRational . unF
 
-magnitudeBound :: Complex -> R Integer
-magnitudeBound (MkComplex f) = liftM (succ . ComplexRational.magnitudeBound) $ f 1
+magnitudeUpperBound :: Complex -> R Rational
+magnitudeUpperBound (MkComplex f) = liftM ((+1) . ComplexRational.magnitudeUpperBound) $ f 1
 -- Eigenschaft: Stelle f die komplexe Zahl a dar. Dann gilt:
 --     |a| <= magnitudeBound f
 
 constant :: ComplexRational -> Complex
 constant = MkComplex . const . return
+
+approx' :: Rational -> Complex -> R ComplexRational
+approx' eps (MkComplex f) = f $ ceiling (recip eps)
 
 instance Apartness Complex where
     magnitudeZeroTest n = unsafeRunR . magnitudeZeroTestR n

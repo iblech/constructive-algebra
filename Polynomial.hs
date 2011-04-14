@@ -100,3 +100,8 @@ leadingCoeff = last . unPoly . canonForm
 -- nach aufsteigender Potenz geordnet, Nuller möglich
 coeffs :: Poly a -> [a]
 coeffs = unPoly
+
+derivative :: (Ring a) => Poly a -> Poly a
+derivative (MkPoly xs) 
+    | null xs   = MkPoly []
+    | otherwise = simplify . MkPoly $ zipWith (*) (tail xs) $ map fromInteger [1..]

@@ -53,9 +53,8 @@ instance Fractional ComplexRational where
 magnitudeSq :: ComplexRational -> Rational
 magnitudeSq (x :+: y) = x^2 + y^2
 
-magnitudeBound :: ComplexRational -> Integer
-magnitudeBound = succ . round . sqrt . P.fromRational . magnitudeSq
--- Hack, sollte ohne sqrt auskommen!
+magnitudeUpperBound :: ComplexRational -> Rational
+magnitudeUpperBound (x :+: y) = abs x + abs y
 
 -- Die Folge mit
 --   a_1 = 1, a_(n+1) = 1 + 1/a_n

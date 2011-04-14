@@ -5,6 +5,7 @@ import Prelude hiding (gcd)
 import Test.QuickCheck
 import Data.List
 import Debug.Trace
+import Data.Ratio
 
 {-
 -- Hat Eigenschaft: Für a rational, a > 0 konvergiert rootSeq streng
@@ -27,6 +28,12 @@ rootSeq' = rootSeq
 -- Für x > 0 kleinstes n mit 1/n < x und n > 0
 roundDownToRecipN :: Rational -> Integer
 roundDownToRecipN x = if recip (fromInteger n) == x then n + 1 else n where n = ceiling . recip $ x
+
+roundUp :: Rational -> Integer
+roundUp z
+    | x `mod` y == 0 = x `div` y
+    | otherwise      = x `div` y + 1
+  where (x,y) = (numerator z, denominator z)
 
 -- ilog b n == Abrundung von log_b n
 -- XXX Quelle?
