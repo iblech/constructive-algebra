@@ -10,6 +10,8 @@ import Algebraic
 import Polynomial
 import Control.Monad
 import Euclidean
+import ComplexRational
+import Real
 
 -- Zählt die doppelte Anzahl von Vorzeichenänderungen
 doubledSignChanges :: (Ring a, Ord a) => [a] -> Integer
@@ -34,6 +36,12 @@ sturmChain r s
 
 doubledIndex :: (Field a, Eq a, IntegralDomain a, Ord a) => a -> a -> Poly a -> Poly a -> Integer
 doubledIndex a b r s = doubledSignChanges' a b (sturmChain r s)
+
+quadrupledWindingNumber :: ComplexRational -> ComplexRational -> Poly (Alg QinC) -> Integer
+quadrupledWindingNumber (x :+: y) (x' :+: y') p
+    = doubledIndex zero unit (fmap realComponent $ realPart gamma) (fmap realComponent $ imagPart gamma)
+    where
+    gamma = undefined
 
 ex :: Poly (Alg QinC)
 ex = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 2 + fromInteger 4 * Polynomial.constant imagUnit))
