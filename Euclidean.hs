@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards, StandaloneDeriving #-}
 module Euclidean where
 
-import Prelude hiding (gcd, quotRem, (+), (*), (-), (/))
+import Prelude hiding (gcd, quotRem, (+), (*), (-), (/), negate)
 import qualified Prelude as P
 import Ring
 import Field
@@ -63,3 +63,15 @@ gcd_ associatednessTest a b
         v             = u' - q * v'
         s             = t' + q * s'
         t             = s'
+
+euclidChain :: (EuclideanRing a, Eq a) => a -> a -> [a]
+euclidChain a b = map (fst . (`quotRem` d)) xs
+    where
+    xs = euclidChain' a b
+    d  = last xs
+
+-- Vorzeichenkonvention für sturmChain
+euclidChain' :: (EuclideanRing a, Eq a) => a -> a -> [a]
+euclidChain' a b
+    | b == zero = [a]
+    | otherwise = a : euclidChain' b (negate . snd $ a `quotRem` b)

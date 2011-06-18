@@ -22,6 +22,7 @@ newtype (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => Alg m =
 deriving instance (Ring (IC m)) => Ring (Alg m)
 deriving instance (AllowsRationalEmbedding (IC m)) => AllowsRationalEmbedding (Alg m)
 deriving instance (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => ApproxFloating (Alg m)
+deriving instance AllowsConjugation (Alg QinC)
 
 instance Field (Alg QinC) where
     recip z = unsafeRunR $ do

@@ -51,6 +51,10 @@ instance (Ring a) => Ring (Poly a) where
     zero = fromInteger zero
     unit = fromInteger unit
 
+instance (AllowsConjugation a) => AllowsConjugation (Poly a) where
+    conjugate (MkPoly xs) = MkPoly (map conjugate xs)
+    imagUnit              = constant imagUnit
+
 instance (IntegralDomain a) => IntegralDomain (Poly a)
 
 instance (AllowsRationalEmbedding a) => AllowsRationalEmbedding (Poly a) where

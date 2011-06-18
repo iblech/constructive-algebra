@@ -26,6 +26,12 @@ instance Ring ComplexRational where
     unit = fromInteger 1
     couldBeNonZero = (/= zero)
 
+instance IntegralDomain ComplexRational
+
+instance AllowsConjugation ComplexRational where
+    conjugate (x :+: y) = x :+: (-y)
+    imagUnit            = 0 :+: 1
+
 instance Field ComplexRational where
     recip (x :+: y)
 	| sq == 0   = error "division by zero (ComplexRational)"

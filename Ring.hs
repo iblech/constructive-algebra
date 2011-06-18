@@ -2,7 +2,7 @@
 module Ring where
 
 import qualified Prelude as P
-import Prelude (Maybe, (&&), (||), (==), (/=), abs, signum, otherwise)
+import Prelude (Maybe, (&&), (||), (==), (/=), abs, otherwise)
 import Data.Ratio
 import qualified Data.Complex as C
 
@@ -27,6 +27,14 @@ class Ring a where
 
 class (Ring a) => IntegralDomain a
 
+data Sign = N | Z | P deriving (P.Show,P.Eq,P.Ord)
+signum :: (Ring a, P.Ord a) => a -> Sign
+signum x
+    | x P.> zero = P
+    | x ==  zero = Z
+    | x P.< zero = N
+    | otherwise  = P.error "signum"
+
 -- x ~ y :<=> ex. u inv'bar: y = u x
 class (Ring a) => TestableAssociatedness a where
     areAssociated :: a -> a -> Maybe a
@@ -34,6 +42,16 @@ class (Ring a) => TestableAssociatedness a where
 
 class (Ring a) => AllowsRationalEmbedding a where
     fromRational :: Rational -> a
+
+class (Ring a) => AllowsConjugation a where
+    conjugate :: a -> a
+    imagUnit  :: a
+
+realPart :: (AllowsConjugation a, AllowsRationalEmbedding a) => a -> a
+realPart z = fromRational (1 P./ 2) * (z + conjugate z)
+
+imagPart :: (AllowsConjugation a, AllowsRationalEmbedding a) => a -> a
+imagPart z = negate imagUnit * fromRational (1 P./ 2) * (z - conjugate z)
 
 class ApproxFloating a where
     approx :: a -> C.Complex P.Double
@@ -71,7 +89,7 @@ instance Ring P.Integer where
 instance IntegralDomain P.Integer
 instance TestableAssociatedness P.Integer where
     areAssociated x y
-        | abs x == abs y = P.Just (signum x * signum y)
+        | abs x == abs y = P.Just (P.signum x * P.signum y)
         | otherwise      = P.Nothing
 instance ApproxFloating P.Integer where
     approx = P.fromIntegral

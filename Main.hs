@@ -5,8 +5,12 @@ import IntegralClosure
 import Ring
 import Complex hiding (goldenRatio)
 import Algebraic as A
+import RootFinding
+import Control.Monad
 
-main = do
+main = print =<< runR (ex exPoly)
+
+main' = do
     let z1 = IntegralClosure.sqrt2
 	z2 = z1 * z1
 	z3 = z2 * z1

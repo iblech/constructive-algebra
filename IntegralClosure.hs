@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts, UndecidableInstances, FlexibleInstances #-}
 module IntegralClosure where
 
 import Debug.Trace
@@ -14,6 +14,7 @@ import Ring
 import RingMorphism
 import Field
 import Smith
+import ComplexRational
 
 import Data.Array
 
@@ -99,6 +100,10 @@ goldenRatio = MkIC Complex.goldenRatio (iX^2 - iX - unit)
 
 sqrt2 :: IC QinC
 sqrt2 = MkIC Complex.sqrt2 (iX^2 - unit - unit)
+
+instance AllowsConjugation (IC QinC) where
+    conjugate (MkIC z p) = MkIC (conjugate z) p
+    imagUnit             = MkIC (constant imagUnit) (iX^2 + unit)
 
 verifyPolynomial :: (RingMorphism m) => IC m -> Codomain m
 verifyPolynomial z@(MkIC x f) = eval x $ fmap mor' f

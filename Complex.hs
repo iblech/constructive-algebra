@@ -34,6 +34,10 @@ instance Ring Complex where
     zero = fromInteger zero
     unit = fromInteger unit
 
+instance AllowsConjugation Complex where
+    conjugate (MkComplex f) = MkComplex $ liftM conjugate . f
+    imagUnit = constant imagUnit
+
 -- XXX: recip-Problematik...
 instance Field Complex where
     recip = recip'

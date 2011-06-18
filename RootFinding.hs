@@ -55,3 +55,10 @@ findApartnessBound mkMesh fun modulus = go 1
 
 exPoly :: Poly Complex
 exPoly = (iX - fromRational 3) * (iX - fromRational 7)
+
+ex :: Poly Complex -> R (Rational,Rational)
+ex poly = do
+    --r <- rootMagnitudeUpperBound poly
+    let r = 29/10
+    mod <- polyContinuity poly r
+    findApartnessBound (mesh r) (flip eval poly . Complex.constant) mod
