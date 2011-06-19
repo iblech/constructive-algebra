@@ -2,7 +2,6 @@
 module NumericHelper where
 
 import Prelude hiding (gcd)
-import Test.QuickCheck
 import Data.List
 import Debug.Trace
 import Data.Ratio

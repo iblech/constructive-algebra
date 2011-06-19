@@ -1,1 +1,4 @@
 R durch beliebige Monade parametrisieren
+
+Complex zu Vervollständigung eines bel. Raums mit submultiplikativen |.|
+verallgemeinern. Dann sind Real, Complex zwei Beispiele

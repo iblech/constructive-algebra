@@ -8,6 +8,7 @@ import Complex hiding (goldenRatio, sqrt2)
 import qualified Complex
 import qualified Prelude as P
 import NumericHelper
+import qualified Polynomial as P
 import Polynomial hiding (constant)
 import Matrix hiding ((!!))
 import Ring
@@ -20,6 +21,13 @@ import Data.Array
 
 data (RingMorphism m) => IC m =
     MkIC { number :: Codomain m, polynomial :: Poly (Domain m) }
+
+-- FIXME: Besserer Name
+fromBase :: (RingMorphism m) => Domain m -> IC m
+fromBase x = r
+    where
+    r    = MkIC (mor' x) (iX - P.constant x)
+    mor' = mor ((undefined :: IC m -> m) r)
 
 instance (RingMorphism m, Determinantable (Poly (Domain m))) => Ring (IC m) where
     MkIC x p + MkIC x' p' = MkIC (x + x') (sumPolynomial p p')

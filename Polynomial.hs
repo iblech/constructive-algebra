@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
 module Polynomial where
 
-import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, recip, fromInteger, fromRational, quotRem)
+import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, recip, fromInteger, fromRational, quotRem, sum)
 import qualified Prelude as P
 import Test.QuickCheck
 import Data.List (intersperse, genericLength)
@@ -9,9 +9,10 @@ import NumericHelper
 import Ring
 import Field
 import Euclidean
+import Control.DeepSeq
 
 newtype Poly a = MkPoly { unPoly :: [a] }
-  deriving (Functor)
+  deriving (Functor,NFData)
 
 mkPoly :: (Ring a, Eq a) => [a] -> Poly a
 mkPoly = canonForm . MkPoly
@@ -109,3 +110,7 @@ derivative :: (Ring a) => Poly a -> Poly a
 derivative (MkPoly xs) 
     | null xs   = MkPoly []
     | otherwise = simplify . MkPoly $ zipWith (*) (tail xs) $ map fromInteger [1..]
+
+-- compose f g = "f . g"
+compose :: (Ring a) => Poly a -> Poly a -> Poly a
+compose (MkPoly as) g = sum $ zipWith (\a i -> a .* g^i) as (map fromInteger [0..])

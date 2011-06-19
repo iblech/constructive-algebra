@@ -9,7 +9,7 @@ import NumericHelper
 import Ring
 import Field
 
-data ComplexRational = Rational :+: Rational
+data ComplexRational = !Rational :+: !Rational
     deriving (Eq)
 
 instance Show ComplexRational where

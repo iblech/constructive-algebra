@@ -53,6 +53,7 @@ realPart z = fromRational (1 P./ 2) * (z + conjugate z)
 imagPart :: (AllowsConjugation a, AllowsRationalEmbedding a) => a -> a
 imagPart z = negate imagUnit * fromRational (1 P./ 2) * (z - conjugate z)
 
+-- unsafePerformIO zugelassen
 class ApproxFloating a where
     approx :: a -> C.Complex P.Double
 
@@ -114,3 +115,9 @@ instance (IntegralDomain a, P.Integral a, ApproxFloating a) => ApproxFloating (R
     approx x =
         let (p,q) = (numerator x,denominator x)
         in  approx p P./ approx q
+
+sum :: (Ring a) => [a] -> a
+sum = sum' zero
+    where
+    sum' acc []     = acc
+    sum' acc (x:xs) = sum' (acc + x) xs

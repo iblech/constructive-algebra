@@ -5,10 +5,16 @@ import IntegralClosure
 import Ring
 import Complex hiding (goldenRatio)
 import Algebraic as A
-import RootFinding
 import Control.Monad
+import Zero
 
-main = print =<< runR (ex exPoly)
+--main = print =<< runR (ex exPoly)
+main = print $ sum
+    [ windingNumber (-imagUnit) (4-imagUnit) ex
+    , windingNumber (4-imagUnit) (4 + imagUnit) ex
+    , windingNumber (4 + imagUnit) imagUnit ex
+    , windingNumber imagUnit (-imagUnit) ex
+    ]
 
 main' = do
     let z1 = IntegralClosure.sqrt2
