@@ -169,6 +169,38 @@ subdivisions radius p =
     mid (Cell1 z0 z1) = (z0 + z1) / 2
     mid (Cell2 z0 z1) = (z0 + z1) / 2
 
+-- muss normiert, aber nicht unbedingt separabel sein
+roots :: Poly (Alg QinC) -> R (Nat -> [Alg QinC])
+roots f = return . roots' f' =<< cauchyRadius (fmap (number . unAlg) f)
+    where
+    (_,_,f',_) = gcd f (derivative f)
+
+-- muss separabel, aber nicht unbed. normiert sein
+roots' :: Poly (Alg QinC) -> Rational -> Nat -> [Alg QinC]
+roots' f radius n =
+    map snd . head $ filter (all (\(b,x) -> b <= 1/fromInteger n)) iters
+    where
+    iters = subdivisions' radius f
+
+subdivisions' :: Rational -> Poly (Alg QinC) -> [[(Rational, Alg QinC)]]
+subdivisions' radius f = go (17/12 * radius) [(f, Cell2 ((-radius) :+: (-radius)) (radius :+: radius))]  -- 17/12 > sqrt 2
+    where
+    go :: Rational -> [(Poly (Alg QinC), Cell)] -> [[(Rational, Alg QinC)]]
+    go r cs = map ((r,) . mid . snd) cs : merge (concatMap (uncurry process) cs)
+	where
+	process :: Poly (Alg QinC) -> Cell -> [[(Rational, Alg QinC)]]
+	process f' (Cell0 z0) = [repeat (0, fromComplexRational z0)]
+	process f' c
+	    | newtonPrecondition f' (mid c)
+	    = tail $ zipWith (\n x -> [(r / 2^(2^n - 1), x)]) [0..] (newton f' (mid c))
+	    | otherwise
+	    = go (r/2) $ divide f' c
+    mid (Cell0 z0)    = fromComplexRational $ z0
+    mid (Cell1 z0 z1) = fromComplexRational $ (z0 + z1) / 2
+    mid (Cell2 z0 z1) = fromComplexRational $ (z0 + z1) / 2
+    merge :: [[a]] -> [[a]]
+    merge xss = map head xss : merge (map tail xss)
+
 newton :: Poly (Alg QinC) -> Alg QinC -> [Alg QinC]
 newton f = iterate step
     where
