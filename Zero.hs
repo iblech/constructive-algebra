@@ -50,7 +50,10 @@ windingNumber z z' p
     alpha = fromComplexRational z + iX * fromComplexRational (z' - z)
 
 toRealPoly :: Poly (Alg QinC) -> Poly (Alg QinR)
-toRealPoly = fmap (\(MkAlg (MkIC z p)) -> MkAlg (MkIC (realComponent z) p))
+toRealPoly = fmap toReal
+
+toReal :: Alg QinC -> Alg QinR
+toReal (MkAlg (MkIC z p)) = MkAlg (MkIC (realComponent z) p)
 
 -- FIXME: Codeduplikation
 windingNumber' :: ComplexRational -> ComplexRational -> Poly ComplexRational -> Rational
@@ -165,3 +168,18 @@ subdivisions radius p =
     mid (Cell0 z0)    = z0
     mid (Cell1 z0 z1) = (z0 + z1) / 2
     mid (Cell2 z0 z1) = (z0 + z1) / 2
+
+newton :: Poly (Alg QinC) -> Alg QinC -> [Alg QinC]
+newton f = iterate step
+    where
+    step x = x - eval x f / eval x (derivative f)
+
+-- Thm. 6.9
+newtonPrecondition :: Poly (Alg QinC) -> Alg QinC -> Bool
+newtonPrecondition f x = and ineqs
+    where
+    etaSq    = magnSq (eval x f / eval x (derivative f))
+    magnSq z = toReal $ z * conjugate z
+    ineqs    = zipWith (\c k -> magnSq c * (fromInteger 8)^(2*k-2) * etaSq^(k-1) <= c1sq) (drop 2 cs) [2..]
+    cs       = coeffs f
+    c1sq     = magnSq (cs !! 1)
