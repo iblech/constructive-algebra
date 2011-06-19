@@ -10,10 +10,10 @@ import Zero
 
 --main = print =<< runR (ex exPoly)
 main = print $ sum
-    [ windingNumber (-imagUnit) (4-imagUnit) ex
-    , windingNumber (4-imagUnit) (4 + imagUnit) ex
-    , windingNumber (4 + imagUnit) imagUnit ex
-    , windingNumber imagUnit (-imagUnit) ex
+    [ windingNumber (-4*imagUnit) (5-4*imagUnit) ex
+    , windingNumber (5-4*imagUnit) (5 + 4*imagUnit) ex
+    , windingNumber (5 + 4*imagUnit) (4*imagUnit) ex
+    , windingNumber (4*imagUnit) (-4*imagUnit) ex
     ]
 
 main' = do

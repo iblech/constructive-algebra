@@ -1,6 +1,7 @@
+{-# LANGUAGE PatternGuards, TupleSections #-}
 module Zero where
 
-import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum)
+import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, quotRem, gcd)
 import Polynomial
 import Ring
 import Field
@@ -43,29 +44,124 @@ index a b r s
 
 windingNumber :: ComplexRational -> ComplexRational -> Poly (Alg QinC) -> Rational
 windingNumber z z' p
-    = index zero unit (toReal $ realPart gamma) (toReal $ imagPart gamma) / 2
+    = index zero unit (toRealPoly $ realPart gamma) (toRealPoly $ imagPart gamma) / 2
     where
     gamma = compose p alpha
-    alpha = constant (fromBase' z) + iX * constant (fromBase' (z' - z))
-    toReal :: Poly (Alg QinC) -> Poly (Alg QinR)
-    toReal = fmap (\(MkAlg (MkIC z p)) -> MkAlg (MkIC (realComponent z) p))
-    fromBase' (u :+: v)
-        | v == 0    = fromRational u
-        | otherwise = MkAlg $ fromRational u + imagUnit * fromRational v
+    alpha = fromComplexRational z + iX * fromComplexRational (z' - z)
 
---windingNumber :: ComplexRational -> ComplexRational -> Poly (Alg QinC) -> Rational
+toRealPoly :: Poly (Alg QinC) -> Poly (Alg QinR)
+toRealPoly = fmap (\(MkAlg (MkIC z p)) -> MkAlg (MkIC (realComponent z) p))
+
+-- FIXME: Codeduplikation
+windingNumber' :: ComplexRational -> ComplexRational -> Poly ComplexRational -> Rational
 windingNumber' z z' p
     = index zero unit (fmap toReal $ realPart gamma) (fmap toReal $ imagPart gamma) / 2
     where
     gamma = compose p alpha
-    alpha = constant (fromBase' z) + iX * constant (fromBase' (z' - z))
-    fromBase' (u :+: v)
-        | v == 0    = fromRational u
-        | otherwise = fromRational u + imagUnit * fromRational v
+    alpha = fromComplexRational z + iX * fromComplexRational (z' - z)
     toReal (x :+: y) = x
 
 ex :: Poly (Alg QinC)
-ex = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3))  -- + fromInteger 4 * Polynomial.constant imagUnit))
+ex = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Polynomial.constant imagUnit))
 
 ex' :: Poly ComplexRational
 ex' = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3))  -- + fromInteger 4 * Polynomial.constant imagUnit))
+
+data Cell
+    = Cell0 ComplexRational
+    | Cell1 ComplexRational ComplexRational  -- Anfangs- und Endpunkt
+    | Cell2 ComplexRational ComplexRational  -- untere linke und obere rechte Ecke
+    deriving (Show,Eq)
+
+-- keine spez. Voraussetzungen, ohne Vielfachheit (1/2 auf Ecke)
+rootsOnSegment :: ComplexRational -> ComplexRational -> Poly (Alg QinC) -> Rational
+rootsOnSegment z0 z1 p = index zero unit (derivative f) f
+    where
+    gamma = compose p alpha
+    alpha = fromComplexRational z0 + iX * fromComplexRational (z1 - z0)
+    p1    = toRealPoly (realPart gamma)
+    p2    = toRealPoly (imagPart gamma)
+    f     = let (u,v,_,_) = gcd p1 p2 in u*p1 + v*p2
+
+-- keine Nullstellen auf Ecken, mit Vielfachheit (1/2 auf Kante)
+rootsOnRectangle :: ComplexRational -> ComplexRational -> Poly (Alg QinC) -> Rational
+rootsOnRectangle z0 z1 p = sum
+    [ windingNumber (realPart z0 + imagUnit * imagPart z0) (realPart z1 + imagUnit * imagPart z0) p
+    , windingNumber (realPart z1 + imagUnit * imagPart z0) (realPart z1 + imagUnit * imagPart z1) p
+    , windingNumber (realPart z1 + imagUnit * imagPart z1) (realPart z0 + imagUnit * imagPart z1) p
+    , windingNumber (realPart z0 + imagUnit * imagPart z1) (realPart z0 + imagUnit * imagPart z0) p
+    ]
+
+fromComplexRational :: (Ring a, AllowsRationalEmbedding a, AllowsConjugation a) => ComplexRational -> a
+fromComplexRational (u :+: v) = fromRational u + imagUnit * fromRational v
+
+divide :: Poly (Alg QinC) -> Cell -> [(Poly (Alg QinC), Cell)]
+divide p (Cell0 z0)    = [(undefined, Cell0 z0)]
+divide p (Cell1 z0 z1) = rs
+    where
+    mid = (z0 + z1) / 2
+    n1  = rootsOnSegment z0  mid p
+    n2  = rootsOnSegment mid z1  p
+    rs  = concat
+        [ guard (n1 /= 0) >> return (p, Cell1 z0  mid)
+        , guard (n2 /= 0) >> return (p, Cell1 mid z1)
+        ]
+divide p c@(Cell2 z0 z1)
+    | (v:_) <- zeros = (undefined, Cell0 v) : divide (fst $ p `quotRem` (iX - fromComplexRational v)) c
+    | otherwise = map (p,) $ concat
+        [ guard (n1245 /= 0) >> return (Cell2 u1 u5)
+        , guard (n2356 /= 0) >> return (Cell2 u2 u6)
+        , guard (n4578 /= 0) >> return (Cell2 u4 u8)
+        , guard (n5689 /= 0) >> return (Cell2 u5 u9)
+        , guard (n25   /= 0) >> return (Cell1 u2 u5)
+        , guard (n56   /= 0) >> return (Cell1 u5 u6)
+        , guard (n58   /= 0) >> return (Cell1 u5 u8)
+        , guard (n45   /= 0) >> return (Cell1 u4 u5)
+        ]
+    where
+    mid   = (z0 + z1) / 2
+    zeros = filter ((== zero) . (flip eval p) . fromComplexRational) [u2, u4, u5, u6, u8]
+    p'    = fst $ p `quotRem` (iX - fromComplexRational mid)
+    (u1,u2,u3,u4,u5,u6,u7,u8,u9) =
+        ( realPart z0  + imagUnit * imagPart z0
+        , realPart mid + imagUnit * imagPart z0
+        , realPart z1  + imagUnit * imagPart z0
+        , realPart z0  + imagUnit * imagPart mid
+        , realPart mid + imagUnit * imagPart mid
+        , realPart z1  + imagUnit * imagPart mid
+        , realPart z0  + imagUnit * imagPart z1
+        , realPart mid + imagUnit * imagPart z1
+        , realPart z1  + imagUnit * imagPart z1
+        )
+    n1245 = rootsOnRectangle u1 u5 p - (n12 + n25 + n45 + n14) / 2
+    n2356 = rootsOnRectangle u2 u6 p - (n23 + n36 + n56 + n25) / 2
+    n4578 = rootsOnRectangle u4 u8 p - (n45 + n58 + n78 + n47) / 2
+    n5689 = rootsOnRectangle u5 u9 p - (n56 + n69 + n89 + n58) / 2
+    n12   = rootsOnSegment u1 u2 p
+    n25   = rootsOnSegment u2 u5 p
+    n45   = rootsOnSegment u4 u5 p
+    n14   = rootsOnSegment u1 u4 p
+    n23   = rootsOnSegment u2 u3 p
+    n36   = rootsOnSegment u3 u6 p
+    n56   = rootsOnSegment u5 u6 p
+    n58   = rootsOnSegment u5 u8 p
+    n78   = rootsOnSegment u7 u8 p
+    n47   = rootsOnSegment u4 u7 p
+    n69   = rootsOnSegment u6 u9 p
+    n89   = rootsOnSegment u8 u9 p
+
+-- Für normierte Polynome!
+cauchyRadius :: Poly Complex -> R Rational
+cauchyRadius (MkPoly zs) = liftM ((1 +) . maximum) (mapM Complex.magnitudeUpperBound zs)
+-- erfüllt: |z| <= cauchyRadius f für alle Nullstellen z von f
+
+-- für normierte Polynome (müssen nicht separabel sein)
+subdivisions :: Rational -> Poly (Alg QinC) -> [[ComplexRational]]
+subdivisions radius p =
+    map (map (mid . snd)) $ iterate (concatMap (uncurry divide)) [(p', Cell2 z0 (-z0))]
+    where
+    z0         = -(radius :+: radius)
+    (_,_,p',_) = gcd p (derivative p)
+    mid (Cell0 z0)    = z0
+    mid (Cell1 z0 z1) = (z0 + z1) / 2
+    mid (Cell2 z0 z1) = (z0 + z1) / 2

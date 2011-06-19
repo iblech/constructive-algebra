@@ -15,7 +15,7 @@ data ComplexRational = !Rational :+: !Rational
 instance Show ComplexRational where
     show (x :+: y)
 	| y == 0    = show x
-	| otherwise = show x ++ " + i*" ++ show y
+	| otherwise = "(" ++ show x ++ "+i" ++ show y ++ ")"
 
 instance Ring ComplexRational where
     (x :+: y) + (x' :+: y') = (x + x') :+: (y + y')

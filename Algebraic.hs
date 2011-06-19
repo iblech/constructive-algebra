@@ -65,7 +65,6 @@ sqrt2 = MkAlg $ IC.sqrt2
 invert :: Alg QinC -> R (Maybe (Alg QinC))
 invert (MkAlg z) = do
     -- Optimierung
-    --R $ putStrLn $ "OPTI!: " ++ show (approx z)
     foundApartness <- go [1,10]
     if foundApartness then return $ Just zInv else do
     if null bounds then return Nothing else do
@@ -98,6 +97,8 @@ invert' (MkAlg (MkIC z p)) = liftM (fmap f) (invert (MkAlg (MkIC (unReal z) p)))
     f :: Alg QinC -> Alg QinR
     f (MkAlg (MkIC z' p')) = MkAlg (MkIC (MkReal z') p')
 
+-- FIXME: hier die rationale Zahl zurückgeben
+-- FIXME: auch isComplexRational implementieren
 isRational :: Alg QinC -> Bool
 isRational z =
     any (== z) nonNegativeCandidates ||

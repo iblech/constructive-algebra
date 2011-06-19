@@ -42,6 +42,7 @@ instance (Field a, Eq a, IntegralDomain a) => EuclideanRing a where
     quotRem x y = (x/y, zero)
 -}
 
+-- FIXME: Dokumentation!
 gcd :: (EuclideanRing a, Eq a) => a -> a -> (a,a,a,a)
 gcd = gcd_ (\_ _ -> Nothing)
 
