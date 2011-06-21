@@ -102,6 +102,13 @@ prodPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 
     (n,m)   = (length xs - 1, length ys - 1)
     (xs,ys) = (coeffs f, coeffs g)
 
+-- Voraussetzung: Polynome müssen normiert sein
+{-
+solPolynomial :: (Ring a, Determinantable (Poly a)) => Poly a -> [Poly a] -> Poly a
+solPolynomial p gs = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
+    where
+    indices = [ (i,
+-}
 
 goldenRatio :: IC QinC
 goldenRatio = MkIC Complex.goldenRatio (iX^2 - iX - unit)
