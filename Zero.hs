@@ -15,6 +15,7 @@ import ComplexRational
 import Real
 import IntegralClosure
 import Debug.Trace
+import Data.List hiding (sum)
 
 -- Zählt die Anzahl von Vorzeichenänderungen, Wechsel von/auf 0 zählen 1/2
 signChanges :: (Ring a, Ord a) => [a] -> Rational
@@ -70,8 +71,8 @@ ex = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4
 ex2 :: Poly (Alg QinC)
 ex2 = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Polynomial.constant imagUnit)) * (iX + negate (fromInteger 9 + fromInteger 8 * Polynomial.constant imagUnit))
 
-ex' :: Poly ComplexRational
-ex' = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3))  -- + fromInteger 4 * Polynomial.constant imagUnit))
+ex' :: Poly (Alg QinC)
+ex' = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 4))  -- + fromInteger 4 * Polynomial.constant imagUnit))
 
 data Cell
     = Cell0 ComplexRational
@@ -186,6 +187,19 @@ roots' f radius = go 1 iters
 	| all ((<= 1 / fromInteger n) . fst) cs = map snd cs : go (succ n) (cs:css)
 	| otherwise                             = trace ("ZZ:" ++ show (map (approx . number . unAlg . snd) cs)) $ go n css
     iters = subdivisions' radius f
+
+rootsEx :: Poly Rational -> Int -> [[Alg QinC]] -> [Alg QinC]
+rootsEx f n = go 1
+    where
+    go :: Int -> [[Alg QinC]] -> [Alg QinC]
+    go i xss
+        | length (head xss) == n
+        = flip map [0..n-1] $ \i -> MkAlg $ flip MkIC (fmap F f) $ MkComplex $ \j -> do
+            R $ putStrLn $ "AAA:" ++ show i ++ "," ++ show j
+            let z = number $ unAlg (xss `genericIndex` ((2*j - fromIntegral i) `max` 2) !! i)
+            unComplex z (2*j)
+        | otherwise
+        = go (i + 1) (tail xss)
 
 -- muss separabel sein!
 subdivisions' :: Rational -> Poly (Alg QinC) -> [[(Rational, Alg QinC)]]
