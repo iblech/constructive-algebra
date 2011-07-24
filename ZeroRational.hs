@@ -201,7 +201,6 @@ subdivisions' radius f = go (17/12 * radius) [(f, Cell2 ((-radius) :+: (-radius)
 	process :: Poly (ComplexRational) -> Cell -> [[(Rational, ComplexRational)]]
 	process f' (Cell0 z0) = repeat [(0, fromComplexRational z0)]
 	process f' c
-            -- XXX: Verhindert, dass bei ex' beide Nullstellen gefunden werden!
 	    | newtonPrecondition f' (mid c)
 	    = tail $ zipWith (\n x -> [(r / 2^(2^n - 1), x)]) [0..] (newton f' (mid c))
 	    | otherwise
@@ -219,12 +218,12 @@ newton f = iterate step
     step x = x - eval x f / eval x (derivative f)
 
 -- Thm. 6.9
--- XXX: falsche Basis verwendet! Koeffizienten in Entwicklung um x!
+-- Vor.: derivative f x != 0, f x != 0.
 newtonPrecondition :: Poly (ComplexRational) -> ComplexRational -> Bool
 newtonPrecondition f x = and ineqs
     where
     etaSq    = magnSq (eval x f / eval x (derivative f))
     magnSq z = toReal $ z * conjugate z
     ineqs    = zipWith (\c k -> magnSq c * (fromInteger 8)^(2*k-2) * etaSq^(k-1) <= c1sq) (drop 2 cs) [2..]
-    cs       = coeffs f
+    cs       = coeffs $ compose f (iX + fromComplexRational x)
     c1sq     = magnSq (cs !! 1)

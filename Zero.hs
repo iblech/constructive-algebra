@@ -228,11 +228,13 @@ newton f = iterate step
     step x = x - eval x f / eval x (derivative f)
 
 -- Thm. 6.9
+-- Vor.: derivative f x != 0, f x != 0.
+-- XXX: evtl. weitere
 newtonPrecondition :: Poly (Alg QinC) -> Alg QinC -> Bool
 newtonPrecondition f x = and ineqs
     where
     etaSq    = magnSq (eval x f / eval x (derivative f))
     magnSq z = toReal $ z * conjugate z
     ineqs    = zipWith (\c k -> magnSq c * (fromInteger 8)^(2*k-2) * etaSq^(k-1) <= c1sq) (drop 2 cs) [2..]
-    cs       = coeffs f
+    cs       = coeffs $ compose f (iX + fromComplexRational x)
     c1sq     = magnSq (cs !! 1)
