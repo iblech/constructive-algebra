@@ -62,6 +62,15 @@ ex2 = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 
 ex' :: Poly ComplexRational
 ex' = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 4))  -- + fromInteger 4 * Polynomial.constant imagUnit))
 
+ex3 :: Poly Rational
+ex3 = iX^2 + fromInteger 1
+
+ex4 :: Poly Rational
+ex4 = iX^2 + iX + fromInteger 1
+
+ex5 :: Poly Rational
+ex5 = iX^6 - fromInteger 1
+
 data Cell
     = Cell0 ComplexRational
     | Cell1 ComplexRational ComplexRational  -- Anfangs- und Endpunkt
@@ -90,10 +99,28 @@ rootsOnRectangle z0 z1 p = sum
 fromComplexRational :: (Ring a, AllowsRationalEmbedding a, AllowsConjugation a) => ComplexRational -> a
 fromComplexRational (u :+: v) = fromRational u + imagUnit * fromRational v
 
+-- Voraussetzung:
+-- Bei 1- und 2-Zellen liegen keine Nullstellen auf den Eckpunkten.
+-- Das Polynom ist separabel.
+-- Liefert:
+-- Liste von Zellen derart, dass:
+-- (1) Die Voraussetzung für diese wieder erfüllt sind,
+-- (2) jede Zelle in ihrem Inneren mindestens eine Nullstelle enthält und
+-- (3) jede Nullstelle des Inneren der Ausgangszelle in einem
+--     der Inneren der Zellen liegt.
+-- Dabei ist das "Innere" einer 0-Zelle sie selbst, das einer 1- und
+-- 2-Zelle sie ohne ihren Rand.
+-- Speziell: Liegen auf dem Rand einer 2-Zelle Nullstellen, werden keine
+-- Zellen für den Rand erzeugt.
 divide :: Poly ComplexRational -> Cell -> [(Poly ComplexRational, Cell)]
-divide p (Cell0 z0)    = [(undefined, Cell0 z0)]
-divide p (Cell1 z0 z1) = rs
+divide p (Cell0 z0)
+    | eval z0 p == 0 = [(p, Cell0 z0)]
+    | otherwise      = []
+divide p c@(Cell1 z0 z1)
+    | eval mid p == 0 = (p, Cell0 mid) : divide (fst $ p `quotRem` (iX - fromComplexRational mid)) c
+    | otherwise       = rs
     where
+    zeros = filter ((== zero) . (flip eval p) . fromComplexRational) [z0, mid, z1]
     mid = (z0 + z1) / 2
     n1  = rootsOnSegment z0  mid p
     n2  = rootsOnSegment mid z1  p
@@ -102,7 +129,10 @@ divide p (Cell1 z0 z1) = rs
         , guard (n2 /= 0) >> return (p, Cell1 mid z1)
         ]
 divide p c@(Cell2 z0 z1)
-    | (v:_) <- zeros = (undefined, Cell0 v) : divide (fst $ p `quotRem` (iX - fromComplexRational v)) c
+    | eval mid p == 0 = (p, Cell0 mid) : divide (fst $ p `quotRem` (iX - fromComplexRational mid)) c
+    -- Hier nicht die 0-Zelle generieren! Denn diese liegen ja auf dem Rand, dafür
+    -- dürfen keine Zellen generiert werden.
+    | (v:_) <- zeros = divide (fst $ p `quotRem` (iX - fromComplexRational v)) c
     | otherwise = map (p,) $ concat
         [ guard (n1245 /= 0) >> return (Cell2 u1 u5)
         , guard (n2356 /= 0) >> return (Cell2 u2 u6)
@@ -115,7 +145,7 @@ divide p c@(Cell2 z0 z1)
         ]
     where
     mid   = (z0 + z1) / 2
-    zeros = filter ((== zero) . (flip eval p) . fromComplexRational) [u2, u4, u5, u6, u8]
+    zeros = filter ((== zero) . (flip eval p) . fromComplexRational) [u2, u4, u6, u8]
     p'    = fst $ p `quotRem` (iX - fromComplexRational mid)
     (u1,u2,u3,u4,u5,u6,u7,u8,u9) =
         ( realPart z0  + imagUnit * imagPart z0
@@ -146,8 +176,8 @@ divide p c@(Cell2 z0 z1)
     n89   = rootsOnSegment u8 u9 p
 
 -- Für normierte Polynome!
-cauchyRadius :: Poly ComplexRational -> R Rational
-cauchyRadius (MkPoly zs) = return . ((1 +) . maximum) $ map ComplexRational.magnitudeUpperBound zs
+cauchyRadius :: Poly ComplexRational -> Rational
+cauchyRadius (MkPoly zs) = ((1 +) . maximum) $ map ComplexRational.magnitudeUpperBound zs
 -- erfüllt: |z| <= cauchyRadius f für alle Nullstellen z von f
 
 -- für normierte Polynome (müssen nicht separabel sein)
@@ -161,11 +191,13 @@ subdivisions radius p =
     mid (Cell1 z0 z1) = (z0 + z1) / 2
     mid (Cell2 z0 z1) = (z0 + z1) / 2
 
+{-
 -- muss normiert, aber nicht unbedingt separabel sein
 roots :: Poly ComplexRational -> R [[ComplexRational]]
 roots f = return . roots' f' =<< cauchyRadius f
     where
     (_,_,f',_) = gcd f (derivative f)
+-}
 
 -- muss separabel, aber nicht unbed. normiert sein
 roots' :: Poly ComplexRational -> Rational -> [[ComplexRational]]
@@ -175,6 +207,24 @@ roots' f radius = go 1 iters
 	| all ((<= 1 / fromInteger n) . fst) cs = map snd cs : go (succ n) (cs:css)
 	| otherwise                             = go n css
     iters = subdivisions' radius f
+
+-- muss weder normiert noch separabel sein
+rootsA :: Poly Rational -> [Alg QinC]
+rootsA f = flip map [0..n-1] $ \i ->
+    let iters' = go i 1 iters in MkAlg $ MkIC (MkComplex (return . (genericIndex iters'))) (fmap F f'')
+    where
+    (_,_,f',_) = gcd f (derivative f)
+    f''        = norm f'
+    n          = fromIntegral (degree f') :: Int
+    iters      = subdivisions' (cauchyRadius $ fmap fromRational f') $ fmap fromRational f'
+    go :: Int -> Integer -> [[(Rational,ComplexRational)]] -> [ComplexRational]
+    go i j (cs:css)
+	| length cs /= n
+	= go i j css
+	| fst (cs !! i) <= 1 / fromInteger j
+	= snd (cs !! i) : go i (j + 1) (cs:css)
+	| otherwise
+	= go i j css 
 
 {-
 rootsEx :: Poly Rational -> Int -> [[ComplexRational]] -> [ComplexRational]
@@ -220,7 +270,7 @@ newton f = iterate step
 -- Thm. 6.9
 -- Vor.: derivative f x != 0, f x != 0.
 newtonPrecondition :: Poly (ComplexRational) -> ComplexRational -> Bool
-newtonPrecondition f x = and ineqs
+newtonPrecondition f x = eval x f /= 0 && eval x (derivative f) /= 0 && and ineqs
     where
     etaSq    = magnSq (eval x f / eval x (derivative f))
     magnSq z = toReal $ z * conjugate z
