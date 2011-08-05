@@ -69,7 +69,7 @@ ex4 :: Poly Rational
 ex4 = iX^2 + iX + fromInteger 1
 
 ex5 :: Poly Rational
-ex5 = iX^6 - fromInteger 1
+ex5 = iX^3 - fromInteger 1
 
 data Cell
     = Cell0 ComplexRational

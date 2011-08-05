@@ -121,3 +121,9 @@ sum = sum' zero
     where
     sum' acc []     = acc
     sum' acc (x:xs) = sum' (acc + x) xs
+
+product :: (Ring a) => [a] -> a
+product = product' unit
+    where
+    product' acc []     = acc
+    product' acc (x:xs) = product' (acc * x) xs

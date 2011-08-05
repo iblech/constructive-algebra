@@ -2,7 +2,7 @@
 StandaloneDeriving, UndecidableInstances, FlexibleInstances #-}
 module Algebraic where
 
-import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational)
+import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem)
 import qualified IntegralClosure as IC
 import IntegralClosure hiding (goldenRatio,sqrt2)
 import Complex hiding (goldenRatio,sqrt2)
@@ -17,6 +17,7 @@ import Control.Monad
 import Control.Arrow
 import Data.Ratio
 import Real
+import Euclidean
 
 -- früher: newtype (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => Alg m =
 -- dann Codomain m ~ Complex weggelassen
@@ -97,16 +98,28 @@ invert' (MkAlg (MkIC z p)) = liftM (fmap f) (invert (MkAlg (MkIC (unReal z) p)))
     f :: Alg QinC -> Alg QinR
     f (MkAlg (MkIC z' p')) = MkAlg (MkIC (MkReal z') p')
 
--- FIXME: hier die rationale Zahl zurückgeben
 -- FIXME: auch isComplexRational implementieren
-isRational :: Alg QinC -> Bool
-isRational z =
-    any (== z) nonNegativeCandidates ||
-    any (== z) (map negate nonNegativeCandidates)
+-- FIXME: UNBEDINGT Korrektheit mit Skript überprüfen!
+isRational :: Alg QinC -> Maybe Rational
+isRational z = listToMaybe $ do
+    -- zero dafür, falls elim weiter unten etwas machen musste
+    cand <- [zero] ++ nonNegativeCandidates ++ map negate nonNegativeCandidates
+    guard $ fromRational cand == z
+    return cand
     where
-    p     = polynomial . unAlg $ z
+    p     = elim . polynomial . unAlg $ z
     (r,s) = (numerator &&& denominator) . unF $ eval 0 p
     nonNegativeCandidates =
-        [ fromRational (p % q)
-        | p <- positiveDivisors r , q <- positiveDivisors s
+        [ p % q
+        | p <- positiveDivisors r, q <- positiveDivisors s
         ]
+    elim q
+	| eval 0 q == zero = elim . fst $ q `quotRem` iX
+	| otherwise        = q
+
+isRationalPoly :: Poly (Alg QinC) -> Maybe (Poly Rational)
+isRationalPoly p
+    | all isJust as = Just . MkPoly $ map fromJust as
+    | otherwise     = Nothing
+    where
+    as = map isRational $ coeffs p

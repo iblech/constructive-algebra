@@ -25,7 +25,7 @@ makeZeroInFirstCol :: (EuclideanRing a, Eq a, TestableAssociatedness a) => Nat -
 makeZeroInFirstCol i = transpose . makeZeroInFirstRow i . transpose
 
 diagonalForm :: (EuclideanRing a, Eq a, TestableAssociatedness a) => Matrix a -> [a]
-diagonalForm mtx = dia mtx --trace (show $ elems . unMatrix $ mtx) $ dia mtx
+diagonalForm mtx = dia mtx  --trace (show $ elems . unMatrix $ mtx) $ dia mtx
 
 dia mtx
     | numRows mtx == 0 || numCols mtx == 0
@@ -68,7 +68,7 @@ instance (EuclideanRing a, Eq a, TestableAssociatedness a) => Determinantable (E
     determinant = detER
 
 instance (Show a, Field a, Eq a, IntegralDomain a) => Determinantable (Poly (F a)) where
-    determinant = t . unER . determinant . fmap ER . t'
+    determinant = unER . determinant . fmap ER  -- t . ... . t'
 
 t x = trace (show x) $ x
 t' x = trace (pretty $ fmap (/= zero) $ unMatrix x) $ x
@@ -96,7 +96,7 @@ exMatrix :: Matrix Rational
 exMatrix = MkMatrix $ listArray ((0,0), (3,3)) [18, 12, 24, 42,  7, 9, 7, 3,  10, 12, 7, 10, 4, -6, 9, 10]
 
 exMatrix2 :: Matrix Rational
-exMatrix2 = MkMatrix $ listArray ((0,0), (3,3)) $ repeat 1 -- [1,1,1, 1,1,1, 1,1,1]
+exMatrix2 = MkMatrix $ listArray ((0,0), (3,3)) $ repeat 1  -- [1,1,1, 1,1,1, 1,1,1]
 
 exMatrix3 :: Matrix Integer
 exMatrix3 = MkMatrix $ listArray ((0,0), (3,3)) [18, 12, 24, 42,  7, 9, 7, 3,  10, 12, 7, 10, 4, -6, 9, 10]

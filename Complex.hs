@@ -40,6 +40,7 @@ instance Ring Complex where
             R . putStrLn $ "k für " ++ show (approx f)
 	    fBound <- magnitudeUpperBound f
 	    gBound <- magnitudeUpperBound g
+            R . putStrLn $ "k für-Erg " ++ show (roundUp $ fBound + gBound + 1)
 	    return $ roundUp $ fBound + gBound + 1
     negate (MkRat f) = MkRat (negate f)
     negate (MkComplex f) = MkComplex $ liftM negate . f
