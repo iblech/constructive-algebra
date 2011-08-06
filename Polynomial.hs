@@ -4,7 +4,7 @@ module Polynomial where
 import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, recip, fromInteger, fromRational, quotRem, sum)
 import qualified Prelude as P
 import Test.QuickCheck
-import Data.List (intersperse, genericLength)
+import Data.List (intersperse, genericLength, foldl')
 import NumericHelper
 import Ring
 import Field
@@ -25,6 +25,13 @@ simplify = MkPoly . reverse . dropWhile (not . couldBeNonZero) . reverse . unPol
 
 eval :: (Ring a) => a -> Poly a -> a
 eval x = foldr (\c val -> c + x*val) zero . unPoly
+--eval x = foldl' ((+) . (* x)) zero . reverse . unPoly
+-- was ist besser?
+
+-- Evaluiert in 0, semantisch gleich eval zero.
+eval0 :: (Ring a) => Poly a -> a
+eval0 (MkPoly [])     = zero
+eval0 (MkPoly (a:as)) = a
 
 instance (Ring a, Eq a, Show a) => Show (Poly a) where
   show f = addZero $ concat . intersperse " + " $ filter (not . null) $ zipWith join (unPoly $ canonForm f) vars
@@ -114,3 +121,8 @@ derivative (MkPoly xs)
 -- compose f g = "f . g"
 compose :: (Ring a) => Poly a -> Poly a -> Poly a
 compose (MkPoly as) g = sum $ zipWith (\a i -> a .* g^i) as (map fromInteger [0..])
+
+multiplicity :: (Ring a, Eq a) => a -> Poly a -> Int
+multiplicity x f
+    | eval x f == zero = 1 + multiplicity x (derivative f)
+    | otherwise        = 0

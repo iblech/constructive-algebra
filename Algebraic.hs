@@ -102,20 +102,16 @@ invert' (MkAlg (MkIC z p)) = liftM (fmap f) (invert (MkAlg (MkIC (unReal z) p)))
 -- FIXME: UNBEDINGT Korrektheit mit Skript überprüfen!
 isRational :: Alg QinC -> Maybe Rational
 isRational z = listToMaybe $ do
-    -- zero dafür, falls elim weiter unten etwas machen musste
     cand <- [zero] ++ nonNegativeCandidates ++ map negate nonNegativeCandidates
     guard $ fromRational cand == z
     return cand
     where
-    p     = elim . polynomial . unAlg $ z
-    (r,s) = (numerator &&& denominator) . unF $ eval 0 p
+    p     = MkPoly . dropWhile (== 0) . coeffs . polynomial . unAlg $ z
+    (r,s) = (numerator &&& denominator) . unF $ eval0 p
     nonNegativeCandidates =
         [ p % q
         | p <- positiveDivisors r, q <- positiveDivisors s
         ]
-    elim q
-	| eval 0 q == zero = elim . fst $ q `quotRem` iX
-	| otherwise        = q
 
 isRationalPoly :: Poly (Alg QinC) -> Maybe (Poly Rational)
 isRationalPoly p

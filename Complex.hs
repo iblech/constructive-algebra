@@ -37,10 +37,10 @@ instance Ring Complex where
     f * g = MkComplex $ \n -> liftM2 (*) (unComplex f (n*k)) (unComplex g (n*k))
 	where
 	k = unsafeRunR $ do
-            R . putStrLn $ "k für " ++ show (approx f)
+            --R . putStrLn $ "k für " ++ show (approx f)
 	    fBound <- magnitudeUpperBound f
 	    gBound <- magnitudeUpperBound g
-            R . putStrLn $ "k für-Erg " ++ show (roundUp $ fBound + gBound + 1)
+            --R . putStrLn $ "k für-Erg " ++ show (roundUp $ fBound + gBound + 1)
 	    return $ roundUp $ fBound + gBound + 1
     negate (MkRat f) = MkRat (negate f)
     negate (MkComplex f) = MkComplex $ liftM negate . f

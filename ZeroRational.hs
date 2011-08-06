@@ -208,7 +208,7 @@ roots' f radius = go 1 iters
 	| otherwise                             = go n css
     iters = subdivisions' radius f
 
--- muss weder normiert noch separabel sein
+-- muss weder normiert noch separabel sein; liefert aber die Nst. ohne Vf.
 rootsA :: Poly Rational -> [Alg QinC]
 rootsA f = flip map [0..n-1] $ \i ->
     let iters' = go i 1 iters in MkAlg $ MkIC (MkComplex (return . (genericIndex iters'))) (fmap F f'')
@@ -225,6 +225,10 @@ rootsA f = flip map [0..n-1] $ \i ->
 	= snd (cs !! i) : go i (j + 1) (cs:css)
 	| otherwise
 	= go i j css 
+
+-- muss weder normiert noch separabel sein; liefert die Nst. mit Vf.
+rootsA' :: Poly Rational -> [Alg QinC]
+rootsA' f = concatMap (\x -> replicate (multiplicity x (fmap fromRational f)) x) (rootsA f)
 
 {-
 rootsEx :: Poly Rational -> Int -> [[ComplexRational]] -> [ComplexRational]

@@ -12,23 +12,27 @@ import Control.Monad
 import Complex hiding (constant)
 import IntegralClosure
 import Field
+import Debug.Trace
 
 -- soll mind. Grad 1 haben
+-- XXX: Korrekt? Beachte: rootsA statt rootsA' verwendet!
 isIrreducible :: Poly Rational -> Maybe (Poly Rational,Poly Rational)
 isIrreducible f
-    | degree f <  1 = error "isirreducible"
-    | degree f == 1 = Nothing
+    | n <  1 = error "isIrreducible"
+    | n == 1 = Nothing
     | otherwise
     = listToMaybe $ do
 	xs <- subsequences zeros
 	guard $ not $ null xs
-	guard $ length xs /= length zeros
+	guard $ length xs /= fromIntegral n
+	trace (show $ map approx xs) $ do
 	let p = product $ map ((iX -) . constant) xs
 	Just p' <- [isRationalPoly p]
 	let q = fst $ f `quotRem` p'  -- ist das ineffizient?
 	return (p',q)
     where
-    zeros  = rootsA f
+    zeros = rootsA f
+    n     = degree f
 
 -- soll mind. Grad 1 haben
 irreducibleFactors :: Poly Rational -> [Poly Rational]
