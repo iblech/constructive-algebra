@@ -6,15 +6,18 @@ import Ring
 import Complex hiding (goldenRatio)
 import Algebraic as A
 import Control.Monad
-import Zero
+import ZeroRational
+import Factoring
 
 --main = print =<< runR (ex exPoly)
-main = print $ sum
-    [ windingNumber (-4*imagUnit) (5-4*imagUnit) ex
-    , windingNumber (5-4*imagUnit) (5 + 4*imagUnit) ex
-    , windingNumber (5 + 4*imagUnit) (4*imagUnit) ex
-    , windingNumber (4*imagUnit) (-4*imagUnit) ex
-    ]
+main = do
+    print $ sum
+        [ windingNumber (-4*imagUnit) (5-4*imagUnit) ex
+        , windingNumber (5-4*imagUnit) (5 + 4*imagUnit) ex
+        , windingNumber (5 + 4*imagUnit) (4*imagUnit) ex
+        , windingNumber (4*imagUnit) (-4*imagUnit) ex
+        ]
+    print $ minimalPolynomial $ imagUnit^6
 
 main' = do
     let z1 = IntegralClosure.sqrt2
