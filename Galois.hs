@@ -10,6 +10,7 @@ import Complex
 import IntegralClosure
 import ZeroRational
 import Algebraic
+import Control.Monad
 
 linearResolvent :: (Ring a, Eq a) => [a] -> [Integer]
 linearResolvent xs = head $ filter isResolvent candidates
@@ -31,15 +32,19 @@ primitiveElement :: Alg QinC -> Alg QinC -> Alg QinC
 primitiveElement x y = x + fromInteger lambda * y
     where
     -- Nst. der Minimalpolynome würden genügen
-    exceptions :: [Rational]
+    -- kann man hier optimieren? gar nicht x',y' ausrechnen, sondern
+    -- nur das Polynom (von z = (x'-x) / (y-y'))?
+    exceptions :: [Alg QinC]
     exceptions = do
-        x' <- rootsA . polynomial . unAlg $ x
-        y' <- rootsA . polynomial . unAlg $ y
-        let z = (x' - x) / (y - y')
-        -- Test unnötig, da wir eh nur rat. Zahlen nehmen [Just q] <- [isRational
-        -- XXX: doch, test besser? oder lieber isEqualToRational?
-        return q
-    lambda = head $ filter ((`notElem` exceptions) . fromInteger) [(0::Integer)..]
+        x' <- rootsA . fmap unF . polynomial . unAlg $ x
+        y' <- rootsA . fmap unF . polynomial . unAlg $ y
+	guard $ y /= y'
+        return $ (x' - x) / (y - y')
+    lambda = head $ filter (\q -> all (necessarilyNotEquals (fromInteger q)) exceptions) [(0::Integer)..]
+    -- necessarilyNotEquals p z == True ==> p != z,
+    -- Rückrichtung gilt nicht.
+    necessarilyNotEquals :: Rational -> Alg QinC -> Bool
+    necessarilyNotEquals p z = eval p (fmap unF $ polynomial (unAlg z)) /= 0
 
 merge :: [a] -> [a] -> [a]
 merge []     ys = ys
