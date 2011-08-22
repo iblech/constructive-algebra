@@ -8,9 +8,16 @@ import Algebraic as A
 import Control.Monad
 import ZeroRational
 import Factoring
+import Galois
+import Data.List (map)
+import Polynomial
 
 --main = print =<< runR (ex exPoly)
-main = do
+--main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^4 - fromRational 10*iX^2 + unit
+main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^3 + unit
+
+
+main' = do
     print $ sum
         [ windingNumber (-4*imagUnit) (5-4*imagUnit) ex
         , windingNumber (5-4*imagUnit) (5 + 4*imagUnit) ex
@@ -19,7 +26,7 @@ main = do
         ]
     print $ minimalPolynomial $ imagUnit^6
 
-main' = do
+main'' = do
     let z1 = IntegralClosure.sqrt2
 	z2 = z1 * z1
 	z3 = z2 * z1

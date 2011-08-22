@@ -71,6 +71,9 @@ ex4 = iX^2 + iX + fromInteger 1
 ex5 :: Poly Rational
 ex5 = iX^3 - fromInteger 1
 
+ex6 :: Poly Rational
+ex6 = constant (1/8)*iX^3 + constant (1/2)*iX
+
 data Cell
     = Cell0 ComplexRational
     | Cell1 ComplexRational ComplexRational  -- Anfangs- und Endpunkt
@@ -176,6 +179,7 @@ divide p c@(Cell2 z0 z1)
     n89   = rootsOnSegment u8 u9 p
 
 -- Für normierte Polynome!
+-- XXX Fehler bei Nicht-Normiertheit bringen
 cauchyRadius :: Poly ComplexRational -> Rational
 cauchyRadius (MkPoly zs) = ((1 +) . maximum) $ map ComplexRational.magnitudeUpperBound zs
 -- erfüllt: |z| <= cauchyRadius f für alle Nullstellen z von f
@@ -216,7 +220,7 @@ rootsA f = flip map [0..n-1] $ \i ->
     (_,_,f',_) = gcd f (derivative f)
     f''        = norm f'
     n          = fromIntegral (degree f') :: Int
-    iters      = subdivisions' (cauchyRadius $ fmap fromRational f') $ fmap fromRational f'
+    iters      = subdivisions' (cauchyRadius $ fmap fromRational f'') $ fmap fromRational f''
     go :: Int -> Integer -> [[(Rational,ComplexRational)]] -> [ComplexRational]
     go i j (cs:css)
 	| length cs /= n
@@ -279,5 +283,6 @@ newtonPrecondition f x = eval x f /= 0 && eval x (derivative f) /= 0 && and ineq
     etaSq    = magnSq (eval x f / eval x (derivative f))
     magnSq z = toReal $ z * conjugate z
     ineqs    = zipWith (\c k -> magnSq c * (fromInteger 8)^(2*k-2) * etaSq^(k-1) <= c1sq) (drop 2 cs) [2..]
+    -- XXX: okay, dass coeffs Nuller liefert?
     cs       = coeffs $ compose f (iX + fromComplexRational x)
     c1sq     = magnSq (cs !! 1)

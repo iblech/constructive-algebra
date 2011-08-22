@@ -5,12 +5,13 @@ import Ring
 import Field
 import Polynomial
 import Factoring
-import Data.List hiding (sum)
-import Complex
+import Data.List hiding (sum,product)
+import Complex hiding (constant)
 import IntegralClosure
 import ZeroRational
 import Algebraic
 import Control.Monad
+import Data.Maybe
 
 linearResolvent :: (Ring a, Eq a) => [a] -> [Integer]
 linearResolvent xs = head $ filter isResolvent candidates
@@ -18,6 +19,7 @@ linearResolvent xs = head $ filter isResolvent candidates
     isResolvent cs = arePairwiseDistinct $ map (evalResolvent cs) $ permutations xs
     candidates  = crossN $ replicate (length xs) allIntegers
     allIntegers = 0 : go 1 where go n = n : (-n) : go (n + 1)
+    -- XXX ab 1, zur Effizienzsteigerung?
     arePairwiseDistinct [] = True
     arePairwiseDistinct (x:xs) = all (x /=) xs && arePairwiseDistinct xs
 
@@ -27,6 +29,15 @@ evalResolvent cs ys = sum $ zipWith (*) (map fromInteger cs) ys
 -- müssen genau die Nst. eines normierten sep. Polynoms sein
 primitiveElement' :: (Ring a, Eq a) => [a] -> a
 primitiveElement' xs = evalResolvent (linearResolvent xs) xs
+
+-- Eingabe müssen genau die Nst. eines normierten sep. Polynoms sein
+galoisGroup :: [Alg QinC] -> [[Alg QinC]]
+galoisGroup xs = fst . head $ filter (isJust . isRationalPoly . poly . snd) (zip cands vss)
+    where
+    res     = linearResolvent xs
+    cands   = tail . subsequences . permutations $ xs
+    vss     = tail . subsequences . map (simplify' . evalResolvent res) . permutations $ xs
+    poly vs = product $ map ((iX -) . constant) vs
 
 primitiveElement :: Alg QinC -> Alg QinC -> Alg QinC
 primitiveElement x y = x + fromInteger lambda * y
@@ -40,11 +51,12 @@ primitiveElement x y = x + fromInteger lambda * y
         y' <- rootsA . fmap unF . polynomial . unAlg $ y
 	guard $ y /= y'
         return $ (x' - x) / (y - y')
-    lambda = head $ filter (\q -> all (necessarilyNotEquals (fromInteger q)) exceptions) [(0::Integer)..]
+    lambda = head $ filter (\q -> all (necessarilyNotEquals (fromInteger q)) exceptions) [(5::Integer)..]
     -- necessarilyNotEquals p z == True ==> p != z,
     -- Rückrichtung gilt nicht.
     necessarilyNotEquals :: Rational -> Alg QinC -> Bool
-    necessarilyNotEquals p z = eval p (fmap unF $ polynomial (unAlg z)) /= 0
+    --necessarilyNotEquals p z = eval p (fmap unF $ polynomial (unAlg z)) /= 0
+    necessarilyNotEquals p z = fromRational p /= z
 
 merge :: [a] -> [a] -> [a]
 merge []     ys = ys

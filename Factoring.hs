@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards #-}
 module Factoring where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
@@ -15,24 +16,26 @@ import Field
 import Debug.Trace
 
 -- soll mind. Grad 1 haben
--- XXX: Korrekt? Beachte: rootsA statt rootsA' verwendet!
 isIrreducible :: Poly Rational -> Maybe (Poly Rational,Poly Rational)
 isIrreducible f
     | n <  1 = error "isIrreducible"
     | n == 1 = Nothing
+    | degree d > 0 = Just (d,s)
     | otherwise
     = listToMaybe $ do
 	xs <- subsequences zeros
 	guard $ not $ null xs
 	guard $ length xs /= fromIntegral n
-	trace (show $ map approx xs) $ do
+	--trace (show $ map approx xs) $ do
 	let p = product $ map ((iX -) . constant) xs
 	Just p' <- [isRationalPoly p]
-	let q = fst $ f `quotRem` p'  -- ist das ineffizient?
+	let q = fst $ f `quotRem` p'
 	return (p',q)
     where
     zeros = rootsA f
     n     = degree f
+    (u,v,s,t) = gcd f (derivative f)
+    d         = u*f + v*derivative f
 
 -- soll mind. Grad 1 haben
 irreducibleFactors :: Poly Rational -> [Poly Rational]
@@ -53,3 +56,7 @@ minimalPolynomial z = go (fmap unF . polynomial . unAlg $ z)
 	| otherwise     = case isIrreducible f of
 	    Nothing    -> f
 	    Just (p,q) -> if eval z (fmap fromRational p) == zero then go p else go q
+
+-- XXX: besserer name!
+simplify' :: Alg QinC -> Alg QinC
+simplify' z = MkAlg $ MkIC (number . unAlg $ z) (fmap F $ minimalPolynomial z)

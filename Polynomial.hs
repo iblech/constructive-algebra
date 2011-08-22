@@ -126,3 +126,10 @@ multiplicity :: (Ring a, Eq a) => a -> Poly a -> Int
 multiplicity x f
     | eval x f == zero = 1 + multiplicity x (derivative f)
     | otherwise        = 0
+
+-- Zur Effizienzsteigerung.
+-- Es muss gelten: couldBeNotX p == False  ==>  p == iX.
+couldBeNotX :: (Ring a) => Poly a -> P.Bool
+couldBeNotX (MkPoly [a0,a1])
+    | couldBeNonZero a0 == False && couldBeNonZero (a1 - unit) == False = False
+couldBeNotX _ = True

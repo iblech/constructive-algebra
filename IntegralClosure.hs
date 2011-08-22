@@ -31,7 +31,10 @@ fromBase x = r
 
 instance (RingMorphism m, Determinantable (Poly (Domain m))) => Ring (IC m) where
     MkIC x p + MkIC x' p' = MkIC (x + x') (sumPolynomial p p')
-    MkIC x p * MkIC x' p' = MkIC (x * x') (prodPolynomial p p')
+    MkIC x p * MkIC x' p'
+        | couldBeNotX p  == False = zero
+        | couldBeNotX p' == False = zero
+        | otherwise               = MkIC (x * x') (prodPolynomial p p')
 
     negate (MkIC x p) = MkIC (negate x) (MkPoly as)
 	where

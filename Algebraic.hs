@@ -37,8 +37,12 @@ instance Field (Alg QinC) where
 
 instance IntegralDomain (Alg QinC)
 
+-- XXX: effizienz/uneleganz abwiegen
 instance Eq (Alg QinC) where
-    x == y = unsafeRunR . liftM isNothing $ invert (x - y)
+    x == y
+        | eval0 (polynomial (unAlg z)) /= zero = False
+        | otherwise       = unsafeRunR . liftM isNothing $ invert z
+        where z = x - y
 
 instance Field (Alg QinR) where
     recip z = unsafeRunR $ do
@@ -74,6 +78,7 @@ invert (MkAlg z) = do
         then return Nothing
         else return $ Just zInv
     where
+    -- XXX: okay, dass coeffs Nuller liefert?
     as     = coeffs (polynomial z)
     bs     = dropWhile (== 0) as
     k      = length bs
@@ -106,6 +111,7 @@ isRational z = listToMaybe $ do
     guard $ fromRational cand == z
     return cand
     where
+    -- XXX: okay, dass coeffs Nuller liefert?
     p     = MkPoly . dropWhile (== 0) . coeffs . polynomial . unAlg $ z
     (r,s) = (numerator &&& denominator) . unF $ eval0 p
     nonNegativeCandidates =
