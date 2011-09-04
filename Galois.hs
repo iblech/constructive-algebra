@@ -18,10 +18,11 @@ linearResolvent xs = head $ filter isResolvent candidates
     where
     isResolvent cs = arePairwiseDistinct $ map (evalResolvent cs) $ permutations xs
     candidates  = crossN $ replicate (length xs) allIntegers
-    allIntegers = 0 : go 1 where go n = n : (-n) : go (n + 1)
     -- XXX ab 1, zur Effizienzsteigerung?
     arePairwiseDistinct [] = True
     arePairwiseDistinct (x:xs) = all (x /=) xs && arePairwiseDistinct xs
+
+allIntegers = 0 : go 1 where go n = n : (-n) : go (n + 1)
 
 evalResolvent :: (Ring a) => [Integer] -> [a] -> a
 evalResolvent cs ys = sum $ zipWith (*) (map fromInteger cs) ys
@@ -39,19 +40,20 @@ galoisGroup xs = fst . head $ filter (isJust . isRationalPoly . poly . snd) (zip
     vss     = tail . subsequences . map (simplify' . evalResolvent res) . permutations $ xs
     poly vs = product $ map ((iX -) . constant) vs
 
+-- für Effizienz sollte y kleineren Grad haben.
 primitiveElement :: Alg QinC -> Alg QinC -> Alg QinC
 primitiveElement x y = x + fromInteger lambda * y
     where
     -- Nst. der Minimalpolynome würden genügen
     -- kann man hier optimieren? gar nicht x',y' ausrechnen, sondern
     -- nur das Polynom (von z = (x'-x) / (y-y'))?
-    exceptions :: [Alg QinC]
+    exceptions :: [Integer]
     exceptions = do
         x' <- rootsA . fmap unF . polynomial . unAlg $ x
         y' <- rootsA . fmap unF . polynomial . unAlg $ y
-	guard $ y /= y'
-        return $ (x' - x) / (y - y')
-    lambda = head $ filter (\q -> all (necessarilyNotEquals (fromInteger q)) exceptions) [(5::Integer)..]
+        r  <- maybeToList $ unsafeRunR $ invert (y - y')
+        maybeToList $ isApproxInteger $ (x' - x) * r
+    lambda = head $ filter (\q -> all (/= q) exceptions) allIntegers
     -- necessarilyNotEquals p z == True ==> p != z,
     -- Rückrichtung gilt nicht.
     necessarilyNotEquals :: Rational -> Alg QinC -> Bool

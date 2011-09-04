@@ -14,7 +14,9 @@ import Polynomial
 
 --main = print =<< runR (ex exPoly)
 --main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^4 - fromRational 10*iX^2 + unit
-main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^3 + unit
+--main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^3 + unit
+
+main = print $ irreducibleFactors $ iX^6 - (unit+unit+unit)
 
 
 main' = do

@@ -19,6 +19,7 @@ import ComplexRational
 
 import Data.Array
 
+-- Polynom soll normiert sein
 data (RingMorphism m) => IC m =
     MkIC { number :: Codomain m, polynomial :: Poly (Domain m) }
 

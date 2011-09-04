@@ -1,8 +1,8 @@
 {-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, FlexibleContexts,
-StandaloneDeriving, UndecidableInstances, FlexibleInstances #-}
+StandaloneDeriving, UndecidableInstances, FlexibleInstances, PatternGuards #-}
 module Algebraic where
 
-import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem)
+import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger)
 import qualified IntegralClosure as IC
 import IntegralClosure hiding (goldenRatio,sqrt2)
 import Complex hiding (goldenRatio,sqrt2)
@@ -18,6 +18,8 @@ import Control.Arrow
 import Data.Ratio
 import Real
 import Euclidean
+import Debug.Trace
+import Control.Exception
 
 -- früher: newtype (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => Alg m =
 -- dann Codomain m ~ Complex weggelassen
@@ -70,7 +72,8 @@ sqrt2 = MkAlg $ IC.sqrt2
 invert :: Alg QinC -> R (Maybe (Alg QinC))
 invert (MkAlg z) = do
     -- Optimierung
-    foundApartness <- go [1,10]
+    trace ("invert: " ++ show (approx z)) $ do
+    foundApartness <- go [1,10,100]
     if foundApartness then return $ Just zInv else do
     if null bounds then return Nothing else do
     zeroTest <- magnitudeZeroTestR (roundDownToRecipN $ unF (minimum bounds)) (number z)
@@ -103,25 +106,59 @@ invert' (MkAlg (MkIC z p)) = liftM (fmap f) (invert (MkAlg (MkIC (unReal z) p)))
     f :: Alg QinC -> Alg QinR
     f (MkAlg (MkIC z' p')) = MkAlg (MkIC (MkReal z') p')
 
+tr q = trace ("ANTW.: " ++ show q) $ q
 -- FIXME: auch isComplexRational implementieren
 -- FIXME: UNBEDINGT Korrektheit mit Skript überprüfen!
 isRational :: Alg QinC -> Maybe Rational
+--isRational z = tr $ trace ("PRÜFE AUF RAT.: " ++ show (approx z, polynomial . unAlg $ z)) $ listToMaybe $ do
 isRational z = listToMaybe $ do
     cand <- [zero] ++ nonNegativeCandidates ++ map negate nonNegativeCandidates
     guard $ fromRational cand == z
     return cand
     where
     -- XXX: okay, dass coeffs Nuller liefert?
-    p     = MkPoly . dropWhile (== 0) . coeffs . polynomial . unAlg $ z
-    (r,s) = (numerator &&& denominator) . unF $ eval0 p
+    as    = dropWhile (== 0) . coeffs . polynomial . unAlg $ z
+    (r,s) = (numerator &&& denominator) $ unF $ head as
     nonNegativeCandidates =
         [ p % q
         | p <- positiveDivisors r, q <- positiveDivisors s
         ]
 
+isInteger :: Alg QinC -> Maybe Integer
+isInteger z
+    | Nothing <- isApproxInteger z = Nothing
+    | otherwise                    = do
+        r <- isRational z
+        let (n,m) = numerator r `quotRem` denominator r
+        if m == 0 then return n else Nothing
+
+-- ist z = a mit a ganzzahlig, dann ist isApproxInteger z = a.
+-- liefert näheste ganze Zahl.
+isApproxInteger :: Alg QinC -> Maybe Integer
+isApproxInteger z = unsafeRunR $ do
+    --zz <- R $ evaluate (approx z)
+    --R $ putStrLn $ "isApproxInteger: " ++ show zz
+    z0@(q :+: _) <- unComplex (number . unAlg $ z) 100
+    let (a,b) = (floor q, ceiling q)
+    --R $ putStrLn $ "isApproxInteger! " ++ show zz
+    _ <- R $ evaluate a
+    _ <- R $ evaluate b
+    if magnitudeSq (z0 - fromInteger a) <= 1/100^2 then return $ Just a else do
+    if magnitudeSq (z0 - fromInteger b) <= 1/100^2 then return $ Just b else do
+    return Nothing
+
 isRationalPoly :: Poly (Alg QinC) -> Maybe (Poly Rational)
-isRationalPoly p
+isRationalPoly = isGoodPoly isRational
+
+isIntegerPoly :: Poly (Alg QinC) -> Maybe (Poly Integer)
+isIntegerPoly = isGoodPoly isInteger
+
+isApproxIntegerPoly :: Poly (Alg QinC) -> Maybe (Poly Integer)
+isApproxIntegerPoly = isGoodPoly isApproxInteger
+
+isGoodPoly :: (Alg QinC -> Maybe a) -> Poly (Alg QinC) -> Maybe (Poly a)
+isGoodPoly isGood p
     | all isJust as = Just . MkPoly $ map fromJust as
     | otherwise     = Nothing
     where
-    as = map isRational $ coeffs p
+    as = map isGood $ coeffs p

@@ -86,6 +86,7 @@ traceEvals :: String -> Complex -> Complex
 traceEvals name (MkRat f) = MkRat f
 traceEvals name (MkComplex f) = MkComplex $ \n -> R $ do
     n' <- evaluate n
+    hPutStrLn stderr $ printf "%-5s_%2d = ..." ("[" ++ name ++ "]") n' -- (show (x' :+: y'))
     x :+: y <- runR (f n')
     x' <- evaluate x
     y' <- evaluate y

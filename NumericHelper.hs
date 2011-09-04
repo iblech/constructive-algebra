@@ -1,10 +1,11 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
 module NumericHelper where
 
 import Prelude hiding (gcd)
 import Data.List
 import Debug.Trace
 import Data.Ratio
+import Primes
 
 {-
 -- Hat Eigenschaft: Für a rational, a > 0 konvergiert rootSeq streng
@@ -50,9 +51,25 @@ ilogb b n | n < 0      = ilogb b (- n)
                                     then bin b lo av
                                     else bin b av hi
 
--- Liefert alle positiven Teiler, auch 1 und die Zahl selbst.
--- XXX: Naiv implementiert!
+-- Vor.: Zahl nicht 0.
+primeFactors :: Integer -> [(Integer,Integer)]
+primeFactors = multiplicities . group . go primes
+    where
+    go (p:ps) n
+        | abs n == 1           = []
+        | (q,0) <- quotRem n p = p : go (p:ps) q
+        | otherwise            = go ps n
+    multiplicities = map (\xs -> (head xs, genericLength xs))
+
+-- Liefert alle positiven Teiler, auch 1 und den (Betrag der) Zahl selbst.
+--positiveDivisors n
+--    | n == 0    = error "divisors 0"
+--    | otherwise = [x | x <- [1..abs n], n `mod` x == 0]
 positiveDivisors :: Integer -> [Integer]
-positiveDivisors n
-    | n == 0    = error "divisors 0"
-    | otherwise = [x | x <- [1..abs n], n `mod` x == 0]
+positiveDivisors = sort . go . primeFactors
+    where
+    go []         = [1]
+    go ((p,n):ps) = do
+        i <- [0..n]
+        q <- go ps
+        return $ p^i * q

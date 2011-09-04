@@ -14,28 +14,40 @@ import Complex hiding (constant)
 import IntegralClosure
 import Field
 import Debug.Trace
+import Data.Ratio
 
 -- soll mind. Grad 1 haben
 isIrreducible :: Poly Rational -> Maybe (Poly Rational,Poly Rational)
 isIrreducible f
     | n <  1 = error "isIrreducible"
     | n == 1 = Nothing
-    | degree d > 0 = Just (d,s)
+    | degree d > 0 = Just (s,d)  -- den kleineren Faktor vorne
     | otherwise
     = listToMaybe $ do
-	xs <- subsequences zeros
+	xs <- sortBy (\xs ys -> length xs `compare` length ys) $ subsequences zeros
 	guard $ not $ null xs
-	guard $ length xs /= fromIntegral n
-	--trace (show $ map approx xs) $ do
+	guard $ length xs <= fromIntegral n `div` 2
+	trace ("BEARBEITE: " ++ show (map approx xs)) $ do
 	let p = product $ map ((iX -) . constant) xs
-	Just p' <- [isRationalPoly p]
-	let q = fst $ f `quotRem` p'
+	Just p' <- [isGoodPoly p]
+	trace ("isgood is: " ++ show (map approx xs)) $ do
+	let (q,r) = f `quotRem` p'
+        -- für isApproxIntegerPoly
+        guard $ r == zero
 	return (p',q)
     where
+    --zeros = zipWith (\z i -> traceEvals' ("root" ++ show i) z) (rootsA f) [0..]
     zeros = rootsA f
+    traceEvals' str (MkAlg (MkIC z p)) = MkAlg (MkIC (traceEvals str z) p)
     n     = degree f
     (u,v,s,t) = gcd f (derivative f)
     d         = u*f + v*derivative f
+    isGoodPoly
+        | all isInteger' (coeffs f) && leadingCoeff f == 1
+        = fmap (fmap fromInteger) . isApproxIntegerPoly
+        | otherwise
+        = isRationalPoly
+    isInteger' q = numerator q `mod` denominator q == 0
 
 -- soll mind. Grad 1 haben
 irreducibleFactors :: Poly Rational -> [Poly Rational]
@@ -43,9 +55,16 @@ irreducibleFactors f
     | Nothing <- test
     = [f]
     | Just (p,q) <- test
-    = irreducibleFactors p ++ irreducibleFactors q
+    -- = irreducibleFactors p ++ irreducibleFactors q
+    = let ps = irreducibleFactors p in ps ++ go p ps q
     where
     test = isIrreducible f
+    -- auf gut Glück denselben Faktor nochmal versuchen
+    go p ps q =
+        let (r,s) = q `quotRem` p
+        in  if s == zero
+                then ps ++ go p ps r
+                else if degree q < 1 then [] else irreducibleFactors q
 
 -- sollte dann in allen Vorkommen von z das MP liefern (überschreiben)
 minimalPolynomial :: Alg QinC -> Poly Rational
