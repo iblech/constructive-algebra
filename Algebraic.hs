@@ -133,16 +133,17 @@ isInteger z
         if m == 0 then return n else Nothing
 
 -- ist z = a mit a ganzzahlig, dann ist isApproxInteger z = a.
--- liefert näheste ganze Zahl.
+-- liefert sonst näheste ganze Zahl, oder Nothing, falls klar ist, dass z nicht
+-- ganzzahlig sein kann.
 isApproxInteger :: Alg QinC -> Maybe Integer
 isApproxInteger z = unsafeRunR $ do
     --zz <- R $ evaluate (approx z)
     --R $ putStrLn $ "isApproxInteger: " ++ show zz
     z0@(q :+: _) <- unComplex (number . unAlg $ z) 100
     let (a,b) = (floor q, ceiling q)
-    --R $ putStrLn $ "isApproxInteger! " ++ show zz
-    _ <- R $ evaluate a
-    _ <- R $ evaluate b
+    --_ <- R $ evaluate a
+    --_ <- R $ evaluate b
+    --R $ putStrLn $ "isApproxInteger! " ++ show zz ++ ": " ++ show (magnitudeSq (z0 - fromInteger a) <= 1/100^2 || magnitudeSq (z0 - fromInteger b) <= 1/100^2)
     if magnitudeSq (z0 - fromInteger a) <= 1/100^2 then return $ Just a else do
     if magnitudeSq (z0 - fromInteger b) <= 1/100^2 then return $ Just b else do
     return Nothing

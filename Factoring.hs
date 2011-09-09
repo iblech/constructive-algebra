@@ -22,6 +22,9 @@ isIrreducible f
     | n <  1 = error "isIrreducible"
     | n == 1 = Nothing
     | degree d > 0 = Just (s,d)  -- den kleineren Faktor vorne
+    | leadingCoeff f /= 1 = do
+        (g,h) <- isIrreducible (norm f)
+        return (g, leadingCoeff f .* h)
     | otherwise
     = listToMaybe $ do
 	xs <- sortBy (\xs ys -> length xs `compare` length ys) $ subsequences zeros
@@ -30,7 +33,7 @@ isIrreducible f
 	trace ("BEARBEITE: " ++ show (map approx xs)) $ do
 	let p = product $ map ((iX -) . constant) xs
 	Just p' <- [isGoodPoly p]
-	trace ("isgood is: " ++ show (map approx xs)) $ do
+	--trace ("isgood is: " ++ show (map approx xs)) $ do
 	let (q,r) = f `quotRem` p'
         -- für isApproxIntegerPoly
         guard $ r == zero
@@ -39,7 +42,8 @@ isIrreducible f
     --zeros = zipWith (\z i -> traceEvals' ("root" ++ show i) z) (rootsA f) [0..]
     zeros = rootsA f
     traceEvals' str (MkAlg (MkIC z p)) = MkAlg (MkIC (traceEvals str z) p)
-    n     = degree f
+    n         = degree f
+    aN        = leadingCoeff f
     (u,v,s,t) = gcd f (derivative f)
     d         = u*f + v*derivative f
     isGoodPoly
@@ -63,8 +67,9 @@ irreducibleFactors f
     go p ps q =
         let (r,s) = q `quotRem` p
         in  if s == zero
-                then ps ++ go p ps r
+                then (mapFirst ((leadingCoeff q / leadingCoeff p) .*) ps) ++ go p ps r
                 else if degree q < 1 then [] else irreducibleFactors q
+    mapFirst f (x:xs) = f x:xs
 
 -- sollte dann in allen Vorkommen von z das MP liefern (überschreiben)
 minimalPolynomial :: Alg QinC -> Poly Rational

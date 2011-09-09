@@ -16,7 +16,7 @@ import Polynomial
 --main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^4 - fromRational 10*iX^2 + unit
 --main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^3 + unit
 
-main = print $ irreducibleFactors $ iX^6 - (unit+unit+unit)
+main = print $ irreducibleFactors $ iX^9 - fromInteger 243 * iX^3
 
 
 main' = do

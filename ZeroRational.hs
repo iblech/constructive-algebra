@@ -215,7 +215,7 @@ roots' f radius = go 1 iters
 -- muss weder normiert noch separabel sein; liefert aber die Nst. ohne Vf.
 rootsA :: Poly Rational -> [Alg QinC]
 rootsA f = flip map [0..n-1] $ \i ->
-    let iters' = go i 1 iters in MkAlg $ MkIC (MkComplex (return . (genericIndex iters'))) (fmap F f'')
+    let iters' = go i 1 iters in MkAlg $ MkIC (traceEvals ("zero" ++ show i) $ MkComplex (return . (genericIndex iters'))) (fmap F f'')
     where
     (_,_,f',_) = gcd f (derivative f)
     f''        = norm f'
@@ -259,9 +259,15 @@ subdivisions' radius f = go (17/12 * radius) [(f, Cell2 ((-radius) :+: (-radius)
 	process :: Poly (ComplexRational) -> Cell -> [[(Rational, ComplexRational)]]
 	process f' (Cell0 z0) = repeat [(0, fromComplexRational z0)]
 	process f' c
+            -- XXX: Vorerst Newton ausgestellt.
+            -- Grund: Zähler und Nenner riesig! Zieht Berechnungstempo enorm runter.
+            -- Beispiel: Zerlegung in irred. Faktoren von X^9 - 243 X^3 mit
+            -- Newton: etwas mehr als zwei Minuten, ohne Newton: etwa 17 Sekunden.
+            {-
 	    | newtonPrecondition f' (mid c)
 	    = tail $ zipWith (\n x -> [(r / 2^(2^n - 1), x)]) [0..] (newton f' (mid c))
 	    | otherwise
+            -}
 	    = go (r/2) $ divide f' c
     mid (Cell0 z0)    = fromComplexRational $ z0
     mid (Cell1 z0 z1) = fromComplexRational $ (z0 + z1) / 2

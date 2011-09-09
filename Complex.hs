@@ -2,6 +2,7 @@
 module Complex where
 
 import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, abs)
+import qualified Prelude as P
 import Control.Monad (liftM, liftM2)
 import ComplexRational hiding (magnitudeUpperBound)
 import qualified ComplexRational as ComplexRational
@@ -15,6 +16,7 @@ import System.IO
 import Control.Exception
 import Text.Printf
 import Debug.Trace
+import System.Time
 
 newtype R a = R { runR :: IO a }
     deriving (Functor,Monad)
@@ -83,7 +85,9 @@ approx' eps (MkRat f) = return f
 approx' eps (MkComplex f) = f $ ceiling (recip eps)
 
 traceEvals :: String -> Complex -> Complex
-traceEvals name (MkRat f) = MkRat f
+traceEvals _ = id
+{-
+traceEvals name (MkRat     f) = MkRat f
 traceEvals name (MkComplex f) = MkComplex $ \n -> R $ do
     n' <- evaluate n
     hPutStrLn stderr $ printf "%-5s_%2d = ..." ("[" ++ name ++ "]") n' -- (show (x' :+: y'))
@@ -91,6 +95,19 @@ traceEvals name (MkComplex f) = MkComplex $ \n -> R $ do
     x' <- evaluate x
     y' <- evaluate y
     hPutStrLn stderr $ printf "%-5s_%2d = %s" ("[" ++ name ++ "]") n' (show (x' :+: y'))
+    return (x' :+: y')
+-}
+
+timeEvals :: String -> Complex -> Complex
+timeEvals name (MkRat f)     = MkRat f
+timeEvals name (MkComplex f) = MkComplex $ \n -> R $ do
+    n' <- evaluate n
+    t0 <- getClockTime
+    x :+: y <- runR (f n')
+    x'      <- evaluate x
+    y'      <- evaluate y
+    t1 <- getClockTime
+    hPutStrLn stderr $ printf "%s: %f\n" name ((P./(10 P.^12 :: Double)) $ P.fromInteger $ tdPicosec $ diffClockTimes t1 t0)
     return (x' :+: y')
 
 instance Apartness Complex where
