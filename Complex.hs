@@ -63,7 +63,7 @@ instance AllowsRationalEmbedding Complex where
     fromRational = MkRat . fromRational
 
 instance ApproxFloating Complex where
-    approx = approx . unsafeRunR . ($ 1000) . unComplex
+    approx = approx . unsafeRunR . ($ 100) . unComplex
 
 data QinC
 instance RingMorphism QinC where

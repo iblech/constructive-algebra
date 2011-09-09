@@ -15,6 +15,7 @@ import IntegralClosure
 import Field
 import Debug.Trace
 import Data.Ratio
+import System.IO.Unsafe
 
 -- soll mind. Grad 1 haben
 isIrreducible :: Poly Rational -> Maybe (Poly Rational,Poly Rational)
@@ -72,14 +73,33 @@ irreducibleFactors f
     mapFirst f (x:xs) = f x:xs
 
 -- sollte dann in allen Vorkommen von z das MP liefern (überschreiben)
+{- Spezifikation:
 minimalPolynomial :: Alg QinC -> Poly Rational
 minimalPolynomial z = go (fmap unF . polynomial . unAlg $ z)
     where
     go f
-	| degree f <= 1 = f
+	| degree f <= 1 = norm f
 	| otherwise     = case isIrreducible f of
-	    Nothing    -> f
+	    Nothing    -> norm f
 	    Just (p,q) -> if eval z (fmap fromRational p) == zero then go p else go q
+funktioniert auch, ist aber sehr langsam in der Nullprüfung
+(Ganzheitsgleichungen haben hohen Grad...)
+-}
+minimalPolynomial :: Alg QinC -> Poly Rational
+minimalPolynomial z = unsafePerformIO . runR $ go 1
+    where
+    f         = polynomial . unAlg $ z
+    z'        = number     . unAlg $ z
+    (u,v,s,t) = gcd f (derivative f)
+    factors   = irreducibleFactors $ fmap unF s
+    isApproxZero n g = magnitudeZeroTestR n $ eval z' (fmap fromRational g)
+    go n = do
+        R $ putStrLn $ "go " ++ show n
+        candidates <- filterM (isApproxZero n) factors
+        R $ putStrLn $ "candidates: " ++ show candidates
+        if length candidates == 1
+            then return . norm $ head candidates
+            else go (2*n)
 
 -- XXX: besserer name!
 simplify' :: Alg QinC -> Alg QinC

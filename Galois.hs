@@ -45,8 +45,6 @@ primitiveElement :: Alg QinC -> Alg QinC -> Alg QinC
 primitiveElement x y = x + fromInteger lambda * y
     where
     -- Nst. der Minimalpolynome würden genügen
-    -- kann man hier optimieren? gar nicht x',y' ausrechnen, sondern
-    -- nur das Polynom (von z = (x'-x) / (y-y'))?
     exceptions :: [Integer]
     exceptions = do
         x' <- rootsA . fmap unF . polynomial . unAlg $ x
@@ -54,11 +52,6 @@ primitiveElement x y = x + fromInteger lambda * y
         r  <- maybeToList $ unsafeRunR $ invert (y - y')
         maybeToList $ isApproxInteger $ (x' - x) * r
     lambda = head $ filter (\q -> all (/= q) exceptions) allIntegers
-    -- necessarilyNotEquals p z == True ==> p != z,
-    -- Rückrichtung gilt nicht.
-    necessarilyNotEquals :: Rational -> Alg QinC -> Bool
-    --necessarilyNotEquals p z = eval p (fmap unF $ polynomial (unAlg z)) /= 0
-    necessarilyNotEquals p z = fromRational p /= z
 
 merge :: [a] -> [a] -> [a]
 merge []     ys = ys

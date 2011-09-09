@@ -16,6 +16,9 @@ import Real
 import IntegralClosure
 import Debug.Trace
 import Data.List hiding (sum)
+import System.IO.Unsafe
+import Data.IORef
+import qualified Data.Map as M
 
 -- Zählt die Anzahl von Vorzeichenänderungen, Wechsel von/auf 0 zählen 1/2
 signChanges :: (Ring a, Ord a) => [a] -> Rational
@@ -214,13 +217,28 @@ roots' f radius = go 1 iters
 
 -- muss weder normiert noch separabel sein; liefert aber die Nst. ohne Vf.
 rootsA :: Poly Rational -> [Alg QinC]
-rootsA f = flip map [0..n-1] $ \i ->
+rootsA f = unsafePerformIO $ do
+    table <- readIORef rootsMemoTable
+    case coeffs f `M.lookup` table of
+        Just zs -> return zs
+        Nothing -> do
+            let zs = rootsA_ f
+            writeIORef rootsMemoTable (M.insert (coeffs f) zs table)
+            return zs
+
+{-# NOINLINE rootsMemoTable #-}
+rootsMemoTable :: IORef (M.Map ([Rational]) [Alg QinC])
+rootsMemoTable = unsafePerformIO (newIORef M.empty)
+
+rootsA_ :: Poly Rational -> [Alg QinC]
+rootsA_ f = trace ("Suche Nullstellen von (r=" ++ show radius ++ "): " ++ show f) $ flip map [0..n-1] $ \i ->
     let iters' = go i 1 iters in MkAlg $ MkIC (traceEvals ("zero" ++ show i) $ MkComplex (return . (genericIndex iters'))) (fmap F f'')
     where
     (_,_,f',_) = gcd f (derivative f)
     f''        = norm f'
     n          = fromIntegral (degree f') :: Int
-    iters      = subdivisions' (cauchyRadius $ fmap fromRational f'') $ fmap fromRational f''
+    radius     = cauchyRadius $ fmap fromRational f''
+    iters      = subdivisions' radius $ fmap fromRational f''
     go :: Int -> Integer -> [[(Rational,ComplexRational)]] -> [ComplexRational]
     go i j (cs:css)
 	| length cs /= n
@@ -230,9 +248,11 @@ rootsA f = flip map [0..n-1] $ \i ->
 	| otherwise
 	= go i j css 
 
+{-
 -- muss weder normiert noch separabel sein; liefert die Nst. mit Vf.
 rootsA' :: Poly Rational -> [Alg QinC]
 rootsA' f = concatMap (\x -> replicate (multiplicity x (fmap fromRational f)) x) (rootsA f)
+-}
 
 {-
 rootsEx :: Poly Rational -> Int -> [[ComplexRational]] -> [ComplexRational]
@@ -274,6 +294,7 @@ subdivisions' radius f = go (17/12 * radius) [(f, Cell2 ((-radius) :+: (-radius)
     mid (Cell2 z0 z1) = fromComplexRational $ (z0 + z1) / 2
     merge :: [[[a]]] -> [[a]]
     merge xsss = concat (map head xsss) : merge (map tail xsss)
+    --divideTrace f1 c1 = trace ("divide: " ++ show c1) $ divide f1 c1
 -- das "lineare" Newton-Verfahren (Thm. 6.7) vielleicht auch einbauen!
 
 newton :: Poly (ComplexRational) -> ComplexRational -> [ComplexRational]
