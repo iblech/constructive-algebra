@@ -52,7 +52,7 @@ instance Ring Complex where
 
 instance AllowsConjugation Complex where
     conjugate (MkComplex f) = MkComplex $ liftM conjugate . f
-    conjugate (MkRat f) = MkRat (conjugate f)
+    conjugate (MkRat f)     = MkRat (conjugate f)
     imagUnit = MkRat imagUnit
 
 -- XXX: recip-Problematik...

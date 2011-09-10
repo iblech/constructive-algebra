@@ -47,6 +47,9 @@ class (Ring a) => AllowsConjugation a where
     conjugate :: a -> a
     imagUnit  :: a
 
+absSq :: (AllowsConjugation a) => a -> a
+absSq z = z * conjugate z
+
 realPart :: (AllowsConjugation a, AllowsRationalEmbedding a) => a -> a
 realPart z = fromRational (1 P./ 2) * (z + conjugate z)
 

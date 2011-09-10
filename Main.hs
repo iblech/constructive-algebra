@@ -18,7 +18,8 @@ import Field
 
 --main = print =<< runR (ex exPoly)
 --main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^4 - fromRational 10*iX^2 + unit
-main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^3 - unit - unit
+--main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^2 - unit - unit
+main = mapM_ print $ (map approx) $ rootsA $ iX^2 - unit - unit
 
 --main = print $ irreducibleFactors $ iX^9 - fromInteger 243 * iX^3
 --main = mapM_ print $ map (unsafePerformIO . runR . flip unComplex 10000 . number . unAlg) $ rootsA $ iX^3 - fromRational 2
