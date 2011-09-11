@@ -77,6 +77,21 @@ instance (Field a, Eq a, IntegralDomain a) => EuclideanRing (Poly a) where
               q'    = leadingCoeff f / leadingCoeff g .* (iX^(degree f - degree g))
           in  (q + q', r)
 
+-- Polynomdivision für den Fall, dass der Nenner ein normiertes Polynom ist
+normedQuotRem :: (Ring a, Eq a) => Poly a -> Poly a -> (Poly a, Poly a)
+normedQuotRem f g
+    | g' == zero              = error "normedQuotRem f zero"
+    | leadingCoeff g' /= unit = error "normedQuotRem f nicht-normiert"
+    | n < m                   = (zero, f')
+    | otherwise                               =
+        let (q,r) = normedQuotRem (f' - q' * g') g'
+            q'    = leadingCoeff f' .* (iX^(fromIntegral (n - m)))
+        in (q + q', r)
+    where
+    f' = canonForm f
+    g' = canonForm g
+    (n,m) = (length (unPoly f'), length (unPoly g'))
+
 instance (Field a, Eq a) => TestableAssociatedness (Poly a) where
     areAssociated p q
         | p == zero && q == zero = Just unit

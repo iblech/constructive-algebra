@@ -163,3 +163,9 @@ isGoodPoly isGood p
     | otherwise     = Nothing
     where
     as = map isGood $ coeffs p
+
+eval 
+    :: Alg QinC
+    -> Poly Rational
+    -> Alg QinC
+eval z p = MkAlg $ IC.eval (unAlg z) (fmap F p)

@@ -6,7 +6,6 @@ import Debug.Trace
 import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (^), negate)
 import Complex hiding (goldenRatio, sqrt2)
 import qualified Complex
-import qualified Prelude as P
 import NumericHelper
 import qualified Polynomial as P
 import Polynomial hiding (constant)
@@ -107,6 +106,26 @@ prodPolynomial f g = annihilatingPolynomial . fromArray $ listArray ((0,0), (len
     (xs,ys) = (coeffs f, coeffs g)
 
 -- Voraussetzung: Polynome müssen normiert sein
+-- evalPolynomial p f ist ein ann. Polynom für p(z), wobei f(z) = 0.
+-- Eq-Voraussetzung eigentlich überflüssig. XXX
+evalPolynomial :: (Ring a, Eq a, HaveAnnihilatingPolynomial a) => Poly a -> Poly a -> Poly a
+evalPolynomial p f =
+    annihilatingPolynomial . fromArray $ listArray ((0,0), (n-1, n-1)) elems
+    where
+    elems = concatMap row [0..fromIntegral (n-1)]
+    n     = pred . length . coeffs . canonForm $ f
+    row i = take n . (++ repeat zero) . coeffs . canonForm . snd $ normedQuotRem (p * iX^i) f
+
+eval 
+    :: (RingMorphism m, HaveAnnihilatingPolynomial (Domain m), Eq (Domain m))
+    => IC m
+    -> Poly (Domain m)
+    -> IC m
+eval z p =
+    MkIC (P.eval (number z) (fmap mor' p)) (evalPolynomial p (polynomial z))
+    where mor' = mor ((undefined :: IC m -> m) z)
+
+-- Voraussetzung: Polynome müssen normiert sein
 {-
 solPolynomial :: (Ring a, Determinantable (Poly a)) => Poly a -> [Poly a] -> Poly a
 solPolynomial p gs = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
@@ -125,5 +144,5 @@ instance AllowsConjugation (IC QinC) where
     imagUnit             = MkIC (constant imagUnit) (iX^2 + unit)
 
 verifyPolynomial :: (RingMorphism m) => IC m -> Codomain m
-verifyPolynomial z@(MkIC x f) = eval x $ fmap mor' f
+verifyPolynomial z@(MkIC x f) = P.eval x $ fmap mor' f
     where mor' = mor ((undefined :: IC m -> m) z)
