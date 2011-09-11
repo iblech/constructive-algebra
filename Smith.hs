@@ -86,7 +86,7 @@ instance (EuclideanRing a, Integral a, IntegralDomain a, TestableAssociatedness 
 -}
 
 instance (Field a, IntegralDomain a, Eq a) => HaveAnnihilatingPolynomial (F a) where
-    annihilatingPolynomial = charPoly
+    annihilatingPolynomial = minPoly
 
 t x = trace (show x) $ x
 t' x = trace (pretty $ fmap (/= zero) $ unMatrix x) $ x
