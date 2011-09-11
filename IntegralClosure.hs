@@ -30,7 +30,7 @@ fromBase x = r
     r    = MkIC (mor' x) (iX - P.constant x)
     mor' = mor ((undefined :: IC m -> m) r)
 
-instance (RingMorphism m, Determinantable (Poly (Domain m))) => Ring (IC m) where
+instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m)) => Ring (IC m) where
     MkIC x p + MkIC x' p' = MkIC (x + x') (sumPolynomial p p')
     MkIC x p * MkIC x' p'
         | couldBeNotX p  == False = zero
@@ -58,10 +58,10 @@ instance (RingMorphism m, Determinantable (Poly (Domain m))) => P.Num (IC m) whe
     fromInteger = fromInteger
 -}
 
-instance (RingMorphism m, IntegralDomain (Codomain m), Determinantable (Poly (Domain m))) =>
+instance (RingMorphism m, IntegralDomain (Codomain m), HaveAnnihilatingPolynomial (Domain m)) =>
     IntegralDomain (IC m)
 
-instance (RingMorphism m, Determinantable (Poly (Domain m)), AllowsRationalEmbedding (Domain m)) =>
+instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m), AllowsRationalEmbedding (Domain m)) =>
     AllowsRationalEmbedding (IC m) where
     fromRational r = z
         where
@@ -73,8 +73,8 @@ instance (RingMorphism m, ApproxFloating (Codomain m)) =>
     approx = approx . number
 
 -- Voraussetzung: Polynome müssen normiert sein
-sumPolynomial :: (Ring a, Determinantable (Poly a)) => Poly a -> Poly a -> Poly a
-sumPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
+sumPolynomial :: (Ring a, HaveAnnihilatingPolynomial a) => Poly a -> Poly a -> Poly a
+sumPolynomial f g = annihilatingPolynomial . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
     where
     elems = [arr ij kl | ij <- indices, kl <- indices ]
     arr (i,j) (k,l) = arr1 (i,j) (k,l) + arr2 (i,j) (k,l)
@@ -89,8 +89,8 @@ sumPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1
     (xs,ys) = (coeffs f, coeffs g)
 
 -- Voraussetzung: Polynome müssen normiert sein
-prodPolynomial :: (Ring a, Determinantable (Poly a)) => Poly a -> Poly a -> Poly a
-prodPolynomial f g = charPoly . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
+prodPolynomial :: (Ring a, HaveAnnihilatingPolynomial a) => Poly a -> Poly a -> Poly a
+prodPolynomial f g = annihilatingPolynomial . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
     where
     elems = [arr ij kl | ij <- indices, kl <- indices ]
     arr (i,j) (k,l)

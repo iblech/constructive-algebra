@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, MultiParamTypeClasses #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, MultiParamTypeClasses, TupleSections #-}
 module Matrix where
 
 import Prelude hiding ((!!))
@@ -7,6 +7,8 @@ import Polynomial
 
 import Data.Array
 import Control.Arrow ((***))
+import Data.List hiding (transpose, (!!))
+import Text.Printf
 
 type Nat = Int
 -- XXX reicht aus, Benchmarks von Nöten!
@@ -69,3 +71,8 @@ charPoly m@(MkMatrix arr) = determinant (MkMatrix arr' `asTypeOf` fmap constant 
     where
     arr' = accum (+) (fmap (negate . constant) arr) [((i,i), iX) | i <- [0..fst (snd (bounds arr))]]
 -}
+
+prettyMatrix :: (Show a) => Matrix a -> String
+prettyMatrix m =
+    concat . intersperse "\n" $ flip map [0..numRows m - 1] $ \i ->
+	concat . intersperse " " $ map (printf "%-10s" . show . (m !!) . (i,)) [0..numCols m - 1]

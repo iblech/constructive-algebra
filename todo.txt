@@ -6,3 +6,7 @@ verallgemeinern. Dann sind Real, Complex zwei Beispiele
 Subresultanten zur beschleunigten Berechnung von Summen/Produkt-Polynomen
 siehe http://www.alexhealy.net/papers/math250a.pdf
 referenziert wird: http://www.math.colostate.edu/~hulpke/paper/gov.pdf
+
+Bei Field: Abhängigkeit IntegralDomain hinzufügen
+
+AnnihilatingPoly für IntBer.
