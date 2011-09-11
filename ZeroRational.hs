@@ -7,13 +7,13 @@ import Ring
 import Field
 import NumericHelper
 import Complex hiding (constant)
-import Algebraic
+import Algebraic hiding (eval)
 import Polynomial
 import Control.Monad
 import Euclidean
 import ComplexRational
 import Real
-import IntegralClosure
+import IntegralClosure hiding (eval)
 import Debug.Trace
 import Data.List hiding (sum)
 import System.IO.Unsafe

@@ -8,10 +8,10 @@ import ZeroRational
 import Data.Maybe
 import Data.List hiding (product)
 import Euclidean
-import Algebraic
+import Algebraic hiding (eval)
 import Control.Monad
 import Complex hiding (constant)
-import IntegralClosure
+import IntegralClosure hiding (eval)
 import Field
 import Debug.Trace
 import Data.Ratio
