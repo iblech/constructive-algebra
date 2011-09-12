@@ -10,7 +10,6 @@ import Field
 import Polynomial
 import Complex hiding (goldenRatio, sqrt2)
 import IntegralClosure
-import RootFinding
 
 import Control.Monad
 import Test.QuickCheck

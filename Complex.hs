@@ -8,7 +8,6 @@ import ComplexRational hiding (magnitudeUpperBound)
 import qualified ComplexRational as ComplexRational
 import Ring
 import Field
-import Apartness
 import RingMorphism
 import NumericHelper
 import System.IO.Unsafe
@@ -110,9 +109,6 @@ timeEvals name (MkComplex f) = MkComplex $ \n -> R $ do
     hPutStrLn stderr $ printf "%s: %f\n" name ((P./(10 P.^12 :: Double)) $ P.fromInteger $ tdPicosec $ diffClockTimes t1 t0)
     return (x' :+: y')
 
-instance Apartness Complex where
-    magnitudeZeroTest n = unsafeRunR . magnitudeZeroTestR n
-
 -- Sei x komplex und n fest. Dann gilt stets:
 --   |x| > 0 oder |x| < 1/n.
 -- magnitudeZero n x gibt im ersten Fall False, im zweiten True zurück,
@@ -123,8 +119,8 @@ magnitudeZeroTestR :: Nat -> Complex -> R Bool
 magnitudeZeroTestR n (MkRat f) = if f /= 0 then return False else return True
 magnitudeZeroTestR n (MkComplex f) = do
     appr <- f (2 * n)
-    -- |approx - z| < 1/(2n)
     return $ magnitudeSq appr < 1 / (2*fromInteger n)^2
+-- |approx - z| < 1/(2n)
 -- Beweis:
 -- Gelte |approx| <  1/(2n). Dann |x| <= |approx| + |x - approx| < 1/n.
 -- Gelte |approx| >= 1/(2n). Dann |x| >= |approx| - |approx - x| > 0.

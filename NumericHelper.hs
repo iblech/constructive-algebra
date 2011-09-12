@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
+-- | Dieses Modul stellt numerische Hilfsfunktionen bereit.
 module NumericHelper where
 
 import Prelude hiding (gcd)
@@ -6,37 +7,38 @@ import Data.List
 import Debug.Trace
 import Data.Ratio
 import Primes
+import Testing
 
-{-
--- Hat Eigenschaft: Für a rational, a > 0 konvergiert rootSeq streng
--- monoton von oben gegen die positive p-te Wurzel von a.
-rootSeq :: (Fractional a) => Int -> a -> Integer -> a
-rootSeq p a n = xs `genericIndex` n
-    where
-    xs = iterate (\x -> ((p'-1)*x + a/x^(p-1)) / p') a
-    p' = fromIntegral p
-
--- konvergiert von unten, FIXME!
-rootSeq' :: (Fractional a) => Int -> a -> Integer -> a
-rootSeq' = rootSeq
-{-p a n = xs `genericIndex` n
-    where
-    xs = iterate (\x -> x - x/p' + (-1)^p * a / (p' * x^(p-1))) (a)
-    p' = fromIntegral p-}
--}
-
--- Für x > 0 kleinstes n mit 1/n < x und n > 0
+-- | Findet zu einer gegebenen rationalen Zahl /x > 0/ die kleinste positive
+-- Zahl /n/ mit /1\/n < x/.
 roundDownToRecipN :: Rational -> Integer
 roundDownToRecipN x = if recip (fromInteger n) == x then n + 1 else n where n = ceiling . recip $ x
 
+props_roundDownToRecipN =
+    [ forAll positive $ \x ->
+        let n = roundDownToRecipN x
+        in  recip (fromInteger n) < x
+    , forAll positive $ \x -> forAll positive $ \n' ->
+        recip (fromInteger n') < x ==> n' >= roundDownToRecipN x
+    ]
+
+-- | Rundet eine gegebene rationale Zahl /x/ zur nächsten ganzen Zahl auf
+-- (also Richtung /+∞/).
 roundUp :: Rational -> Integer
 roundUp z
     | x `mod` y == 0 = x `div` y
     | otherwise      = x `div` y + 1
   where (x,y) = (numerator z, denominator z)
 
+props_roundUp =
+    [ property $ \x ->
+        x <= fromInteger (roundUp x)  &&  fromInteger (roundUp x) - x < 1
+    ]
+
 -- ilog b n == Abrundung von log_b n
 -- XXX Quelle?
+-- http://www.haskell.org/pipermail/haskell-cafe/2009-August/065854.html
+-- XXX Bessere Version nehmen!
 ilogb :: Integer -> Integer -> Integer
 ilogb b n | n < 0      = ilogb b (- n)
           | n < b      = 0
@@ -51,7 +53,15 @@ ilogb b n | n < 0      = ilogb b (- n)
                                     then bin b lo av
                                     else bin b av hi
 
--- Vor.: Zahl nicht 0.
+props_ilogb = (:[]) $ forAll positive $ \b -> forAll positive $ \n ->
+    b > 1 ==>
+    let k = ilogb b n
+    in  b^k <= n && b^(k+1) > n
+
+-- | Bestimmt zu einer gegebenen ganzen Zahl /n ≠ 0/ ihre Primfaktorzerlegung
+-- (in positive Primzahlen). Die Vielfachheiten sind jeweils die zweiten
+-- Komponenten der Paare. Jeder Primfaktor kommt genau einmal in der
+-- Rückgabeliste vor.
 primeFactors :: Integer -> [(Integer,Integer)]
 primeFactors = multiplicities . group . go primes
     where
@@ -61,10 +71,15 @@ primeFactors = multiplicities . group . go primes
         | otherwise            = go ps n
     multiplicities = map (\xs -> (head xs, genericLength xs))
 
--- Liefert alle positiven Teiler, auch 1 und den (Betrag der) Zahl selbst.
---positiveDivisors n
---    | n == 0    = error "divisors 0"
---    | otherwise = [x | x <- [1..abs n], n `mod` x == 0]
+props_primeFactors = (:[]) $ forAll arbitrary $ \n -> n /= 0 ==> and
+    [ abs n == product (map (uncurry (^)) . primeFactors $ n)
+    , all (`elem` primes) . map fst $ primeFactors n
+    ]
+
+-- | Liefert alle positiven Teiler einer gegebenen ganzen Zahl /n ≠ 0/, auch
+-- /1/ und den (Betrag der) Zahl selbst. Erfüllt folgende Spezifikation:
+--
+-- > positiveDivisors n = [x | x <- [1..abs n], n `mod` x == 0]
 positiveDivisors :: Integer -> [Integer]
 positiveDivisors = sort . go . primeFactors
     where
@@ -74,8 +89,13 @@ positiveDivisors = sort . go . primeFactors
         q <- go ps
         return $ p^i * q
 
-{- http://www.haskell.org/haskellwiki/Generic_number_type#squareRoot #-}
--- liefert abgerundete Wurzel
+props_positiveDivisors = (:[]) $ forAll arbitrary $ \n -> n /= 0 ==>
+    positiveDivisors n == [x | x <- [1..abs n], n `mod` x == 0]
+
+-- | Bestimmt zu einer gegebenen nichtnegativen ganzen Zahl /n/ die Abrundung
+-- ihrer nichtnegativen Quadratwurzel.
+--
+-- Quelle: <http://www.haskell.org/haskellwiki/Generic_number_type#squareRoot>
 squareRoot :: Integer -> Integer
 squareRoot 0 = 0
 squareRoot 1 = 1
@@ -87,3 +107,15 @@ squareRoot n =
        iters = iterate newtonStep (squareRoot (div n lowerN) * lowerRoot)
        isRoot r  =  r^2 <= n && n < (r+1)^2
    in  head $ dropWhile (not . isRoot) iters
+
+props_squareRoot = (:[]) $ forAll arbitrary $ \n -> n >= 0 ==>
+    let s = squareRoot n
+    in  s >= 0 && s^2 <= n && (s+1)^2 > n
+
+prop_NumericHelper = concat
+    [ props_roundDownToRecipN
+    , props_roundUp
+    , props_primeFactors
+    , props_positiveDivisors
+    , props_squareRoot
+    ]
