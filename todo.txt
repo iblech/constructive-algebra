@@ -10,3 +10,7 @@ referenziert wird: http://www.math.colostate.edu/~hulpke/paper/gov.pdf
 Bei Field: Abhängigkeit IntegralDomain hinzufügen
 
 AnnihilatingPoly für IntBer.
+
+Proxy verwenden (in RingMorphism)
+
+Gestaffelte Gradberechnung zum Finden des MP nutzen!?

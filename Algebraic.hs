@@ -72,7 +72,7 @@ sqrt2 = MkAlg $ IC.sqrt2
 invert :: Alg QinC -> R (Maybe (Alg QinC))
 invert (MkAlg z) = do
     -- Optimierung
-    trace ("invert: " ++ show (approx z)) $ do
+    --trace ("invert: " ++ show (approx z)) $ do
     foundApartness <- go [1,10,100]
     if foundApartness then return $ Just zInv else do
     if null bounds then return Nothing else do

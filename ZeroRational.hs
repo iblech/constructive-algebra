@@ -297,7 +297,7 @@ subdivisions' radius f = go (17/12 * radius) [(f, Cell2 ((-radius) :+: (-radius)
     mid (Cell2 z0 z1) = fromComplexRational $ (z0 + z1) / 2
     merge :: [[[a]]] -> [[a]]
     merge xsss = concat (map head xsss) : merge (map tail xsss)
-    divideTrace f1 c1 = trace ("divide: " ++ show c1) $ divide f1 c1
+    divideTrace f1 c1 = divide f1 c1 --trace ("divide: " ++ show c1) $ divide f1 c1
 -- das "lineare" Newton-Verfahren (Thm. 6.7) vielleicht auch einbauen!
 
 newton :: Poly (ComplexRational) -> ComplexRational -> [ComplexRational]

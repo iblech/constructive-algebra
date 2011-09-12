@@ -1,6 +1,7 @@
 module Main where
 
 import Prelude (print, ($), (.), flip, tail)
+import qualified Prelude as P
 import Data.List hiding (sum)
 import IntegralClosure
 import Ring
@@ -30,6 +31,7 @@ import Field
 --main = print (approx z) >> print (polynomial . unAlg $ z) where z = foldl1 primitiveElement $ tail $ rootsA $ iX^3 - unit - unit
 --main = print $ approx $ foldl1 primitiveElement $ tail $ rootsA $ iX^4 + unit
 
+{-
 main = do
     let [a,b,c] = rootsA $ iX^3 + unit
         (as,t)  = pseudoResolvent [a,b]
@@ -37,6 +39,13 @@ main = do
     print $ polynomial . unAlg $ t
     putStrLn ""
     print $ as
+-}
+
+main = do
+    let fi = fromInteger :: P.Integer -> Poly P.Rational
+    let gs = galoisGroup $ (iX - fi 1) *(iX - fi 2) *(iX - fi 3) *(iX - fi 4)
+    print gs
+    print gs
 
 main' = do
     print $ sum

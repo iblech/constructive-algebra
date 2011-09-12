@@ -15,6 +15,9 @@ import Control.Monad
 import Data.Maybe
 import Debug.Trace
 import NumericHelper
+import IdealExtension as I
+import IdealEuclidean
+import Euclidean
 
 -- Vor.: f normiert, separabel
 linearResolvent :: Poly Rational -> R [Integer]
@@ -32,16 +35,29 @@ linearResolvent f = do
         let q = magnitudeUpperBound $ absSq ((a - b) * recip' (u - v))
         return $ liftM roundUp q
 
+-- normiert, separabel
 galoisGroup :: Poly Rational -> [[Int]]
-galoisGroup f = map (map fst . fst) . filter (isRoot . snd) $ vs
+galoisGroup f = trace debugMsg $ sigmas
     where
-    xs       = rootsA f
-    (res,t)  = pseudoResolvent (tail xs)
-    res'     = 0:res
-    m        = fmap unF . polynomial . unAlg $ t  -- Minimalpolynom von t
-    ps       = permutations $ zip [0..] xs
-    vs       = flip map ps $ \sigma -> (sigma, evalResolvent res' (map snd sigma))
-    isRoot v = trace ("versuche wurzel: " ++ show (approx v)) $ A.eval v m == zero
+    xs         = rootsA f
+    (res,t,hs) = pseudoResolvent (tail xs)
+    res'       = 0:res
+    hs'        = negate (sum hs + constant a) : hs where a = (!! 1) . reverse . coeffs . canonForm $ f
+    t'         = t  -- simplify' unnötig
+    m          = fmap unF . polynomial . unAlg $ t'  -- Minimalpolynom von t
+    conjs      = rootsA m
+    inds       = [0..length xs - 1]
+    sigmas     =
+        flip map conjs $ \t0 ->
+            flip map inds $ \i ->
+                head [ j | j <- inds, xs !! j == A.eval t0 (hs' !! i) ]
+    debugMsg = concat $ intersperse "\n"
+        [ "Zur Galoisgruppe von: " ++ show f
+        , "Nullstellen:          " ++ show (map approx xs)
+        , "Prim. Element:        " ++ show res' ++ " * xs ~~ " ++ show (approx t')
+        , "Min. Polynom:         " ++ show m
+        , "Gal. Konjugierte:     " ++ show (map approx conjs)
+        ]
 
 {-
 
@@ -96,27 +112,38 @@ galoisGroup xs = fst . head $ filter (isJust . isRationalPoly . poly . snd) (zip
 
 
 -- für Effizienz sollte y kleineren Grad haben.
-primitiveElement :: Alg QinC -> Alg QinC -> (Integer, Alg QinC)
-primitiveElement x y = (lambda, x + fromInteger lambda * y)
+primitiveElement :: Alg QinC -> Alg QinC -> (Integer, Alg QinC, Poly Rational, Poly Rational)
+primitiveElement x y = (lambda, t, hX, hY)
     where
+    f = fmap unF . polynomial . unAlg $ x
+    g = fmap unF . polynomial . unAlg $ y
+    -- XXX: noch separabel machen (das g)!
     -- Nst. der Minimalpolynome würden genügen
     exceptions :: [Integer]
     exceptions = do
-        x' <- rootsA . fmap unF . polynomial . unAlg $ x
-        y' <- rootsA . fmap unF . polynomial . unAlg $ y
+        x' <- rootsA f
+        y' <- rootsA g
         r  <- maybeToList $ unsafeRunR $ invert (y - y')
         maybeToList $ isApproxInteger $ (x' - x) * r
     lambda = head $ filter (\q -> all (/= q) exceptions) allIntegers
+    t = x + fromInteger lambda * y
+    hY = runISEwithAlgebraic t $ do
+        let h = fmap I.fromBase f `compose` (constant adjointedRoot - fromInteger lambda * iX)
+        d <- idealNormedGCD (fmap I.fromBase g) h
+        liftM negate . canonISE . head . unPoly $ d
+    hX = iX - fromInteger lambda * hY
 
-pseudoResolvent :: [Alg QinC] -> ([Integer], Alg QinC)
-pseudoResolvent []       = ([],  zero)
-pseudoResolvent [x]      = ([1], x)
+-- garantiert, dass das zurückgegebene prim. Element bereits simplify'-ed wurde.
+pseudoResolvent :: [Alg QinC] -> ([Integer], Alg QinC, [Poly Rational])
+pseudoResolvent []       = ([],  zero,        [])
+pseudoResolvent [x]      = ([1], simplify' x, [iX])
 pseudoResolvent (x:y:zs) =
-    let (lambda, u) = primitiveElement x y
-        u'          = simplify' $ trace ("vor simplify: " ++ show (polynomial .  unAlg $ u)) $ u
-        (as, t)     = pseudoResolvent (u':zs)
-        -- zipWith (*) as (u':zs) = t
-    in  (1 : lambda : tail as, t)
+    let (lambda, u, hX, hY) = primitiveElement x y
+        u'                  = trace ("vor simplify: " ++ show (polynomial .  unAlg $ u)) $ simplify' u
+        (as, t, hU:hs)      = pseudoResolvent (u':zs)
+        -- zipWith (*) as (u':zs) = t,  (hs !! i)(t) = (u':zs) !! i
+        reduce p = snd (p `quotRem` fmap unF (polynomial . unAlg $ t))
+    in  (1 : lambda : tail as, t, reduce (hX `compose` hU) : reduce (hY `compose` hU) : hs)
 
 merge :: [a] -> [a] -> [a]
 merge []     ys = ys

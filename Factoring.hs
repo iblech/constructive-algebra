@@ -21,7 +21,9 @@ import Cyclotomic
 
 -- soll mind. Grad 1 haben
 isIrreducible :: Poly Rational -> Maybe (Poly Rational,Poly Rational)
-isIrreducible f
+isIrreducible f = trace ("isIrreducible: " ++ show f) $ isIrreducible_ f
+
+isIrreducible_ f
     | n <  1 = error "isIrreducible"
     | n == 1 = Nothing
     | degree d > 0 = Just (s,d)  -- den kleineren Faktor vorne
