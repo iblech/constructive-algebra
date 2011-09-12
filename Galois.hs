@@ -10,7 +10,7 @@ import Data.List hiding (sum,product)
 import Complex hiding (constant)
 import IntegralClosure
 import ZeroRational
-import Algebraic
+import Algebraic as A
 import Control.Monad
 import Data.Maybe
 import Debug.Trace
@@ -33,17 +33,29 @@ linearResolvent f = do
         return $ liftM roundUp q
 
 galoisGroup :: Poly Rational -> [[Int]]
-galoisGroup f = unsafeRunR $ do
+galoisGroup f = map (map fst . fst) . filter (isRoot . snd) $ vs
+    where
+    xs       = rootsA f
+    (res,t)  = pseudoResolvent (tail xs)
+    res'     = 0:res
+    m        = fmap unF . polynomial . unAlg $ t  -- Minimalpolynom von t
+    ps       = permutations $ zip [0..] xs
+    vs       = flip map ps $ \sigma -> (sigma, evalResolvent res' (map snd sigma))
+    isRoot v = trace ("versuche wurzel: " ++ show (approx v)) $ A.eval v m == zero
+
+{-
+
+galoisGroup :: Poly Rational -> [[Int]]
+galoisGroup f =
     res <- linearResolvent f
     let cands = tail . subsequences . permutations $ [0..length as-1]
         vss   = tail . subsequences . map (evalResolvent res) . permutations
 galoisGroup xs = fst . head $ filter (isJust . isRationalPoly . poly . snd) (zip cands vss)
     where
-    res     = linearResolvent xs
     cands   = tail . subsequences . permutations $ xs
     vss     = tail . subsequences . map (simplify' . evalResolvent res) . permutations $ xs
     poly vs = product $ map ((iX -) . constant) vs
-    
+-}   
 
 pairs :: [a] -> [(a,a)]
 pairs []       = []
@@ -80,10 +92,12 @@ galoisGroup xs = fst . head $ filter (isJust . isRationalPoly . poly . snd) (zip
     cands   = tail . subsequences . permutations $ xs
     vss     = tail . subsequences . map (simplify' . evalResolvent res) . permutations $ xs
     poly vs = product $ map ((iX -) . constant) vs
+-}
+
 
 -- für Effizienz sollte y kleineren Grad haben.
-primitiveElement :: Alg QinC -> Alg QinC -> Alg QinC
-primitiveElement x y = x + fromInteger lambda * y
+primitiveElement :: Alg QinC -> Alg QinC -> (Integer, Alg QinC)
+primitiveElement x y = (lambda, x + fromInteger lambda * y)
     where
     -- Nst. der Minimalpolynome würden genügen
     exceptions :: [Integer]
@@ -93,7 +107,16 @@ primitiveElement x y = x + fromInteger lambda * y
         r  <- maybeToList $ unsafeRunR $ invert (y - y')
         maybeToList $ isApproxInteger $ (x' - x) * r
     lambda = head $ filter (\q -> all (/= q) exceptions) allIntegers
--}
+
+pseudoResolvent :: [Alg QinC] -> ([Integer], Alg QinC)
+pseudoResolvent []       = ([],  zero)
+pseudoResolvent [x]      = ([1], x)
+pseudoResolvent (x:y:zs) =
+    let (lambda, u) = primitiveElement x y
+        u'          = simplify' $ trace ("vor simplify: " ++ show (polynomial .  unAlg $ u)) $ u
+        (as, t)     = pseudoResolvent (u':zs)
+        -- zipWith (*) as (u':zs) = t
+    in  (1 : lambda : tail as, t)
 
 merge :: [a] -> [a] -> [a]
 merge []     ys = ys

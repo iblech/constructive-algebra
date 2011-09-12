@@ -9,6 +9,7 @@ import Data.Maybe
 import Data.List hiding (product)
 import Euclidean
 import Algebraic hiding (eval)
+import qualified Algebraic as A
 import Control.Monad
 import Complex hiding (constant)
 import IntegralClosure hiding (eval)
@@ -16,6 +17,7 @@ import Field
 import Debug.Trace
 import Data.Ratio
 import System.IO.Unsafe
+import Cyclotomic
 
 -- soll mind. Grad 1 haben
 isIrreducible :: Poly Rational -> Maybe (Poly Rational,Poly Rational)
@@ -26,6 +28,13 @@ isIrreducible f
     | leadingCoeff f /= 1 = do
         (g,h) <- isIrreducible (norm f)
         return (g, leadingCoeff f .* h)
+    | eval0 f == 0 = Just (iX,fst (f `quotRem` iX))
+    | f `elem` (relevantCyclotomics ++ knownIrreds)
+    = Nothing
+    | (g,(h,_)):_ <- cyclotomicResiduals
+    = Just (g,h)
+    | Just (g,h) <- isComposedPoly f, Just (p,q) <- isIrreducible g
+    = Just (p `compose` h, q `compose` h)
     | otherwise
     = listToMaybe $ do
 	xs <- sortBy (\xs ys -> length xs `compare` length ys) $ subsequences zeros
@@ -53,6 +62,27 @@ isIrreducible f
         | otherwise
         = isRationalPoly
     isInteger' q = numerator q `mod` denominator q == 0
+    -- die 3 ist Heuristik
+    relevantCyclotomics =
+        takeWhile (\p -> degree p <= 3 * degree f) $ map (fmap fromInteger) cyclotomicPolynomials
+    cyclotomicResiduals =
+        filter ((== zero) . snd . snd) $ map (\p -> (p, f `quotRem` p)) relevantCyclotomics
+
+knownIrreds :: [Poly Rational]
+knownIrreds = [iX^6 + fromInteger 108]
+
+-- isComposedPoly f = Just (g,h) ==> g . h = f, isComposedPoly g = Nothing.
+isComposedPoly :: Poly Rational -> Maybe (Poly Rational, Poly Rational)
+isComposedPoly f 
+    | null cands = Nothing
+    | otherwise  =
+        let n = last cands
+            g = MkPoly [ as !! (n*i) | i <- [0..(length as - 1) `div` n] ]
+        in  Just (g, iX^fromIntegral n)
+    where
+    cands    = [ i | i <- [2..length as],     all ((== 0) . (`mod` i)) usedExps ]
+    usedExps = [ i | i <- [0..length as - 1], as !! i /= 0 ]
+    as       = coeffs f
 
 -- soll mind. Grad 1 haben
 irreducibleFactors :: Poly Rational -> [Poly Rational]
@@ -85,21 +115,32 @@ minimalPolynomial z = go (fmap unF . polynomial . unAlg $ z)
 funktioniert auch, ist aber sehr langsam in der Nullprüfung
 (Ganzheitsgleichungen haben hohen Grad...)
 -}
-minimalPolynomial :: Alg QinC -> Poly Rational
-minimalPolynomial z = unsafePerformIO . runR $ go 1
+
+-- langsamer als minimalPolynomial
+minimalPolynomial' :: Alg QinC -> Poly Rational
+minimalPolynomial' z = unsafePerformIO . runR $ go 1
     where
     f         = polynomial . unAlg $ z
     z'        = number     . unAlg $ z
     (u,v,s,t) = gcd f (derivative f)
-    factors   = irreducibleFactors $ fmap unF s
+    -- Normierung schon hier, damit nicht sehr kleine Konstanten viele
+    -- Iterationen unten erzwingen
+    factors   = map norm $ irreducibleFactors $ fmap unF s
     isApproxZero n g = magnitudeZeroTestR n $ eval z' (fmap fromRational g)
     go n = do
         R $ putStrLn $ "go " ++ show n
         candidates <- filterM (isApproxZero n) factors
         R $ putStrLn $ "candidates: " ++ show candidates
         if length candidates == 1
-            then return . norm $ head candidates
+            then return $ head candidates
             else go (2*n)
+
+minimalPolynomial :: Alg QinC -> Poly Rational
+minimalPolynomial z = head $ filter (\p -> zero == A.eval z p) factors
+    where
+    f         = polynomial . unAlg $ z
+    (u,v,s,t) = gcd f (derivative f)
+    factors   = fmap norm $ irreducibleFactors $ fmap unF s
 
 -- XXX: besserer name!
 simplify' :: Alg QinC -> Alg QinC

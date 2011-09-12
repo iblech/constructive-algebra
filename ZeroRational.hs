@@ -283,18 +283,21 @@ subdivisions' radius f = go (17/12 * radius) [(f, Cell2 ((-radius) :+: (-radius)
             -- Grund: Zähler und Nenner riesig! Zieht Berechnungstempo enorm runter.
             -- Beispiel: Zerlegung in irred. Faktoren von X^9 - 243 X^3 mit
             -- Newton: etwas mehr als zwei Minuten, ohne Newton: etwa 17 Sekunden.
+            -- Außerdem: XXX Falsch angewendet! Darf nur verwendet werden, wenn
+            -- die Zelle so klein ist, dass nicht andere Nullstellen verloren
+            -- gehen!
             {-
 	    | newtonPrecondition f' (mid c)
 	    = tail $ zipWith (\n x -> [(r / 2^(2^n - 1), x)]) [0..] (newton f' (mid c))
 	    | otherwise
             -}
-	    = go (r/2) $ divide f' c
+	    = go (r/2) $ divideTrace f' c
     mid (Cell0 z0)    = fromComplexRational $ z0
     mid (Cell1 z0 z1) = fromComplexRational $ (z0 + z1) / 2
     mid (Cell2 z0 z1) = fromComplexRational $ (z0 + z1) / 2
     merge :: [[[a]]] -> [[a]]
     merge xsss = concat (map head xsss) : merge (map tail xsss)
-    --divideTrace f1 c1 = trace ("divide: " ++ show c1) $ divide f1 c1
+    divideTrace f1 c1 = trace ("divide: " ++ show c1) $ divide f1 c1
 -- das "lineare" Newton-Verfahren (Thm. 6.7) vielleicht auch einbauen!
 
 newton :: Poly (ComplexRational) -> ComplexRational -> [ComplexRational]
@@ -304,6 +307,8 @@ newton f = iterate step
 
 -- Thm. 6.9
 -- Vor.: derivative f x != 0, f x != 0.
+-- Die Voraussetzungen zeigen dann auch, dass f genau eine Nullstelle im
+-- offenen Ball mit Radius 2*eta um x hat.
 newtonPrecondition :: Poly (ComplexRational) -> ComplexRational -> Bool
 newtonPrecondition f x = eval x f /= 0 && eval x (derivative f) /= 0 && and ineqs
     where
