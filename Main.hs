@@ -1,6 +1,6 @@
 module Main where
 
-import Prelude (print, ($), (.), flip, tail)
+import Prelude (print, ($), (.), flip, tail, fst, snd)
 import qualified Prelude as P
 import Data.List hiding (sum)
 import IntegralClosure
@@ -43,9 +43,11 @@ main = do
 
 main = do
     let fi = fromInteger :: P.Integer -> Poly P.Rational
-    let gs = galoisGroup $ (iX - fi 3) * (iX^2 + fi 5)
-    print gs
-    print gs
+    let gs = galoisGroup $ (iX^3 - fromRational (1/2)) * (iX^2 + fi 5)
+    print $ snd gs
+    print . map approx $ fst gs
+    print . map approx $ fst gs
+    print $ snd gs
 
 main' = do
     print $ sum

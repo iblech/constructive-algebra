@@ -105,30 +105,13 @@ allIntegers = 0 : go 1 where go n = n : (-n) : go (n + 1)
 
 evalResolvent :: (Ring a) => [Integer] -> [a] -> a
 evalResolvent cs ys = sum $ zipWith (*) (map fromInteger cs) ys
-{-
-
--- müssen genau die Nst. eines normierten sep. Polynoms sein
-primitiveElement' :: (ApproxFloating a, Ring a, Eq a) => [a] -> a
-primitiveElement' xs = evalResolvent (linearResolvent xs) xs
-
--- Eingabe müssen genau die Nst. eines normierten sep. Polynoms sein
-galoisGroup :: [Alg QinC] -> [[Alg QinC]]
-galoisGroup xs = fst . head $ filter (isJust . isRationalPoly . poly . snd) (zip cands vss)
-    where
-    res     = linearResolvent xs
-    cands   = tail . subsequences . permutations $ xs
-    vss     = tail . subsequences . map (simplify' . evalResolvent res) . permutations $ xs
-    poly vs = product $ map ((iX -) . constant) vs
--}
-
 
 -- für Effizienz sollte y kleineren Grad haben.
 primitiveElement :: Alg QinC -> Alg QinC -> (Integer, Alg QinC, Poly Rational, Poly Rational)
 primitiveElement x y = (lambda, t, hX, hY)
     where
     f = fmap unF . polynomial . unAlg $ x
-    g = fmap unF . polynomial . unAlg $ y
-    -- XXX: noch separabel machen (das g)!
+    g = squareFree . fmap unF . polynomial . unAlg $ y
     -- Nst. der Minimalpolynome würden genügen
     exceptions :: [Integer]
     exceptions = do
