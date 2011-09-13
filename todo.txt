@@ -17,3 +17,6 @@ Gestaffelte Gradberechnung zum Finden des MP nutzen!?
 
 coeffs -> unsafeCoeffs
 norm -> soll auch gleich kanonisieren
+
+Field/IntegralDomain-Mess.
+Sollte Field Eq implizieren/erfordern?

@@ -16,11 +16,12 @@ import Text.Printf
 type Nat = Int
 
 -- | Typ der Matrizen beliebiger Größe über /a/.
--- Die Indizierung der zugrundeliegenden Felder beginnt bei /(0,0)/.
+-- Die Indizierung der zugrundeliegenden Felder beginnt bei /(0,0)/,
+-- Matrizen mit null Zeilen oder Spalten sind zugelassen.
 --
 -- Eine statische Typisierung der Größe über natürliche Zahlen auf Typebene
 -- wäre möglich gewesen, war jedoch im Hinblick auf die vielen
--- Abschneideoperationen auf Untermatrizen unkomfortabel.
+-- Abschneideoperationen auf Untermatrizen in "Smith" unkomfortabel.
 newtype Matrix a = MkMatrix { unMatrix :: Array (Nat,Nat) a }
     deriving (Show,Eq,Functor)
 
