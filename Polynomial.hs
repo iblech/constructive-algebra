@@ -148,3 +148,9 @@ couldBeNotX :: (Ring a) => Poly a -> P.Bool
 couldBeNotX (MkPoly [a0,a1])
     | couldBeNonZero a0 == False && couldBeNonZero (a1 - unit) == False = False
 couldBeNotX _ = True
+
+-- | Berechnet zu einem gegebenen Polynom /f/ seinen quadratfreien Anteil (als
+-- normiertes Polynom), also /g/ mit /f = dg/, wobei /d/ den größten
+-- gemeinsamen Teiler von /f/ und /f'/ bezeichne.
+squareFree :: (Field a, IntegralDomain a, Eq a) => Poly a -> Poly a
+squareFree f = let (u,v,s,t) = gcd f (derivative f) in norm s

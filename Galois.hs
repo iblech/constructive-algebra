@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, PatternGuards #-}
 module Galois where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
@@ -36,8 +36,19 @@ linearResolvent f = do
         return $ liftM roundUp q
 
 -- normiert, separabel
-galoisGroup :: Poly Rational -> [[Int]]
-galoisGroup f = trace debugMsg $ sigmas
+galoisGroup :: Poly Rational -> ([Alg QinC], [[Int]])
+galoisGroup f
+    | Just (g,h) <- isIrreducible f
+    = let (xs,gs) = galoisGroup g
+          (ys,hs) = galoisGroup h
+          n       = length (head gs)  -- Anzahl Nullstellen von f
+      in  (xs ++ ys, [ sigma ++ map (n +) tau | sigma <- gs, tau <- hs ])
+    | otherwise
+    = galoisGroup' f
+
+-- normiert, separabel
+galoisGroup' :: Poly Rational -> ([Alg QinC], [[Int]])
+galoisGroup' f = trace debugMsg $ (xs, sigmas)
     where
     xs         = map simplify' $ rootsA f
     (res,t,hs) = pseudoResolvent (tail xs)

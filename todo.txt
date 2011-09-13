@@ -14,3 +14,6 @@ AnnihilatingPoly für IntBer.
 Proxy verwenden (in RingMorphism)
 
 Gestaffelte Gradberechnung zum Finden des MP nutzen!?
+
+coeffs -> unsafeCoeffs
+norm -> soll auch gleich kanonisieren
