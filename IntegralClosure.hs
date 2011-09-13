@@ -27,7 +27,7 @@ fromBase :: (RingMorphism m) => Domain m -> IC m
 fromBase x = r
     where
     r    = MkIC (mor' x) (iX - P.constant x)
-    mor' = mor ((undefined :: IC m -> m) r)
+    mor' = mor ((undefined :: IC m -> Proxy m) r)
 
 instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m)) => Ring (IC m) where
     MkIC x p + MkIC x' p' = MkIC (x + x') (sumPolynomial p p')
@@ -64,7 +64,7 @@ instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m), AllowsRationalE
     AllowsRationalEmbedding (IC m) where
     fromRational r = z
         where
-        mor' = mor ((undefined :: IC m -> m) z)
+        mor' = mor ((undefined :: IC m -> Proxy m) z)
         z    = MkIC (mor' (fromRational r)) (iX - fromRational r)
 
 instance (RingMorphism m, ApproxFloating (Codomain m)) =>
@@ -123,7 +123,7 @@ eval
     -> IC m
 eval z p =
     MkIC (P.eval (number z) (fmap mor' p)) (evalPolynomial p (polynomial z))
-    where mor' = mor ((undefined :: IC m -> m) z)
+    where mor' = mor ((undefined :: IC m -> Proxy m) z)
 
 -- Voraussetzung: Polynome müssen normiert sein
 {-
@@ -145,4 +145,4 @@ instance AllowsConjugation (IC QinC) where
 
 verifyPolynomial :: (RingMorphism m) => IC m -> Codomain m
 verifyPolynomial z@(MkIC x f) = P.eval x $ fmap mor' f
-    where mor' = mor ((undefined :: IC m -> m) z)
+    where mor' = mor ((undefined :: IC m -> Proxy m) z)

@@ -18,7 +18,7 @@ data QinR
 instance RingMorphism QinR where
     type Domain   QinR = F Rational
     type Codomain QinR = Real
-    mor _ = MkReal . mor (undefined :: QinC)
+    mor _ = MkReal . mor (undefined :: Proxy QinC)
 
 data RinC
 instance RingMorphism RinC where
