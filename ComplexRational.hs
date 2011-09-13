@@ -1,3 +1,5 @@
+-- | Dieses Modul stellt den Datentyp 'ComplexRational' komplexrationaler
+-- Zahlen, also den Elementen von /Q(i)/, bereit.
 module ComplexRational where
 
 import Data.List (genericIndex)
@@ -8,7 +10,11 @@ import qualified Data.Complex as C
 import NumericHelper
 import Ring
 import Field
+import Testing
+import Control.Monad
 
+-- | Typ für komplexrationale Zahlen in kartesischer Darstellung.
+-- Der Konstruktor ist strikt in seinen beiden Argumenten.
 data ComplexRational = !Rational :+: !Rational
     deriving (Eq)
 
@@ -44,40 +50,70 @@ instance AllowsRationalEmbedding ComplexRational where
 instance ApproxFloating ComplexRational where
     approx (x :+: y) = P.fromRational x C.:+ P.fromRational y
 
-instance Num ComplexRational where
-    (+) = (+)
-    (*) = (*)
-    negate      = negate
-    fromInteger = fromInteger
-    signum      = error "signum on ComplexRational"
-    abs         = error "abs on ComplexRational"
-
-instance Fractional ComplexRational where
-    recip          = recip
-    fromRational x = x :+: 0
-
+-- | Berechnet das Quadrat /|z|^2/ des Betrags einer Zahl /z/.
+--
+-- (Oftmals sind wir eigentlich am Betrag selbst, und nicht an seinem
+-- Quadrat, interessiert. Aber das Betragsquadrat ist stets wieder eine
+-- rationale Zahl, während wir für den echten Betrag entweder Fließkommazahlen
+-- (schlecht) oder eine Umsetzung von Q(i) (besser) benötigen würden.)
 magnitudeSq :: ComplexRational -> Rational
 magnitudeSq (x :+: y) = x^2 + y^2
 
+props_magnitudeSq :: [Property]
+props_magnitudeSq =
+    [ property $ magnitudeSq unit == 1
+    , forAll arbitrary $ \z -> forAll arbitrary $ \u ->
+        magnitudeSq (z * u) == magnitudeSq z * magnitudeSq u
+    ]
+
+-- | Liefert eine obere Schranke für den Betrag einer Zahl /z/.
 magnitudeUpperBound :: ComplexRational -> Rational
 magnitudeUpperBound (x :+: y) = abs x + abs y
 
--- Die Folge mit
---   a_1 = 1, a_(n+1) = 1 + 1/a_n
+props_magnitudeUpperBound :: [Property]
+props_magnitudeUpperBound = (:[]) $ forAll arbitrary $ \x ->
+    magnitudeSq x <= (magnitudeUpperBound x)^2
+
+-- | Liefert Approximationen an den goldenen Schnitt. Erfüllt folgende
+-- Spezifikation:
+--
+-- > |goldenRatioSeq n - φ| < 1/n für alle n >= 1.
+goldenRatioSeq :: Integer -> ComplexRational
+goldenRatioSeq n = xs `genericIndex` (ilogb 2 n)
+    where xs = iterate ((unit +) . recip) unit
+-- a_1 = 1, a_(n+1) = 1 + 1/a_n
 -- erfüllt |a_n - a| < (4/9)^n für alle n >= 2.
 -- Diese Folge hier wird künstlich verlangsamt, sie erfüllt |x_n - x| < 1/n für
 -- alle n >= 1.
 -- XXX: Bestimmt kann man die Folge noch viel weiter verlangsamen!
-goldenRatioSeq :: Integer -> ComplexRational
-goldenRatioSeq n = xs `genericIndex` (ilogb 2 n)
-    where xs = iterate ((1 +) . recip) 1
 
+-- | Liefert Approximationen an /√2/. Erfüllt folgende Spezifikation:
+--
+-- > |sqrt2Seq n - √2| < 1/n für alle n >= 1.
+sqrt2Seq :: Integer -> ComplexRational
+sqrt2Seq n = xs `genericIndex` ((1 + ilogb 2 n) `div` 2)
+    where xs = map (+ unit) $ iterate (\x -> unit / (fromInteger 2 + x)) zero
 -- Die Folge mit
 --   a_1 = 0, a_(n+1) = 1/(2+a_n)
 -- erfüllt |a_n - (sqrt(2) - 1)| <= gamma^n * c für alle n >= 1
 -- mit gamma = 1 / (2 (1 + sqrt(2))) <= 0.2072 und c = 2.
 -- Die Folge hier wird daher entsprechend künstlich verlangsamt.
 -- XXX: Bestimmt kann man die Folge noch viel weiter verlangsamen!
-sqrt2Seq :: Integer -> ComplexRational
-sqrt2Seq n = xs `genericIndex` ((1 + ilogb 2 n) `div` 2)
-    where xs = map (+ 1) $ iterate (\x -> 1 / (2 + x)) 0
+
+props_Approximation :: (Integer -> ComplexRational) -> C.Complex P.Double -> [Property]
+props_Approximation seq x = (:[]) $ forAll positive $ \n ->
+    C.magnitude (approx (seq n) P.- x) < P.recip (P.fromInteger n)
+
+props_ComplexRational :: [Property]
+props_ComplexRational = concat
+    [ props_magnitudeSq
+    , props_magnitudeUpperBound
+    , props_Approximation goldenRatioSeq ((1 P.+ sqrt 5) P./ 2)
+    , props_Approximation sqrt2Seq       (sqrt 2)
+    ]
+
+
+-- Reduktion auf die 'Arbitrary'-Instanz von /(Rational,Rational)/.
+instance Arbitrary ComplexRational where
+    arbitrary = liftM (uncurry (:+:)) arbitrary
+    shrink    = map   (uncurry (:+:)) . shrink . (\(x :+: y) -> (x,y))

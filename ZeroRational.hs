@@ -120,14 +120,14 @@ fromComplexRational (u :+: v) = fromRational u + imagUnit * fromRational v
 -- Zellen für den Rand erzeugt.
 divide :: Poly ComplexRational -> Cell -> [(Poly ComplexRational, Cell)]
 divide p (Cell0 z0)
-    | eval z0 p == 0 = [(p, Cell0 z0)]
+    | eval z0 p == zero = [(p, Cell0 z0)]
     | otherwise      = []
 divide p c@(Cell1 z0 z1)
-    | eval mid p == 0 = (p, Cell0 mid) : divide (fst $ p `quotRem` (iX - fromComplexRational mid)) c
+    | eval mid p == zero = (p, Cell0 mid) : divide (fst $ p `quotRem` (iX - fromComplexRational mid)) c
     | otherwise       = rs
     where
     zeros = filter ((== zero) . (flip eval p) . fromComplexRational) [z0, mid, z1]
-    mid = (z0 + z1) / 2
+    mid = (z0 + z1) / fromInteger 2
     n1  = rootsOnSegment z0  mid p
     n2  = rootsOnSegment mid z1  p
     rs  = concat
@@ -135,7 +135,7 @@ divide p c@(Cell1 z0 z1)
         , guard (n2 /= 0) >> return (p, Cell1 mid z1)
         ]
 divide p c@(Cell2 z0 z1)
-    | eval mid p == 0 = (p, Cell0 mid) : divide (fst $ p `quotRem` (iX - fromComplexRational mid)) c
+    | eval mid p == zero = (p, Cell0 mid) : divide (fst $ p `quotRem` (iX - fromComplexRational mid)) c
     -- Hier nicht die 0-Zelle generieren! Denn diese liegen ja auf dem Rand, dafür
     -- dürfen keine Zellen generiert werden.
     | (v:_) <- zeros = divide (fst $ p `quotRem` (iX - fromComplexRational v)) c
@@ -150,7 +150,7 @@ divide p c@(Cell2 z0 z1)
         , guard (n45   /= 0) >> return (Cell1 u4 u5)
         ]
     where
-    mid   = (z0 + z1) / 2
+    mid   = (z0 + z1) / fromInteger 2
     zeros = filter ((== zero) . (flip eval p) . fromComplexRational) [u2, u4, u6, u8]
     p'    = fst $ p `quotRem` (iX - fromComplexRational mid)
     (u1,u2,u3,u4,u5,u6,u7,u8,u9) =
@@ -190,13 +190,13 @@ cauchyRadius (MkPoly zs) = ((1 +) . maximum) $ map ComplexRational.magnitudeUppe
 -- für normierte Polynome (müssen nicht separabel sein)
 subdivisions :: Rational -> Poly ComplexRational -> [[ComplexRational]]
 subdivisions radius p =
-    map (map (mid . snd)) $ iterate (concatMap (uncurry divide)) [(p', Cell2 z0 (-z0))]
+    map (map (mid . snd)) $ iterate (concatMap (uncurry divide)) [(p', Cell2 z0 (negate z0))]
     where
-    z0         = -(radius :+: radius)
+    z0         = negate (radius :+: radius)
     (_,_,p',_) = gcd p (derivative p)
     mid (Cell0 z0)    = z0
-    mid (Cell1 z0 z1) = (z0 + z1) / 2
-    mid (Cell2 z0 z1) = (z0 + z1) / 2
+    mid (Cell1 z0 z1) = (z0 + z1) / fromInteger 2
+    mid (Cell2 z0 z1) = (z0 + z1) / fromInteger 2
 
 {-
 -- muss normiert, aber nicht unbedingt separabel sein
@@ -293,8 +293,8 @@ subdivisions' radius f = go (17/12 * radius) [(f, Cell2 ((-radius) :+: (-radius)
             -}
 	    = go (r/2) $ divideTrace f' c
     mid (Cell0 z0)    = fromComplexRational $ z0
-    mid (Cell1 z0 z1) = fromComplexRational $ (z0 + z1) / 2
-    mid (Cell2 z0 z1) = fromComplexRational $ (z0 + z1) / 2
+    mid (Cell1 z0 z1) = fromComplexRational $ (z0 + z1) / fromInteger 2
+    mid (Cell2 z0 z1) = fromComplexRational $ (z0 + z1) / fromInteger 2
     merge :: [[[a]]] -> [[a]]
     merge xsss = concat (map head xsss) : merge (map tail xsss)
     divideTrace f1 c1 = divide f1 c1 --trace ("divide: " ++ show c1) $ divide f1 c1
@@ -310,7 +310,7 @@ newton f = iterate step
 -- Die Voraussetzungen zeigen dann auch, dass f genau eine Nullstelle im
 -- offenen Ball mit Radius 2*eta um x hat.
 newtonPrecondition :: Poly (ComplexRational) -> ComplexRational -> Bool
-newtonPrecondition f x = eval x f /= 0 && eval x (derivative f) /= 0 && and ineqs
+newtonPrecondition f x = eval x f /= zero && eval x (derivative f) /= zero && and ineqs
     where
     etaSq    = magnSq (eval x f / eval x (derivative f))
     magnSq z = toReal $ z * conjugate z

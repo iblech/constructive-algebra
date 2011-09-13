@@ -116,7 +116,7 @@ timeEvals name (MkComplex f) = MkComplex $ \n -> R $ do
 --     magnitudeZero n x == False  ==>  |x| > 0,
 -- aber die Umkehrung stimmt nicht.
 magnitudeZeroTestR :: Nat -> Complex -> R Bool
-magnitudeZeroTestR n (MkRat f) = if f /= 0 then return False else return True
+magnitudeZeroTestR n (MkRat f) = if f /= zero then return False else return True
 magnitudeZeroTestR n (MkComplex f) = do
     appr <- f (2 * n)
     return $ magnitudeSq appr < 1 / (2*fromInteger n)^2
