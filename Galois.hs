@@ -39,7 +39,7 @@ linearResolvent f = do
 galoisGroup :: Poly Rational -> [[Int]]
 galoisGroup f = trace debugMsg $ sigmas
     where
-    xs         = rootsA f
+    xs         = map simplify' $ rootsA f
     (res,t,hs) = pseudoResolvent (tail xs)
     res'       = 0:res
     hs'        = negate (sum hs + constant a) : hs where a = (!! 1) . reverse . coeffs . canonForm $ f

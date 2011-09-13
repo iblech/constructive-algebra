@@ -43,7 +43,7 @@ main = do
 
 main = do
     let fi = fromInteger :: P.Integer -> Poly P.Rational
-    let gs = galoisGroup $ (iX - fi 1) *(iX - fi 2) *(iX - fi 3) *(iX - fi 4)
+    let gs = galoisGroup $ (iX - fi 3) * (iX^2 + fi 5)
     print gs
     print gs
 
