@@ -72,7 +72,7 @@ magnitudeUpperBound (x :+: y) = abs x + abs y
 
 props_magnitudeUpperBound :: [Property]
 props_magnitudeUpperBound = (:[]) $ forAll arbitrary $ \x ->
-    magnitudeSq x <= (magnitudeUpperBound x)^2
+    magnitudeUpperBound x >= 0 && magnitudeSq x <= (magnitudeUpperBound x)^2
 
 -- | Liefert Approximationen an den goldenen Schnitt. Erfüllt folgende
 -- Spezifikation:

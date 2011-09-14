@@ -32,11 +32,14 @@ import Testing
 -- Wird zur Indizierung der Matrizen zugrundeliegenden "Data.Array"s benutzt.
 type Nat = Int
 
--- | Typ der Matrizen der Größe /n x m/ über /a/.
+-- | Typ der /(n x m)/-Matrizen über /a/.
 -- Die Indizierung der zugrundeliegenden Felder beginnt bei /(0,0)/,
 -- Matrizen mit null Zeilen oder Spalten sind zugelassen.
 --
 -- Die Typen /n/ und /m/ sollten der 'TypeLevelNat.ReifyNat'-Klasse angehören.
+--
+-- Da wir den 'MkMatrix'-Konstruktor exportieren, kann man den statischen
+-- Schutz überwinden.
 newtype Matrix n m a = MkMatrix { unMatrix :: Array (Nat,Nat) a }
     deriving (Show,Eq,Functor)
 

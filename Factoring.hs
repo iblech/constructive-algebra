@@ -3,7 +3,7 @@ module Factoring where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
 import Ring
-import Polynomial
+import Polynomial as Poly
 import ZeroRational
 import Data.Maybe
 import Data.List hiding (product)
@@ -11,7 +11,7 @@ import Euclidean
 import Algebraic hiding (eval)
 import qualified Algebraic as A
 import Control.Monad
-import Complex hiding (constant)
+import Complex
 import IntegralClosure hiding (eval)
 import Field
 import Debug.Trace
@@ -28,7 +28,7 @@ isIrreducible_ f
     | n == 1 = Nothing
     | degree d > 0 = Just (s,d)  -- den kleineren Faktor vorne
     | leadingCoeff f /= 1 = do
-        (g,h) <- isIrreducible (norm f)
+        (g,h) <- isIrreducible (normalize f)
         return (g, leadingCoeff f .* h)
     | eval0 f == 0 = Just (iX,fst (f `quotRem` iX))
     | f `elem` (relevantCyclotomics ++ knownIrreds)
@@ -43,7 +43,7 @@ isIrreducible_ f
 	guard $ not $ null xs
 	guard $ length xs <= fromIntegral n `div` 2
 	trace ("BEARBEITE: " ++ show (map approx xs)) $ do
-	let p = product $ map ((iX -) . constant) xs
+	let p = product $ map ((iX -) . Poly.fromBase) xs
 	Just p' <- [isGoodPoly p]
 	--trace ("isgood is: " ++ show (map approx xs)) $ do
 	let (q,r) = f `quotRem` p'
@@ -59,7 +59,7 @@ isIrreducible_ f
     (u,v,s,t) = gcd f (derivative f)
     d         = u*f + v*derivative f
     isGoodPoly
-        | all isInteger' (coeffs f) && leadingCoeff f == 1
+        | all isInteger' (unsafeCoeffs f) && leadingCoeff f == 1
         = fmap (fmap fromInteger) . isApproxIntegerPoly
         | otherwise
         = isRationalPoly
@@ -84,7 +84,7 @@ isComposedPoly f
     where
     cands    = [ i | i <- [2..length as],     all ((== 0) . (`mod` i)) usedExps ]
     usedExps = [ i | i <- [0..length as - 1], as !! i /= 0 ]
-    as       = coeffs f
+    as       = canonCoeffs f
 
 -- soll mind. Grad 1 haben
 irreducibleFactors :: Poly Rational -> [Poly Rational]
@@ -127,7 +127,7 @@ minimalPolynomial' z = unsafePerformIO . runR $ go 1
     (u,v,s,t) = gcd f (derivative f)
     -- Normierung schon hier, damit nicht sehr kleine Konstanten viele
     -- Iterationen unten erzwingen
-    factors   = map norm $ irreducibleFactors $ fmap unF s
+    factors   = map normalize $ irreducibleFactors $ fmap unF s
     isApproxZero n g = magnitudeZeroTestR n $ eval z' (fmap fromRational g)
     go n = do
         R $ putStrLn $ "go " ++ show n
@@ -142,7 +142,7 @@ minimalPolynomial z = head $ filter (\p -> zero == A.eval z p) factors
     where
     f         = polynomial . unAlg $ z
     (u,v,s,t) = gcd f (derivative f)
-    factors   = fmap norm $ irreducibleFactors $ fmap unF s
+    factors   = fmap normalize $ irreducibleFactors $ fmap unF s
 
 -- XXX: besserer name!
 simplify' :: Alg QinC -> Alg QinC

@@ -7,12 +7,12 @@ import Ring
 import Field
 import Nat
 import IdealExtension
-import Polynomial
+import Polynomial as Poly
 import Control.Monad
 import Data.List
 
 idealCanonCoeffs :: (IdealField a) => Poly a -> Nondet a [a]
-idealCanonCoeffs = liftM reverse . dropWhileM (`idealEquals` zero) . reverse . unPoly
+idealCanonCoeffs = liftM reverse . dropWhileM (`idealEquals` zero) . reverse . unsafeCoeffs
 
 idealDegree :: (IdealField a) => Poly a -> Nondet a Integer
 idealDegree = liftM pred . liftM genericLength . idealCanonCoeffs
@@ -41,7 +41,7 @@ idealQuotRem f g = do
     return (q + q', r)
 
 --exi :: Nondet (ISE Rational s) (Poly (ISE Rational s), Poly (ISE Rational s))
-exi = idealGCD ((iX - constant (adjointedRoot :: ISE Rational ())) * (iX - fromInteger 3)) ((adjointedRoot - unit) .* (iX - constant adjointedRoot) * (iX - fromInteger 5))
+exi = idealGCD ((iX - Poly.fromBase (adjointedRoot :: ISE Rational ())) * (iX - fromInteger 3)) ((adjointedRoot - unit) .* (iX - Poly.fromBase adjointedRoot) * (iX - fromInteger 5))
 
 idealGCD :: (IdealField a) => Poly a -> Poly a -> Nondet a (Poly a,Poly a,Poly a,Poly a)
 idealGCD a b = do

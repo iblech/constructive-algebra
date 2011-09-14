@@ -76,8 +76,8 @@ magnitudeUpperBound (MkComplex f) = liftM ((+1) . ComplexRational.magnitudeUpper
 -- Eigenschaft: Stelle f die komplexe Zahl a dar. Dann gilt:
 --     |a| <= magnitudeBound f
 
-constant :: ComplexRational -> Complex
-constant = MkRat
+fromBase :: ComplexRational -> Complex
+fromBase = MkRat
 
 approx' :: Rational -> Complex -> R ComplexRational
 approx' eps (MkRat f) = return f

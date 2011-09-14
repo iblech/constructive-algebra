@@ -11,11 +11,11 @@ module Smith
     , charPoly, minPoly, lambdaMatrix
     ) where
 
-import Matrix
+import Matrix as M
 import Data.Array
 import Prelude hiding (gcd, (!!), (+), (*), (-), (/), negate, quotRem)
 import qualified Prelude as P
-import Polynomial
+import Polynomial as Poly
 import Ring
 import Field
 import Euclidean
@@ -154,7 +154,7 @@ props_annihilatingPolynomial proxy = (:[]) $ forAll (elements [0..maxDim]) $ \n 
             let _ = numRows' mtx `asTypeOf` numCols' mtx `asTypeOf` n'
                 _ = (undefined :: Matrix n m a -> Proxy a) mtx `asTypeOf` proxy
                 p = annihilatingPolynomial mtx
-            in  leadingCoeff p == unit && eval mtx (fmap fromBase p) == zero
+            in  leadingCoeff p == unit && eval mtx (fmap M.fromBase p) == zero
     where maxDim = 4
 
 -- | Berechnet die Determinante, indem Determinante-/1/-Transformationen
@@ -181,7 +181,7 @@ charPoly = unER . determinant . fmap ER . lambdaMatrix
 -- über die Smithsche Normalform von /lambda 1 - A/. Das Minimalpolynom
 -- der eindeutigen /0x0/-Matrix ist das Einspolynom.
 minPoly :: (ReifyNat n, Field a, IntegralDomain a, Eq a) => SqMatrix n a -> Poly a
-minPoly = norm . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix
+minPoly = normalize . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix
     where
     last' xs = if null xs then unit else last xs
     -- Ausnahme für die 0x0-Matrix
@@ -191,7 +191,7 @@ minPoly = norm . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix
 -- im entsprechenden Polynomring).
 lambdaMatrix :: (ReifyNat n, Ring a) => SqMatrix n a -> SqMatrix n (Poly a)
 lambdaMatrix (MkMatrix arr) = MkMatrix $
-    accum (+) (fmap (negate . constant) arr) [((i,i), iX) | i <- [0..fst (snd (bounds arr))]]
+    accum (+) (fmap (negate . Poly.fromBase) arr) [((i,i), iX) | i <- [0..fst (snd (bounds arr))]]
 
 props_Smith :: [Property]
 props_Smith = props_annihilatingPolynomial (undefined :: Proxy (F Rational))

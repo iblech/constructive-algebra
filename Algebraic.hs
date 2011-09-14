@@ -82,10 +82,10 @@ invert (MkAlg z) = do
         else return $ Just zInv
     where
     -- XXX: okay, dass coeffs Nuller liefert?
-    as     = coeffs (polynomial z)
+    as     = unsafeCoeffs (polynomial z)
     bs     = dropWhile (== 0) as
     k      = length bs
-    p'     = norm . MkPoly . reverse $ bs
+    p'     = normalize . MkPoly . reverse $ bs
     bounds = 1 : zipWith f (tail bs) [1..]
 	where
 	f b j
@@ -117,7 +117,7 @@ isRational z = listToMaybe $ do
     return cand
     where
     -- XXX: okay, dass coeffs Nuller liefert?
-    as    = dropWhile (== 0) . coeffs . polynomial . unAlg $ z
+    as    = dropWhile (== 0) . unsafeCoeffs . polynomial . unAlg $ z
     (r,s) = (numerator &&& denominator) $ unF $ head as
     nonNegativeCandidates =
         [ p % q
@@ -162,7 +162,7 @@ isGoodPoly isGood p
     | all isJust as = Just . MkPoly $ map fromJust as
     | otherwise     = Nothing
     where
-    as = map isGood $ coeffs p
+    as = map isGood $ unsafeCoeffs p
 
 eval 
     :: Alg QinC

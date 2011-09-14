@@ -5,10 +5,10 @@ import Debug.Trace
 
 import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (^), negate)
 import Complex hiding (goldenRatio, sqrt2)
-import qualified Complex
+import qualified Complex as C
 import NumericHelper
-import qualified Polynomial as P
-import Polynomial hiding (constant)
+import qualified Polynomial as Poly
+import Polynomial as Poly
 import Matrix hiding ((!!))
 import Ring
 import RingMorphism
@@ -27,7 +27,7 @@ data (RingMorphism m) => IC m =
 fromBase :: (RingMorphism m) => Domain m -> IC m
 fromBase x = r
     where
-    r    = MkIC (mor' x) (iX - P.constant x)
+    r    = MkIC (mor' x) (iX - Poly.fromBase x)
     mor' = mor ((undefined :: IC m -> Proxy m) r)
 
 instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m)) => Ring (IC m) where
@@ -39,7 +39,7 @@ instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m)) => Ring (IC m) 
 
     negate (MkIC x p) = MkIC (negate x) (MkPoly as)
 	where
-	as = reverse $ zipWith (*) (reverse $ coeffs p) (cycle [unit,negate unit])
+	as = reverse $ zipWith (*) (reverse $ unsafeCoeffs p) (cycle [unit,negate unit])
 
     fromInteger i = MkIC (fromInteger i) (iX - fromInteger i)
 
@@ -88,7 +88,7 @@ sumPolynomial f g =
 	| otherwise = if k == i then negate (ys !! l) else zero
     indices = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
     (n,m)   = (length xs - 1, length ys - 1)
-    (xs,ys) = (coeffs f, coeffs g)
+    (xs,ys) = (unsafeCoeffs f, unsafeCoeffs g)
 
 -- Voraussetzung: Polynome müssen normiert sein
 prodPolynomial :: (Ring a, HaveAnnihilatingPolynomial a) => Poly a -> Poly a -> Poly a
@@ -108,7 +108,7 @@ prodPolynomial f g =
 	= xs !! k * ys !! l
     indices = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
     (n,m)   = (length xs - 1, length ys - 1)
-    (xs,ys) = (coeffs f, coeffs g)
+    (xs,ys) = (unsafeCoeffs f, unsafeCoeffs g)
 
 -- Voraussetzung: Polynome müssen normiert sein
 -- evalPolynomial p f ist ein ann. Polynom für p(z), wobei f(z) = 0.
@@ -118,8 +118,8 @@ evalPolynomial p f =
     flip fromArray' annihilatingPolynomial $ listArray ((0,0), (n-1, n-1)) elems
     where
     elems = concatMap row [0..fromIntegral (n-1)]
-    n     = pred . length . coeffs . canonForm $ f
-    row i = take n . (++ repeat zero) . coeffs . canonForm . snd $ normedQuotRem (p * iX^i) f
+    n     = pred . length . canonCoeffs $ f
+    row i = take n . (++ repeat zero) . canonCoeffs . snd $ normedQuotRem (p * iX^i) f
 
 eval 
     :: (RingMorphism m, HaveAnnihilatingPolynomial (Domain m), Eq (Domain m))
@@ -127,7 +127,7 @@ eval
     -> Poly (Domain m)
     -> IC m
 eval z p =
-    MkIC (P.eval (number z) (fmap mor' p)) (evalPolynomial p (polynomial z))
+    MkIC (Poly.eval (number z) (fmap mor' p)) (evalPolynomial p (polynomial z))
     where mor' = mor ((undefined :: IC m -> Proxy m) z)
 
 -- Voraussetzung: Polynome müssen normiert sein
@@ -139,15 +139,15 @@ solPolynomial p gs = charPoly . fromArray $ listArray ((0,0), (length indices - 
 -}
 
 goldenRatio :: IC QinC
-goldenRatio = MkIC Complex.goldenRatio (iX^2 - iX - unit)
+goldenRatio = MkIC C.goldenRatio (iX^2 - iX - unit)
 
 sqrt2 :: IC QinC
-sqrt2 = MkIC Complex.sqrt2 (iX^2 - unit - unit)
+sqrt2 = MkIC C.sqrt2 (iX^2 - unit - unit)
 
 instance AllowsConjugation (IC QinC) where
     conjugate (MkIC z p) = MkIC (conjugate z) p
-    imagUnit             = MkIC (constant imagUnit) (iX^2 + unit)
+    imagUnit             = MkIC (C.fromBase imagUnit) (iX^2 + unit)
 
 verifyPolynomial :: (RingMorphism m) => IC m -> Codomain m
-verifyPolynomial z@(MkIC x f) = P.eval x $ fmap mor' f
+verifyPolynomial z@(MkIC x f) = Poly.eval x $ fmap mor' f
     where mor' = mor ((undefined :: IC m -> Proxy m) z)

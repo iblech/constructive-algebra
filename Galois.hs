@@ -4,10 +4,10 @@ module Galois where
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
 import Ring
 import Field
-import Polynomial
+import Polynomial as Poly
 import Factoring
 import Data.List hiding (sum,product)
-import Complex hiding (constant)
+import Complex
 import IntegralClosure
 import ZeroRational
 import Algebraic as A
@@ -53,7 +53,7 @@ galoisGroup' f = trace debugMsg $ (xs, sigmas)
     xs         = map simplify' $ rootsA f
     (res,t,hs) = pseudoResolvent (tail xs)
     res'       = 0:res
-    hs'        = negate (sum hs + constant a) : hs where a = (!! 1) . reverse . coeffs . canonForm $ f
+    hs'        = negate (sum hs + Poly.fromBase a) : hs where a = (!! 1) . reverse . canonCoeffs $ f
     t'         = t  -- simplify' unnötig
     m          = fmap unF . polynomial . unAlg $ t'  -- Minimalpolynom von t
     conjs      = rootsA m
@@ -111,7 +111,7 @@ primitiveElement :: Alg QinC -> Alg QinC -> (Integer, Alg QinC, Poly Rational, P
 primitiveElement x y = (lambda, t, hX, hY)
     where
     f = fmap unF . polynomial . unAlg $ x
-    g = squareFree . fmap unF . polynomial . unAlg $ y
+    g = squarefreePart . fmap unF . polynomial . unAlg $ y
     -- Nst. der Minimalpolynome würden genügen
     exceptions :: [Integer]
     exceptions = do
@@ -122,9 +122,9 @@ primitiveElement x y = (lambda, t, hX, hY)
     lambda = head $ filter (\q -> all (/= q) exceptions) allIntegers
     t = x + fromInteger lambda * y
     hY = runISEwithAlgebraic t $ do
-        let h = fmap I.fromBase f `compose` (constant adjointedRoot - fromInteger lambda * iX)
+        let h = fmap I.fromBase f `compose` (Poly.fromBase adjointedRoot - fromInteger lambda * iX)
         d <- idealNormedGCD (fmap I.fromBase g) h
-        liftM negate . canonISE . head . unPoly $ d
+        liftM negate . canonISE . head . unsafeCoeffs $ d
     hX = iX - fromInteger lambda * hY
 
 -- garantiert, dass das zurückgegebene prim. Element bereits simplify'-ed wurde.

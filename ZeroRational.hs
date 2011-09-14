@@ -6,9 +6,9 @@ import Polynomial
 import Ring
 import Field
 import NumericHelper
-import Complex hiding (constant)
+import Complex
 import Algebraic hiding (eval)
-import Polynomial
+import Polynomial as Poly
 import Control.Monad
 import Euclidean
 import ComplexRational
@@ -57,13 +57,13 @@ windingNumber z z' p
     toReal (x :+: y) = x
 
 ex :: Poly ComplexRational
-ex = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Polynomial.constant imagUnit))
+ex = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Poly.fromBase imagUnit))
 
 ex2 :: Poly ComplexRational
-ex2 = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Polynomial.constant imagUnit)) * (iX + negate (fromInteger 9 + fromInteger 8 * Polynomial.constant imagUnit))
+ex2 = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Poly.fromBase imagUnit)) * (iX + negate (fromInteger 9 + fromInteger 8 * Poly.fromBase imagUnit))
 
 ex' :: Poly ComplexRational
-ex' = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 4))  -- + fromInteger 4 * Polynomial.constant imagUnit))
+ex' = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 4))  -- + fromInteger 4 * Poly.fromBase imagUnit))
 
 ex3 :: Poly Rational
 ex3 = iX^2 + fromInteger 1
@@ -75,7 +75,7 @@ ex5 :: Poly Rational
 ex5 = iX^3 - fromInteger 1
 
 ex6 :: Poly Rational
-ex6 = constant (1/8)*iX^3 + constant (1/2)*iX
+ex6 = Poly.fromBase (1/8)*iX^3 + Poly.fromBase (1/2)*iX
 
 data Cell
     = Cell0 ComplexRational
@@ -219,11 +219,11 @@ roots' f radius = go 1 iters
 rootsA :: Poly Rational -> [Alg QinC]
 rootsA f = unsafePerformIO $ do
     table <- readIORef rootsMemoTable
-    case coeffs f `M.lookup` table of
+    case canonCoeffs f `M.lookup` table of
         Just zs -> return zs
         Nothing -> do
             let zs = rootsA_ f
-            writeIORef rootsMemoTable (M.insert (coeffs f) zs table)
+            writeIORef rootsMemoTable (M.insert (canonCoeffs f) zs table)
             return zs
 
 {-# NOINLINE rootsMemoTable #-}
@@ -235,7 +235,7 @@ rootsA_ f = trace ("Suche Nullstellen von (r=" ++ show radius ++ "): " ++ show f
     let iters' = go i 1 iters in MkAlg $ MkIC (traceEvals ("zero" ++ show i) $ MkComplex (return . (genericIndex iters'))) (fmap F f'')
     where
     (_,_,f',_) = gcd f (derivative f)
-    f''        = norm f'
+    f''        = normalize f'
     n          = fromIntegral (degree f') :: Int
     radius     = cauchyRadius $ fmap fromRational f''
     iters      = subdivisions' radius $ fmap fromRational f''
@@ -309,12 +309,12 @@ newton f = iterate step
 -- Vor.: derivative f x != 0, f x != 0.
 -- Die Voraussetzungen zeigen dann auch, dass f genau eine Nullstelle im
 -- offenen Ball mit Radius 2*eta um x hat.
-newtonPrecondition :: Poly (ComplexRational) -> ComplexRational -> Bool
+newtonPrecondition :: Poly ComplexRational -> ComplexRational -> Bool
 newtonPrecondition f x = eval x f /= zero && eval x (derivative f) /= zero && and ineqs
     where
     etaSq    = magnSq (eval x f / eval x (derivative f))
     magnSq z = toReal $ z * conjugate z
     ineqs    = zipWith (\c k -> magnSq c * (fromInteger 8)^(2*k-2) * etaSq^(k-1) <= c1sq) (drop 2 cs) [2..]
     -- XXX: okay, dass coeffs Nuller liefert?
-    cs       = coeffs $ compose f (iX + fromComplexRational x)
+    cs       = unsafeCoeffs $ compose f (iX + fromComplexRational x)
     c1sq     = magnSq (cs !! 1)

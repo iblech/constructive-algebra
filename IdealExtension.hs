@@ -4,7 +4,7 @@ module IdealExtension where
 import Prelude hiding (gcd, quotRem, (+), (*), (-), (/), (^), negate, recip, fromInteger)
 import Ring
 import Field
-import Polynomial
+import Polynomial as Poly
 import Euclidean
 import Control.Monad.Reader
 import Control.Monad.Error
@@ -37,7 +37,7 @@ newtype ISE k s = S (Poly k)
     deriving (Show,Ring,AllowsRationalEmbedding)
 
 fromBase :: k -> ISE k s
-fromBase = S . Polynomial.constant
+fromBase = S . Poly.fromBase
 
 adjointedRoot :: (Field k) => ISE k s
 adjointedRoot = S iX
