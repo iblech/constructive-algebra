@@ -1,7 +1,7 @@
 -- | Dieses Modul erlaubt es, eine gegebene Matrix über einem euklidischen Ring
 -- auf /Smithsche Normalform/ zu bringen.
 --
--- Dies verwenden wir unter anderem um Minimalpolynome von Matrizen
+-- Dies verwenden wir unter anderem, um Minimalpolynome von Matrizen
 -- auszurechnen.
 {-# LANGUAGE FlexibleContexts, FlexibleInstances #-}
 module Smith
@@ -19,11 +19,15 @@ import Polynomial
 import Ring
 import Field
 import Euclidean
+import TypeLevelNat
+import Testing
 
 -- | Führt eine Transformation derart aus, dass das /(0,j)/-Element null wird;
 -- dazu wird der größte gemeinsame Teiler vom /(0,0)/- und /(0,j)/-Element
 -- genutzt. Die zugehörige Transformationsmatrix hat stets Determinante /1/.
-makeZeroInFirstRow :: (EuclideanRing a, Eq a, TestableAssociatedness a) => Nat -> Matrix a -> Matrix a
+makeZeroInFirstRow
+    :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, TestableAssociatedness a)
+    => Nat -> Matrix (S n) m a -> Matrix (S n) m a
 makeZeroInFirstRow j mtx@(MkMatrix arr) = MkMatrix (arr // updates) `asTypeOf` mtx
     where
     (u,v,s,t) = gcd' (arr ! (0,0)) (arr ! (0,j))
@@ -42,7 +46,9 @@ makeZeroInFirstRow j mtx@(MkMatrix arr) = MkMatrix (arr // updates) `asTypeOf` m
 -- | Führt eine Transformation derart aus, dass das /(j,0)/-Element null wird;
 -- dazu wird der größte gemeinsame Teiler vom /(0,0)/- und /(j,0)/-Element
 -- genutzt. Die zugehörige Transformationsmatrix hat stets Determinante /1/.
-makeZeroInFirstCol :: (EuclideanRing a, Eq a, TestableAssociatedness a) => Nat -> Matrix a -> Matrix a
+makeZeroInFirstCol
+    :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, TestableAssociatedness a)
+    => Nat -> Matrix n (S m) a -> Matrix n (S m) a
 makeZeroInFirstCol i = transpose . makeZeroInFirstRow i . transpose
 
 -- | Bringt eine gegebene Matrix auf (rechteckige) Diagonalform.
@@ -51,20 +57,19 @@ makeZeroInFirstCol i = transpose . makeZeroInFirstRow i . transpose
 -- muss hier nicht unbedingt erfüllt sein.
 --
 -- Die verwendeten Transformationen haben stets Determinante /1/.
-diagonalForm :: (EuclideanRing a, Eq a, TestableAssociatedness a) => Matrix a -> [a]
+diagonalForm :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, TestableAssociatedness a) => Matrix n m a -> [a]
 diagonalForm mtx
     | numRows mtx == 0 || numCols mtx == 0
     = []
     | not (null badCols)
-    = diagonalForm $ makeZeroInFirstRow (head badCols) mtx
+    = withNontrivialRows mtx $ diagonalForm . makeZeroInFirstRow (head badCols)
     | not (null badRows)
-    = diagonalForm $ makeZeroInFirstCol (head badRows) mtx
+    = withNontrivialCols mtx $ diagonalForm . makeZeroInFirstCol (head badRows)
     | otherwise
-    = mtx !! (0,0) : diagonalForm mtx'
+    = mtx !! (0,0) : withNontrivialRowsCols mtx (diagonalForm . deleteRow 0 . deleteColumn 0)
     where
     badCols = [j | j <- [1..numCols mtx - 1], mtx !! (0,j) /= zero]
     badRows = [i | i <- [1..numRows mtx - 1], mtx !! (i,0) /= zero]
-    mtx'    = deleteRow 0 . deleteColumn 0 $ mtx
 -- Das Verfahren terminiert, da wir die aufsteigende Kettenbedingung für
 -- Hauptideale voraussetzen und in 'makeZeroInFirstRow' darauf achten,
 -- im trivialem Fall vorliegender Assoziiertheit die richtige (nichts
@@ -74,7 +79,9 @@ diagonalForm mtx
 -- Diese werden nicht auf irgendeine Art und Weise normiert (welche sollte
 -- das in einem beliebigen euklidischen Ring auch sein?), sollten also
 -- nur bis auf Assoziiertheit verstanden werden.
-elementaryDivisors :: (EuclideanRing a, Eq a, TestableAssociatedness a) => Matrix a -> [a]
+elementaryDivisors
+    :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, TestableAssociatedness a)
+    => Matrix n m a -> [a]
 elementaryDivisors = divisors . diagonalForm
 
 -- | Formt eine gegebene Liste von Ringelementen (die wir uns als
@@ -118,7 +125,7 @@ splice _ _ _      = error "splice"  -- sollte nicht eintreten
 class (Ring a) => HaveAnnihilatingPolynomial a where
     -- | Bestimmt ein normiertes Polynom, welches die gegebene Matrix
     -- annihiliert. Das Nullpolynom zählt nicht als normiert.
-    annihilatingPolynomial :: SqMatrix a -> Poly a
+    annihilatingPolynomial :: (ReifyNat n) => SqMatrix n a -> Poly a
 
 -- XXX: QuickCheck für annihilatingPolynomial!
 
@@ -138,34 +145,53 @@ instance (EuclideanRing a, Integral a, IntegralDomain a, TestableAssociatedness 
 instance (Field a, IntegralDomain a, Eq a) => HaveAnnihilatingPolynomial (F a) where
     annihilatingPolynomial = minPoly
 
+props_annihilatingPolynomial
+    :: (HaveAnnihilatingPolynomial a, Eq a, Show a, Arbitrary a)
+    => Proxy a -> [Property]
+props_annihilatingPolynomial proxy = (:[]) $ forAll (elements [0..maxDim]) $ \n ->
+    reflectNat n $ \n' ->
+        forAll arbitrary $ \mtx ->
+            let _ = numRows' mtx `asTypeOf` numCols' mtx `asTypeOf` n'
+                _ = (undefined :: Matrix n m a -> Proxy a) mtx `asTypeOf` proxy
+                p = annihilatingPolynomial mtx
+            in  leadingCoeff p == unit && eval mtx (fmap fromBase p) == zero
+    where maxDim = 4
 
 -- | Berechnet die Determinante, indem Determinante-/1/-Transformationen
 -- verwendet werden, um die gegebene Matrix auf Dreiecksform zu bringen.
-determinant :: (EuclideanRing a, Eq a, TestableAssociatedness a) => SqMatrix a -> a
+determinant :: (ReifyNat n, EuclideanRing a, Eq a, TestableAssociatedness a) => SqMatrix n a -> a
 determinant mtx
     | numRows mtx == 0 = unit
-    | null badCols     = (mtx !! (0,0)) * determinant mtx'
-    | otherwise        = determinant $ makeZeroInFirstRow (head badCols) mtx
+    | null badCols     = (mtx !! (0,0)) * restDet
+    | otherwise        =
+        withNontrivialRowsCols mtx (flip withSquare determinant . makeZeroInFirstRow (head badCols))
     where
     badCols = [j | j <- [1..numCols mtx - 1], mtx !! (0,j) /= zero]
-    mtx'    = deleteRow 0 . deleteColumn 0 $ mtx
+    restDet = withNontrivialRowsCols mtx (flip withSquare determinant . deleteRow 0 . deleteColumn 0)
 
 -- | Berechnet das charakteristische Polynom (normiert) einer gegebenen Matrix.
 -- Die Körper-Voraussetzung an den Ring stellen wir, um die effizienten
 -- Smith-Umformungen nutzen zu können. Erfüllt folgende Spezifikation:
 --
 -- > determinant = naiveDeterminant . lambdaMatrix
-charPoly :: (Field a, IntegralDomain a, Eq a) => SqMatrix a -> Poly a
+charPoly :: (ReifyNat n, Field a, IntegralDomain a, Eq a) => SqMatrix n a -> Poly a
 charPoly = unER . determinant . fmap ER . lambdaMatrix
 
 -- | Berechnet das Minimalpolynom (normiert) einer gegebenen Matrix /A/
--- über die Smithsche Normalform von /lambda 1 - A/.
-minPoly :: (Field a, IntegralDomain a, Eq a) => SqMatrix a -> Poly a
-minPoly = norm . last . map unER . elementaryDivisors . fmap ER . lambdaMatrix
+-- über die Smithsche Normalform von /lambda 1 - A/. Das Minimalpolynom
+-- der eindeutigen /0x0/-Matrix ist das Einspolynom.
+minPoly :: (ReifyNat n, Field a, IntegralDomain a, Eq a) => SqMatrix n a -> Poly a
+minPoly = norm . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix
+    where
+    last' xs = if null xs then unit else last xs
+    -- Ausnahme für die 0x0-Matrix
 
 -- | Liefert zu einer gegebenen Matrix /A/ die für die Bestimmung von
 -- annihilierenden Polynomen wichtige Matrix /lambda 1 - A/ (mit Einträgen
 -- im entsprechenden Polynomring).
-lambdaMatrix :: (Ring a) => SqMatrix a -> SqMatrix (Poly a)
-lambdaMatrix (MkMatrix arr) = fromArray $
+lambdaMatrix :: (ReifyNat n, Ring a) => SqMatrix n a -> SqMatrix n (Poly a)
+lambdaMatrix (MkMatrix arr) = MkMatrix $
     accum (+) (fmap (negate . constant) arr) [((i,i), iX) | i <- [0..fst (snd (bounds arr))]]
+
+props_Smith :: [Property]
+props_Smith = props_annihilatingPolynomial (undefined :: Proxy (F Rational))

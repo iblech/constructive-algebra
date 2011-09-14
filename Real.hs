@@ -9,6 +9,7 @@ import Field
 import qualified Complex as C
 import Complex hiding (sqrt2,goldenRatio)
 import Control.Monad
+import Proxy
 
 newtype Real = MkReal { unReal :: Complex }
     deriving (Ring,AllowsRationalEmbedding,ApproxFloating)

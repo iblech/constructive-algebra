@@ -6,10 +6,7 @@ module RingMorphism where
 
 import Prelude hiding (fromInteger)
 import Ring
-
--- | Dummytyp ohne Elemente (abgesehen von 'undefined'), um bei der
--- Typerschließung zu helfen.
-data Proxy s
+import Proxy
 
 -- | Klasse für Ringhomomorphismen.
 class (Ring (Domain m), Ring (Codomain m)) => RingMorphism m where

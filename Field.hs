@@ -4,6 +4,7 @@ module Field where
 import Prelude (Show, Eq, Ord, (.), map)
 import qualified Prelude as P
 import Ring
+import Testing
 
 import Data.Ratio
 
@@ -13,7 +14,7 @@ class (Ring a) => Field a where
 
 -- Dummytyp, um das Typsystem davon zu überzeugen, dass ein Field-Typ vorliegt
 newtype (Field a) => F a = F { unF :: a }
-    deriving (Eq,Ord,Ring,IntegralDomain,Field,P.Num,P.Fractional,TestableAssociatedness,AllowsRationalEmbedding,ApproxFloating)
+    deriving (Eq,Ord,Ring,IntegralDomain,Field,P.Num,P.Fractional,TestableAssociatedness,AllowsRationalEmbedding,ApproxFloating,Arbitrary)
 instance (Show a, Field a) => Show (F a) where
     show        = P.show . unF
     showsPrec i = P.showsPrec i . unF

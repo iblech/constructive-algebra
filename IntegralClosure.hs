@@ -15,6 +15,7 @@ import RingMorphism
 import Field
 import Smith
 import ComplexRational
+import Proxy
 
 import Data.Array
 
@@ -73,7 +74,9 @@ instance (RingMorphism m, ApproxFloating (Codomain m)) =>
 
 -- Voraussetzung: Polynome müssen normiert sein
 sumPolynomial :: (Ring a, HaveAnnihilatingPolynomial a) => Poly a -> Poly a -> Poly a
-sumPolynomial f g = annihilatingPolynomial . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
+sumPolynomial f g =
+    flip fromArray' annihilatingPolynomial $
+        listArray ((0,0), (length indices - 1, length indices - 1)) elems
     where
     elems = [arr ij kl | ij <- indices, kl <- indices ]
     arr (i,j) (k,l) = arr1 (i,j) (k,l) + arr2 (i,j) (k,l)
@@ -89,7 +92,9 @@ sumPolynomial f g = annihilatingPolynomial . fromArray $ listArray ((0,0), (leng
 
 -- Voraussetzung: Polynome müssen normiert sein
 prodPolynomial :: (Ring a, HaveAnnihilatingPolynomial a) => Poly a -> Poly a -> Poly a
-prodPolynomial f g = annihilatingPolynomial . fromArray $ listArray ((0,0), (length indices - 1, length indices - 1)) elems
+prodPolynomial f g =
+    flip fromArray' annihilatingPolynomial $
+        listArray ((0,0), (length indices - 1, length indices - 1)) elems
     where
     elems = [arr ij kl | ij <- indices, kl <- indices ]
     arr (i,j) (k,l)
@@ -110,7 +115,7 @@ prodPolynomial f g = annihilatingPolynomial . fromArray $ listArray ((0,0), (len
 -- Eq-Voraussetzung eigentlich überflüssig. XXX
 evalPolynomial :: (Ring a, Eq a, HaveAnnihilatingPolynomial a) => Poly a -> Poly a -> Poly a
 evalPolynomial p f =
-    annihilatingPolynomial . fromArray $ listArray ((0,0), (n-1, n-1)) elems
+    flip fromArray' annihilatingPolynomial $ listArray ((0,0), (n-1, n-1)) elems
     where
     elems = concatMap row [0..fromIntegral (n-1)]
     n     = pred . length . coeffs . canonForm $ f

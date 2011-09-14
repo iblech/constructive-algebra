@@ -41,9 +41,9 @@ main = do
     print $ as
 -}
 
-main' = do
+main = do
     let fi = fromInteger :: P.Integer -> Poly P.Rational
-    let gs = galoisGroup $ (iX^3 - fromRational (1/2)) * (iX^2 + fi 5)
+    let gs = galoisGroup $ (iX^3 - fi 1) * (iX^2 + fi 5)
     print $ snd gs
     print . map approx $ fst gs
     print . map approx $ fst gs
@@ -60,7 +60,7 @@ main' = do
     print $ minimalPolynomial $ imagUnit^6
 -}
 
-main = do
+main' = do
     let z1 = IntegralClosure.sqrt2
 	z2 = z1 * z1
 	z3 = z2 * z1
