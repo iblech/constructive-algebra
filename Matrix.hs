@@ -1,6 +1,7 @@
 -- | Dieses Modul stellt grundlegende Matrixoperationen bereit.
 --
--- Zur Darstellung der zugrundeliegenden Felder nutzen wir "Data.Array".
+-- Zur Darstellung der zugrundeliegenden Felder nutzen wir "Data.Array",
+-- zur statischen Typisierung der Zeilen- und Spaltenzahl "TypeLevelNat".
 {-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, MultiParamTypeClasses, TupleSections, TypeSynonymInstances #-}
 module Matrix
     ( Nat
@@ -31,17 +32,16 @@ import Testing
 -- Wird zur Indizierung der Matrizen zugrundeliegenden "Data.Array"s benutzt.
 type Nat = Int
 
--- | Typ der Matrizen beliebiger Größe über /a/.
+-- | Typ der Matrizen der Größe /n x m/ über /a/.
 -- Die Indizierung der zugrundeliegenden Felder beginnt bei /(0,0)/,
 -- Matrizen mit null Zeilen oder Spalten sind zugelassen.
 --
--- Eine statische Typisierung der Größe über natürliche Zahlen auf Typebene
--- wäre möglich gewesen, war jedoch im Hinblick auf die vielen
--- Abschneideoperationen auf Untermatrizen in "Smith" unkomfortabel.
+-- Die Typen /n/ und /m/ sollten der 'TypeLevelNat.ReifyNat'-Klasse angehören.
 newtype Matrix n m a = MkMatrix { unMatrix :: Array (Nat,Nat) a }
     deriving (Show,Eq,Functor)
 
--- | Typ der quadratischen Matrizen beliebiger Größe über /a/.
+-- | Typ der quadratischen /n x n/-Matrizen über /a/.
+-- Der Typ /n/ sollte der 'TypeLevelNat.ReifyNat'-Klasse angehören.
 type SqMatrix n a = Matrix n n a
 
 -- | /m !! (i,j)/ ist der /(i,j)/-Eintrag der Matrix /m/.
@@ -49,14 +49,22 @@ type SqMatrix n a = Matrix n n a
 (!!) :: Matrix n m a -> (Nat,Nat) -> a
 (!!) m ij = unMatrix m ! ij
 
+-- | Ummantelt ein gegebenes Feld in eine Matrix.
+-- Da der Ergebnistyp abhängig von der Zeilen- und Spaltenanzahl des gegebenen
+-- Felds ist, kann die resultierende Matrix aber nicht einfach zurückgegeben
+-- werden, sondern muss an eine polymorphe Continuation übergeben werden.
 fromArray :: Array (Nat,Nat) a -> (forall n m. (ReifyNat n, ReifyNat m) => Matrix n m a -> r) -> r
-fromArray arr k = reflectNat n $ \n' -> reflectNat m $ \m' ->
-    k (MkMatrix arr `asTypeOf` dummy n' m')
+fromArray arr k
+    | fst (bounds arr) == (0,0) =
+        reflectNat n $ \n' -> reflectNat m $ \m' -> k (MkMatrix arr `asTypeOf` dummy n' m')
+    | otherwise                 = error "Unkonventionsgemäße Indizierung in fromArray!"
     where
     dummy :: Proxy n -> Proxy m -> Matrix n m a
     dummy = undefined
     (n,m) = (succ *** succ) . (fromIntegral *** fromIntegral) $ snd (bounds arr)
 
+-- | Ummantelt ein gegebenes quadratisches Feld in eine quadratische Matrix.
+-- Wirft eine Laufzeitausnahme, falls das gegebene Feld nicht quadratisch ist.
 fromArray' :: Array (Nat,Nat) a -> (forall n. (ReifyNat n) => SqMatrix n a -> r) -> r
 fromArray' arr k
     | n == m    = reflectNat n $ \n' -> k (MkMatrix arr `asTypeOf` dummy n')
@@ -65,6 +73,9 @@ fromArray' arr k
     dummy = undefined :: Proxy n -> SqMatrix n a
     (n,m) = dim arr
 
+-- | Bringt die Information darüber, dass die gegebene Matrix mindestens eine
+-- Zeile besitzt, aufs Typniveau; ist dem nicht so, wird eine Laufzeitausnahme
+-- geworfen.
 withNontrivialRows
     :: (ReifyNat n, ReifyNat m)
     => Matrix n m a
@@ -77,6 +88,9 @@ withNontrivialRows mtx@(MkMatrix arr) k
     dummy = undefined :: Proxy k -> Proxy l -> Matrix k l a
     (n,m) = dim arr
 
+-- | Bringt die Information darüber, dass die gegebene Matrix mindestens eine
+-- Spalte besitzt, aufs Typniveau; ist dem nicht so, wird eine Laufzeitausnahme
+-- geworfen.
 withNontrivialCols
     :: (ReifyNat n, ReifyNat m)
     => Matrix n m a
@@ -84,15 +98,19 @@ withNontrivialCols
     -> r
 withNontrivialCols mtx k = withNontrivialRows (transpose mtx) $ k . transpose
 
+-- | Bringt die Information darüber, dass die gegebene Matrix mindestens eine
+-- Zeile und eine Spalte besitzt, aufs Typniveau; ist dem nicht so, wird eine
+-- Laufzeitausnahme geworfen.
 withNontrivialRowsCols
     :: (ReifyNat n, ReifyNat m)
     => Matrix n m a
     -> (forall k l. (ReifyNat k, ReifyNat l) => Matrix (S k) (S l) a -> r)
     -> r
 withNontrivialRowsCols mtx k =
-    withNontrivialRows mtx $ \mtx' ->
-        withNontrivialCols mtx' $ \mtx'' -> k mtx''
+    withNontrivialRows mtx $ \mtx' -> withNontrivialCols mtx' k
 
+-- | Bringt die Information darüber, dass die gegebene Matrix quadratisch ist,
+-- aufs Typniveau; ist dem nicht so, wird eine Laufzeitausnahme geworfen.
 withSquare
     :: (ReifyNat n, ReifyNat m)
     => Matrix n m a
@@ -100,19 +118,30 @@ withSquare
     -> r
 withSquare (MkMatrix arr) k = fromArray' arr k
 
+-- | Liefert die Anzahl Zeilen und Spalten des zugrundeliegenden Felds.
+-- Wird nur intern in diesem Modul benötigt.
 dim :: Array (Nat,Nat) a -> (Integer,Integer)
 dim = (succ *** succ) . (fromIntegral *** fromIntegral) . snd . bounds
 
--- | Liefert die Anzahl der Zeilen einer Matrix.
+-- | Liefert die Anzahl der Zeilen einer Matrix auf Wertebene.
+-- Diese Funktion nutzt nur die gegebenen Typinformationen und betrachtet
+-- nicht das zugrundeliegende Feld.
 numRows :: (ReifyNat n, ReifyNat m) => Matrix n m a -> Nat
 numRows = fromIntegral . reifyNat . numRows'
 
--- | Liefert die Anzahl der Spalten einer Matrix.
+-- | Liefert die Anzahl der Spalten einer Matrix auf Wertebene.
+-- Diese Funktion nutzt nur die gegebenen Typinformationen und betrachtet
+-- nicht das zugrundeliegende Feld.
 numCols :: (ReifyNat n, ReifyNat m) => Matrix n m a -> Nat
 numCols = fromIntegral . reifyNat . numCols'
 
+-- | Liefert die Anzahl der Zeilen einer Matrix auf Typebene.
+-- In das zugrundeliegende Feld wird nicht geschaut.
 numRows' :: (ReifyNat n, ReifyNat m) => Matrix n m a -> Proxy n
 numRows' = undefined
+
+-- | Liefert die Anzahl der Spalten einer Matrix auf Typebene.
+-- In das zugrundeliegende Feld wird nicht geschaut.
 numCols' :: (ReifyNat n, ReifyNat m) => Matrix n m a -> Proxy m
 numCols' = undefined
 
@@ -150,12 +179,7 @@ naiveDeterminant m
     f i = (negate unit)^fromIntegral i * (m !! (0,i)) *
         withNontrivialRowsCols m (flip withSquare naiveDeterminant . deleteColumn i . deleteRow 0)
 
--- | Formatiert eine Matrix (für Debugging-Zwecke).
-prettyMatrix :: (ReifyNat n, ReifyNat m, Show a) => Matrix n m a -> String
-prettyMatrix m =
-    concat . intersperse "\n" $ flip map [0..numRows m - 1] $ \i ->
-	concat . intersperse " " $ map (printf "%-10s" . show . (m !!) . (i,)) [0..numCols m - 1]
-
+-- Ringstruktur der quadratischen (n x n)-Matrizen
 instance (ReifyNat n, Ring a) => Ring (SqMatrix n a) where
     zero        = fromBase zero
     unit        = fromBase unit
@@ -166,6 +190,7 @@ instance (ReifyNat n, Ring a) => Ring (SqMatrix n a) where
         [ ((i,j), sum [ a!(i,k) * b!(k,j) | k <- [0..n] ]) | i <- [0..n], j <- [0..n] ]
         where ((0,0),(n,_)) = bounds a
 
+-- | 'fromBase x' ist das 'x'-fache der Einheitsmatrix.
 fromBase :: (ReifyNat n, Ring a) => a -> SqMatrix n a
 fromBase x = r
     where
@@ -180,3 +205,9 @@ instance (ReifyNat n, ReifyNat m, Arbitrary a) => Arbitrary (Matrix n m a) where
             xs <- replicateM (n*m) arbitrary
             return . MkMatrix $ listArray ((0,0), (n-1,m-1)) xs
         (n,m) = (numRows &&& numCols) . (undefined :: Gen a -> a) $ r
+
+-- | Formatiert eine Matrix (für Debugging-Zwecke).
+prettyMatrix :: (ReifyNat n, ReifyNat m, Show a) => Matrix n m a -> String
+prettyMatrix m =
+    concat . intersperse "\n" $ flip map [0..numRows m - 1] $ \i ->
+	concat . intersperse " " $ map (printf "%-10s" . show . (m !!) . (i,)) [0..numCols m - 1]
