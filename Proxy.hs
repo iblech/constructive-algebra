@@ -13,7 +13,7 @@ data Proxy s
 -- deriving (Functor) führt bei GHC 6.12.1 zu einer Panik.
 
 instance Functor Proxy where
-    fmap f _ = undefined
+    fmap _ _ = undefined
 
 unProxy :: Proxy s -> s
 unProxy = undefined

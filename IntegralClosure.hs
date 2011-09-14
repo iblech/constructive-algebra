@@ -17,12 +17,9 @@ module IntegralClosure
     , props_IntegralClosure
     ) where
 
-import Debug.Trace
-
 import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (^), negate)
 import Complex hiding (goldenRatio, sqrt2)
 import qualified Complex as C
-import NumericHelper
 import qualified Polynomial as Poly
 import Polynomial as Poly
 import Matrix hiding ((!!))
@@ -30,7 +27,6 @@ import Ring
 import RingMorphism
 import Field
 import Smith
-import ComplexRational
 import Proxy
 import Testing
 
@@ -111,9 +107,9 @@ instance (RingMorphism m, ApproxFloating (Codomain m)) => ApproxFloating (IC m) 
 sumAnnihilator :: (Ring a, HaveAnnihilatingPolynomial a) => NormedPoly a -> NormedPoly a -> NormedPoly a
 sumAnnihilator f g =
     flip fromArray' annihilatingPolynomial $
-        listArray ((0,0), (length indices - 1, length indices - 1)) elems
+        listArray ((0,0), (length inds - 1, length inds - 1)) elts
     where
-    elems = [arr ij kl | ij <- indices, kl <- indices ]
+    elts = [arr ij kl | ij <- inds, kl <- inds ]
     arr (i,j) (k,l) = arr1 (i,j) (k,l) + arr2 (i,j) (k,l)
     arr1 (i,j) (k,l)
 	| i < n - 1 = if (k,l) == (i+1,j) then unit else zero
@@ -121,7 +117,7 @@ sumAnnihilator f g =
     arr2 (i,j) (k,l)
 	| j < m - 1 = if (k,l) == (i,j+1) then unit else zero
 	| otherwise = if k == i then negate (ys !! l) else zero
-    indices = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
+    inds = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
     (n,m)   = (length xs - 1, length ys - 1)
     (xs,ys) = (canonCoeffs' f, canonCoeffs' g)
 
@@ -145,9 +141,9 @@ props_sumAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), g
 prodAnnihilator :: (Ring a, HaveAnnihilatingPolynomial a) => NormedPoly a -> NormedPoly a -> NormedPoly a
 prodAnnihilator f g =
     flip fromArray' annihilatingPolynomial $
-        listArray ((0,0), (length indices - 1, length indices - 1)) elems
+        listArray ((0,0), (length inds - 1, length inds - 1)) elts
     where
-    elems = [arr ij kl | ij <- indices, kl <- indices ]
+    elts = [arr ij kl | ij <- inds, kl <- inds ]
     arr (i,j) (k,l)
 	| i < n - 1  && j < m - 1
 	= if (k,l) == (i+1,j+1) then unit else zero
@@ -157,7 +153,9 @@ prodAnnihilator f g =
 	= if k == i + 1 then negate (ys !! l) else zero
 	| i == n - 1 && j == m - 1
 	= xs !! k * ys !! l
-    indices = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
+        | otherwise
+        = error "prodAnnihilator: unmöglicher Fall"
+    inds = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
     (n,m)   = (length xs - 1, length ys - 1)
     (xs,ys) = (canonCoeffs' f, canonCoeffs' g)
 
@@ -179,9 +177,9 @@ props_prodAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), 
 -- Grad von /f/ läuft (ausschließlich) -- unabhängig vom Grad von /p/!
 evalAnnihilator :: (Ring a, Eq a, HaveAnnihilatingPolynomial a) => Poly a -> NormedPoly a -> NormedPoly a
 evalAnnihilator p f =
-    flip fromArray' annihilatingPolynomial $ listArray ((0,0), (n-1, n-1)) elems
+    flip fromArray' annihilatingPolynomial $ listArray ((0,0), (n-1, n-1)) elts
     where
-    elems = concatMap row [0..fromIntegral (n-1)]
+    elts  = concatMap row [0..fromIntegral (n-1)]
     n     = pred . length . canonCoeffs' $ f
     row i = take n . (++ repeat zero) . unsafeCoeffs . snd $ normedQuotRem (p * iX^i) (unNormedPoly f)
 

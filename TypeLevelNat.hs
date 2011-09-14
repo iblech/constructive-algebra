@@ -15,11 +15,13 @@ module TypeLevelNat
     ( Z, S
     , ReifyNat(..), reflectNat, reflectPositiveNat
     , module Proxy
+    , props_TypeLevelNat
     ) where
 
 import Prelude hiding (pred,succ)
 import Proxy
 import Testing
+import Nat
 
 -- | Darstellung der Null (Zero)
 data Z
@@ -27,9 +29,6 @@ data Z
 -- | Darstellung des Nachfolgers /S n/ einer durch den Typ /n/ dargestellen
 -- natürlichen Zahl (Successor)
 data S n
-
--- | Approximation an den Typ für natürliche Zahlen.
-type Nat = Integer
 
 -- | Klasse, um natürliche Zahlen der Typebene in Werte zu wandeln.
 -- Das Gegenstück ist 'reflectNat'.
@@ -68,11 +67,14 @@ reflectPositiveNat n k
     | n == 1    = k (undefined :: Proxy (S Z))
     | otherwise = reflectPositiveNat (n - 1) $ k . fmap succ
 
-zero :: Z
-zero = undefined
-
 pred :: S n -> n
 pred = undefined
 
 succ :: n -> S n
 succ = undefined
+
+props_TypeLevelNat :: [Property]
+props_TypeLevelNat = 
+    [ forAll arbitrary $ \n            -> reflectNat         n reifyNat == n
+    , forAll arbitrary $ \(Positive n) -> reflectPositiveNat n reifyNat == n
+    ]

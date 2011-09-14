@@ -9,6 +9,7 @@ module Smith
     , HaveAnnihilatingPolynomial(..)
     , determinant
     , charPoly, minPoly, lambdaMatrix
+    , props_Smith
     ) where
 
 import Matrix as M

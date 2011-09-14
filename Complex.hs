@@ -16,13 +16,12 @@ import Control.Exception
 import Text.Printf
 import Debug.Trace
 import System.Time
+import Nat
 
 newtype R a = R { runR :: IO a }
     deriving (Functor,Monad)
 unsafeRunR :: R a -> a
 unsafeRunR = unsafePerformIO . runR
-
-type Nat = Integer
 
 data Complex = MkRat !ComplexRational | MkComplex (Nat -> R ComplexRational)
 unComplex :: Complex -> Nat -> R ComplexRational

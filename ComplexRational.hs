@@ -101,8 +101,8 @@ sqrt2Seq n = xs `genericIndex` ((1 + ilogb 2 n) `div` 2)
 -- XXX: Bestimmt kann man die Folge noch viel weiter verlangsamen!
 
 props_Approximation :: (Integer -> ComplexRational) -> C.Complex P.Double -> [Property]
-props_Approximation seq x = (:[]) $ forAll positive $ \n ->
-    C.magnitude (approx (seq n) P.- x) < P.recip (P.fromInteger n)
+props_Approximation f x = (:[]) $ forAll positive $ \n ->
+    C.magnitude (approx (f n) P.- x) < P.recip (P.fromInteger n)
 
 props_ComplexRational :: [Property]
 props_ComplexRational = concat

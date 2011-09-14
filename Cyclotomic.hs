@@ -9,7 +9,6 @@ import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRationa
 import Ring
 import Polynomial
 import NumericHelper
-import Euclidean
 import Data.List hiding (product)
 
 -- | Liste aller Kreisteilungspolynome, beginnend mit /X-1/.

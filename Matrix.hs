@@ -28,7 +28,8 @@ import TypeLevelNat
 import Ring
 import Testing
 
--- | Approximation an den Typ für natürliche Zahlen (beginnend bei null).
+-- | Approximation an den Typ für natürliche Zahlen (beginnend bei null),
+-- abweichend vom restlichen Projekt einfach 'Int' statt 'Integer'.
 -- Wird zur Indizierung der Matrizen zugrundeliegenden "Data.Array"s benutzt.
 type Nat = Int
 
@@ -89,7 +90,7 @@ withNontrivialRows mtx@(MkMatrix arr) k
     | otherwise = reflectPositiveNat n $ \n' -> k (MkMatrix arr `asTypeOf` dummy n' (numCols' mtx))
     where
     dummy = undefined :: Proxy k -> Proxy l -> Matrix k l a
-    (n,m) = dim arr
+    (n,_) = dim arr
 
 -- | Bringt die Information darüber, dass die gegebene Matrix mindestens eine
 -- Spalte besitzt, aufs Typniveau; ist dem nicht so, wird eine Laufzeitausnahme

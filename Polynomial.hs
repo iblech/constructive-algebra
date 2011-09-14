@@ -17,8 +17,7 @@ module Polynomial
 
 import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, recip, fromInteger, fromRational, quotRem, sum)
 import qualified Prelude as P
-import Data.List (intersperse, genericLength, foldl')
-import NumericHelper
+import Data.List (intersperse, genericLength)
 import Ring
 import Field
 import Euclidean
@@ -51,10 +50,10 @@ mkNormedPoly f
     as = canonCoeffs f
 
 instance (Ring a, Eq a, Show a) => Show (Poly a) where
-  show f = addZero $ concat . intersperse " + " $ filter (not . null) $ zipWith join (canonCoeffs f) vars
+  show f = addZero $ concat . intersperse " + " $ filter (not . null) $ zipWith mult (canonCoeffs f) vars
       where
-      vars = "" : "X" : map (("X^" ++) . show) [2..]
-      join x v
+      vars = "" : "X" : map (("X^" ++) . show) [(2::Integer)..]
+      mult x v
         | x == zero = ""
 	| x == unit = if null v then "1" else v
 	| otherwise = show x ++ (if null v then "" else "*" ++ v)
@@ -69,8 +68,8 @@ instance (Ring a) => Ring (Poly a) where
     MkPoly xs + MkPoly ys = simplify $ MkPoly (zipWithDefault (+) zero xs ys)
     MkPoly xs * MkPoly ys = simplify . MkPoly $ go xs ys
 	where
-	go []     ys = []
-	go (x:xs) ys = zipWithDefault (+) zero (map (x *) ys) (zero:go xs ys)
+	go []     _  = []
+	go (a:as) bs = zipWithDefault (+) zero (map (a *) bs) (zero:go as bs)
     negate = fmap negate
     fromInteger = MkPoly . (:[]) . fromInteger
     zero = MkPoly []
@@ -146,8 +145,8 @@ eval x = foldr (\c val -> c + x*val) zero . unPoly
 --
 -- > eval0 = eval zero.
 eval0 :: (Ring a) => Poly a -> a
-eval0 (MkPoly [])     = zero
-eval0 (MkPoly (a:as)) = a
+eval0 (MkPoly [])    = zero
+eval0 (MkPoly (a:_)) = a
 
 -- | Berechnet die Polynomdivision mit Rest für den Fall, dass das
 -- Nennerpolynom normiert ist. Gegenüber 'quotRem' besitzt diese
@@ -237,16 +236,16 @@ couldBeNotX _ = True
 -- normiertes Polynom), also /g/ mit /f = dg/, wobei /d/ den größten
 -- gemeinsamen Teiler von /f/ und /f'/ bezeichne.
 squarefreePart :: (Field a, IntegralDomain a, Eq a) => Poly a -> Poly a
-squarefreePart f = let (u,v,s,t) = gcd f (derivative f) in normalize s
+squarefreePart f = let (_,_,s,_) = gcd f (derivative f) in normalize s
 
 -- | Mischt zwei Listen vermöge einem gegebenen Operator und einem
 -- Standardargument, was genau dann verwendet wird, wenn eine der beiden Listen
 -- kürzer als die andere ist.
 zipWithDefault :: (a -> a -> b) -> a -> [a] -> [a] -> [b]
-zipWithDefault (#) zero = go
+zipWithDefault (#) def = go
     where
-    go []     ys     = map (zero #) ys
-    go (x:xs) []     = map (# zero) (x:xs)
+    go []     ys     = map (def #) ys
+    go (x:xs) []     = map (# def) (x:xs)
     go (x:xs) (y:ys) = (x#y) : go xs ys
 
 -- | Prüft, ob beim gegebenen Polynom die Vereinbarung, dass Elemente von
