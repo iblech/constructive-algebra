@@ -37,11 +37,11 @@ fromArray :: Array (Nat,Nat) a -> Matrix a
 fromArray = MkMatrix
 
 -- | Liefert die Anzahl der Zeilen einer Matrix.
-numRows :: Matrix a -> Int
+numRows :: Matrix a -> Nat
 numRows = succ . fst . snd . bounds . unMatrix
 
 -- | Liefert die Anzahl der Spalten einer Matrix.
-numCols :: Matrix a -> Int
+numCols :: Matrix a -> Nat
 numCols = succ . snd . snd . bounds . unMatrix
 
 -- | /deleteRow i m/ ist diejenige Untermatrix von /m/, die aus /m/ durch
@@ -84,3 +84,5 @@ prettyMatrix :: (Show a) => Matrix a -> String
 prettyMatrix m =
     concat . intersperse "\n" $ flip map [0..numRows m - 1] $ \i ->
 	concat . intersperse " " $ map (printf "%-10s" . show . (m !!) . (i,)) [0..numCols m - 1]
+
+-- XXX: Ringstruktur für quadratische Matrizen!

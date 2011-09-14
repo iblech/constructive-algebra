@@ -1,3 +1,5 @@
+-- | Dieses Modul stellt für jeden Ring /a/ seinen Polynomring /Poly a/ in
+-- einer Variablen zur Verfügung.
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
 module Polynomial where
 
@@ -11,6 +13,9 @@ import Field
 import Euclidean
 import Control.DeepSeq
 
+-- | Typ der Polynome über 'a', repräsentiert durch die zugehörigen Folgen der
+-- Koeffizienten, von niedrigster zur höchsten Potenz geordnet. Die Darstellung
+-- ist wegen abschließender Nuller natürlich nicht eindeutig
 newtype Poly a = MkPoly { unPoly :: [a] }
   deriving (Functor,NFData)
 

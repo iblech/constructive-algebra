@@ -120,6 +120,8 @@ class (Ring a) => HaveAnnihilatingPolynomial a where
     -- annihiliert. Das Nullpolynom zählt nicht als normiert.
     annihilatingPolynomial :: SqMatrix a -> Poly a
 
+-- XXX: QuickCheck für annihilatingPolynomial!
+
 {-
  - XXX: noch verbessern: Sollte für jeden IntBer. funktionieren. Hat mit ER nichts zu tun!
 instance (EuclideanRing a, Integral a, IntegralDomain a, TestableAssociatedness a, Eq a) => HaveAnnihilatingPolynomial (ER a) where
