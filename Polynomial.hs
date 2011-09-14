@@ -3,15 +3,16 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
 module Polynomial
     ( Poly(MkPoly)
-    , canonCoeffs, unsafeCoeffs
+    , NormedPoly(..), mkNormedPoly
+    , canonCoeffs, canonCoeffs', unsafeCoeffs
     , fromBase, eval, eval0
     , normedQuotRem
     , (.*), iX
-    , normalize, leadingCoeff
+    , normalize, normalize', leadingCoeff
     , derivative, compose
     , squarefreePart
     , couldBeNotX
-    , NormedPoly(..)
+    , normedPolyProp
     ) where
 
 import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, recip, fromInteger, fromRational, quotRem, sum)
@@ -29,6 +30,25 @@ import Control.Monad
 -- ist wegen möglicher abschließender Nuller natürlich nicht eindeutig.
 newtype Poly a = MkPoly { unPoly :: [a] }
   deriving (Functor)
+
+-- | Kennzeichnung für normierte Polynome. Dabei sei sogar vereinbart,
+-- dass es keine abschließenden Nuller gibt, also dass der höchste Koeffizient
+-- schon selbst genau /1/ ist.
+--
+-- Dient auch zum einfachen Testen von Eigenschaften normierter Polynome,
+-- Beispielanwendung:
+--
+-- > forAll arbitrary $ \MkNormedPoly p -> ...
+newtype NormedPoly a = MkNormedPoly { unNormedPoly :: Poly a } deriving (Show,Eq,Functor)
+
+-- | Kluger Konstruktor für 'NormedPoly': Er prüft, ob wirklich ein normiertes
+-- Polynom vorliegt (wirft sonst eine Laufzeitausnahme) und kanonisiert es.
+mkNormedPoly :: (Ring a, Eq a) => Poly a -> NormedPoly a
+mkNormedPoly f
+    | last as == unit = MkNormedPoly (MkPoly as)
+    | otherwise       = error "mkNormedPoly auf einem nicht-normierten Polynom!"
+    where
+    as = canonCoeffs f
 
 instance (Ring a, Eq a, Show a) => Show (Poly a) where
   show f = addZero $ concat . intersperse " + " $ filter (not . null) $ zipWith join (canonCoeffs f) vars
@@ -84,18 +104,21 @@ uncanonify (MkPoly as) = do
     i  <- elements [0..5]
     return . MkPoly $ as ++ replicate i zero
 
--- | Modifikator für Beschränkung auf normierte Polynome, siehe
--- "Test.QuickCheck.Modifiers". Beispielanwendung:
---
--- > forAll arbitrary $ \NormedPoly p -> ...
-newtype NormedPoly a = NormedPoly (Poly a) deriving (Show)
 instance (Arbitrary a, Ring a) => Arbitrary (NormedPoly a) where
-    arbitrary = liftM NormedPoly . uncanonify =<< liftM (MkPoly . (++ [unit])) arbitrary
+    arbitrary = liftM (MkNormedPoly . MkPoly . (++ [unit])) arbitrary
 
 -- | Liefert die Liste der Koeffizienten in kanonisierter Form,
 -- also ohne abschließende Nuller.
 canonCoeffs :: (Ring a, Eq a) => Poly a -> [a]
 canonCoeffs = reverse . dropWhile (== zero) . reverse . unsafeCoeffs
+
+-- | Liefert für normierte Polynome die Liste der Koeffizienten in
+-- kanonisierter Form, also ohne abschließende Nuller. Ander als 'canonCoeffs'
+-- benötigt man hier nicht die Diskretheitsvoraussetzung an den Ring, weil
+-- man vereinbart hat, dass Polynome in 'NormedPoly' sogar \"echt\",
+-- also ohne abschließende Nuller, normiert sind.
+canonCoeffs' :: (Ring a) => NormedPoly a -> [a]
+canonCoeffs' = unsafeCoeffs . unNormedPoly
 
 -- | Liefert die Liste der Koeffizienten ohne eine Kanonisierung
 -- vorzunehmen. Diese Funktion ist bezüglich der Gleichheit auf Polynomen
@@ -174,6 +197,10 @@ normalize p = MkPoly $ map (a *) as where as = canonCoeffs p; a = recip (last as
 -- Das erhöht die Effizienz in "IntegralClosure" bei der Berechnung von
 -- Ganzheitsgleichungen.
 
+-- | Normiert ein Polynom und markiert es als solches.
+normalize' :: (Field a, Eq a) => Poly a -> NormedPoly a
+normalize' = MkNormedPoly . normalize
+
 -- | Liefert den Leitkoeffizienten (konventionsgemäß also niemals null).
 -- Auf dem Nullpolynom wird eine Laufzeitausnahme geworfen.
 leadingCoeff :: (Ring a, Eq a) => Poly a -> a
@@ -221,3 +248,9 @@ zipWithDefault (#) zero = go
     go []     ys     = map (zero #) ys
     go (x:xs) []     = map (# zero) (x:xs)
     go (x:xs) (y:ys) = (x#y) : go xs ys
+
+-- | Prüft, ob beim gegebenen Polynom die Vereinbarung, dass Elemente von
+-- 'NormedPoly' auch ohne Wegwerfen abschließender Nullkoeffizienten schon
+-- normiert sind, erfüllt ist. Nützlich zur Formulierung von Tests.
+normedPolyProp :: (Ring a, Eq a) => NormedPoly a -> Bool
+normedPolyProp (MkNormedPoly (MkPoly as)) = last as == unit

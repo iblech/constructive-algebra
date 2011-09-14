@@ -55,7 +55,7 @@ import Data.Array
 data (RingMorphism m) => IC m = MkIC
     { number     :: Codomain m
         -- ^ Element des Zielrings
-    , polynomial :: Poly (Domain m)
+    , polynomial :: NormedPoly (Domain m)
         -- ^ eine die Zugehörigkeit zum Ganzheitsring beweisende Ganzheitsgleichung
     }
 
@@ -64,25 +64,25 @@ data (RingMorphism m) => IC m = MkIC
 fromBase :: (RingMorphism m) => Domain m -> IC m
 fromBase x = r
     where
-    r    = MkIC (mor' x) (iX - Poly.fromBase x)
+    r    = MkIC (mor' x) $ MkNormedPoly (iX - Poly.fromBase x)
     mor' = mor ((undefined :: IC m -> Proxy m) r)
 
 
 instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m)) => Ring (IC m) where
     MkIC x p + MkIC x' p' = MkIC (x + x') (sumAnnihilator p p')
     MkIC x p * MkIC x' p'
-        | couldBeNotX p  == False = zero
-        | couldBeNotX p' == False = zero
-        | otherwise               = MkIC (x * x') (prodAnnihilator p p')
+        | couldBeNotX (unNormedPoly p)  == False = zero
+        | couldBeNotX (unNormedPoly p') == False = zero
+        | otherwise                              = MkIC (x * x') (prodAnnihilator p p')
 
-    negate (MkIC x p) = MkIC (negate x) (MkPoly as)
+    negate (MkIC x p) = MkIC (negate x) (MkNormedPoly (MkPoly as))
 	where
-	as = reverse $ zipWith (*) (reverse $ unsafeCoeffs p) (cycle [unit,negate unit])
+	as = reverse $ zipWith (*) (reverse $ canonCoeffs' p) (cycle [unit,negate unit])
 
-    fromInteger i = MkIC (fromInteger i) (iX - fromInteger i)
+    fromInteger i = MkIC (fromInteger i) (MkNormedPoly (iX - fromInteger i))
 
-    zero = fromInteger zero
-    unit = fromInteger unit
+    zero = IntegralClosure.fromBase zero
+    unit = IntegralClosure.fromBase unit
 
 instance (RingMorphism m, IntegralDomain (Codomain m), HaveAnnihilatingPolynomial (Domain m)) =>
     IntegralDomain (IC m)
@@ -92,7 +92,7 @@ instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m), AllowsRationalE
     fromRational r = z
         where
         mor' = mor ((undefined :: IC m -> Proxy m) z)
-        z    = MkIC (mor' (fromRational r)) (iX - fromRational r)
+        z    = MkIC (mor' (fromRational r)) (MkNormedPoly $ iX - fromRational r)
 
 instance (RingMorphism m, ApproxFloating (Codomain m)) => ApproxFloating (IC m) where
     approx = approx . number
@@ -108,7 +108,7 @@ instance (RingMorphism m, ApproxFloating (Codomain m)) => ApproxFloating (IC m) 
 --
 -- Die Abbildung /Multiplikation mit (x+y)/ besitzt dann ein annihilierendes
 -- Polynom; dieses berechnen wir.
-sumAnnihilator :: (Ring a, HaveAnnihilatingPolynomial a) => Poly a -> Poly a -> Poly a
+sumAnnihilator :: (Ring a, HaveAnnihilatingPolynomial a) => NormedPoly a -> NormedPoly a -> NormedPoly a
 sumAnnihilator f g =
     flip fromArray' annihilatingPolynomial $
         listArray ((0,0), (length indices - 1, length indices - 1)) elems
@@ -123,7 +123,7 @@ sumAnnihilator f g =
 	| otherwise = if k == i then negate (ys !! l) else zero
     indices = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
     (n,m)   = (length xs - 1, length ys - 1)
-    (xs,ys) = (unsafeCoeffs f, unsafeCoeffs g)
+    (xs,ys) = (canonCoeffs' f, canonCoeffs' g)
 
 -- sollte nicht mit 'stdArgs' getestet werden, sondern mit einer erheblichen
 -- Beschränkung, wie beispielsweise:
@@ -131,19 +131,18 @@ sumAnnihilator f g =
 -- > mapM_ (Test.QuickCheck.quickCheckWith stdArgs{maxSize=4}) $
 --       props_sumAnnihilator (undefined :: Proxy (F Rational))
 props_sumAnnihilator :: (HaveAnnihilatingPolynomial a, Show a, Eq a, Arbitrary a) => Proxy a -> [Property]
-props_sumAnnihilator proxy = (:[]) $ forAll arbitrary $ \(NormedPoly f, NormedPoly g) ->
-    let h  = sumAnnihilator f g
+props_sumAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), g@(MkNormedPoly g')) ->
+    let h  = sumAnnihilator f g `asTypeOf` MkNormedPoly (Poly.fromBase (unProxy proxy))
         -- Hier evaluieren wir per Hand h(X+Y) im Ring (R[Y]/(g))[X]/(f)...
-        h' = compose (fmap Poly.fromBase h) (Poly.fromBase iX + iX)
-        r  = snd $ normedQuotRem h' (fmap Poly.fromBase f)
+        h' = compose (fmap Poly.fromBase (unNormedPoly h)) (Poly.fromBase iX + iX)
+        r  = snd $ normedQuotRem h' (fmap Poly.fromBase f')
         -- ...null müsste herauskommen:
-    in  leadingCoeff h == unit `asTypeOf` unProxy proxy &&
-        all ((== zero) . snd . (`normedQuotRem` g)) (canonCoeffs r)
+    in  normedPolyProp h && all ((== zero) . snd . (`normedQuotRem` g')) (canonCoeffs r)
 
 -- | Bestimmt zu zwei gegebenen Ganzheitsgleichungen /f/ (eines Elements /x/)
 -- und /g/ (eines Elements /y/) eine, welche das Produkt /x y/ als Nullstelle
 -- besitzt. Das Vorgehen ist das gleiche wie bei 'sumAnnihilator'.
-prodAnnihilator :: (Ring a, HaveAnnihilatingPolynomial a) => Poly a -> Poly a -> Poly a
+prodAnnihilator :: (Ring a, HaveAnnihilatingPolynomial a) => NormedPoly a -> NormedPoly a -> NormedPoly a
 prodAnnihilator f g =
     flip fromArray' annihilatingPolynomial $
         listArray ((0,0), (length indices - 1, length indices - 1)) elems
@@ -160,15 +159,14 @@ prodAnnihilator f g =
 	= xs !! k * ys !! l
     indices = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
     (n,m)   = (length xs - 1, length ys - 1)
-    (xs,ys) = (unsafeCoeffs f, unsafeCoeffs g)
+    (xs,ys) = (canonCoeffs' f, canonCoeffs' g)
 
 props_prodAnnihilator :: (HaveAnnihilatingPolynomial a, Show a, Eq a, Arbitrary a) => Proxy a -> [Property]
-props_prodAnnihilator proxy = (:[]) $ forAll arbitrary $ \(NormedPoly f, NormedPoly g) ->
-    let h  = prodAnnihilator f g
-        h' = compose (fmap Poly.fromBase h) (Poly.fromBase iX * iX)
-        r  = snd $ normedQuotRem h' (fmap Poly.fromBase f)
-    in  leadingCoeff h == unit `asTypeOf` unProxy proxy &&
-        all ((== zero) . snd . (`normedQuotRem` g)) (canonCoeffs r)
+props_prodAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), g@(MkNormedPoly g')) ->
+    let h  = prodAnnihilator f g `asTypeOf` MkNormedPoly (Poly.fromBase (unProxy proxy))
+        h' = compose (fmap Poly.fromBase (unNormedPoly h)) (Poly.fromBase iX * iX)
+        r  = snd $ normedQuotRem h' (fmap Poly.fromBase f')
+    in  normedPolyProp h && all ((== zero) . snd . (`normedQuotRem` g')) (canonCoeffs r)
 
 -- | Bestimmt zu einer gegebenen Ganzheitsgleichung /f/ (eines Elements /x/)
 -- und eines Polynoms /p/ (welches nicht normiert sein muss) eine
@@ -179,19 +177,19 @@ props_prodAnnihilator proxy = (:[]) $ forAll arbitrary $ \(NormedPoly f, NormedP
 -- wesentlich effizienter: Sie nutzt die /R/-Algebra /R[x]/ mit dem bekannten
 -- Erzeugendensystem /x^i/, wobei /i/ von /0/ (einschließlich) bis zum
 -- Grad von /f/ läuft (ausschließlich) -- unabhängig vom Grad von /p/!
-evalAnnihilator :: (Ring a, Eq a, HaveAnnihilatingPolynomial a) => Poly a -> Poly a -> Poly a
+evalAnnihilator :: (Ring a, Eq a, HaveAnnihilatingPolynomial a) => Poly a -> NormedPoly a -> NormedPoly a
 evalAnnihilator p f =
     flip fromArray' annihilatingPolynomial $ listArray ((0,0), (n-1, n-1)) elems
     where
     elems = concatMap row [0..fromIntegral (n-1)]
-    n     = pred . length . unsafeCoeffs $ f
-    row i = take n . (++ repeat zero) . unsafeCoeffs . snd $ normedQuotRem (p * iX^i) f
+    n     = pred . length . canonCoeffs' $ f
+    row i = take n . (++ repeat zero) . unsafeCoeffs . snd $ normedQuotRem (p * iX^i) (unNormedPoly f)
 
 props_evalAnnihilator :: (HaveAnnihilatingPolynomial a, Show a, Eq a, Arbitrary a) => Proxy a -> [Property]
-props_evalAnnihilator proxy = (:[]) $ forAll arbitrary $ \(NormedPoly f, p) ->
-    let h = evalAnnihilator p f
-    in  leadingCoeff h == unit `asTypeOf` unProxy proxy &&
-        zero == snd (normedQuotRem (compose h p) f)
+props_evalAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f, p) ->
+    let h = evalAnnihilator p f `asTypeOf` MkNormedPoly (Poly.fromBase (unProxy proxy))
+    in  normedPolyProp h &&
+        zero == snd (normedQuotRem (compose (unNormedPoly h) p) (unNormedPoly f))
 
 -- | Wertet ein Polynom mit Koeffizienten im Quellring in einem Element des
 -- Ganzheitsring aus. Semantisch nicht von der Spezifikation
@@ -213,21 +211,21 @@ eval z p =
 -- dass die mitgeführte Gleichung auch in der Tat eine Ganzheitsgleichung
 -- für das Element ist.
 verifyPolynomial :: (RingMorphism m) => IC m -> Codomain m
-verifyPolynomial z@(MkIC x f) = Poly.eval x $ fmap mor' f
+verifyPolynomial z@(MkIC x (MkNormedPoly f)) = Poly.eval x $ fmap mor' f
     where mor' = mor ((undefined :: IC m -> Proxy m) z)
 
 
 -- | Konstante für den goldenen Schnitt.
 goldenRatio :: IC QinC
-goldenRatio = MkIC C.goldenRatio (iX^2 - iX - unit)
+goldenRatio = MkIC C.goldenRatio $ mkNormedPoly (iX^2 - iX - unit)
 
 -- | Konstante für die Quadratwurzel aus 2.
 sqrt2 :: IC QinC
-sqrt2 = MkIC C.sqrt2 (iX^2 - unit - unit)
+sqrt2 = MkIC C.sqrt2 $ mkNormedPoly (iX^2 - unit - unit)
 
 instance AllowsConjugation (IC QinC) where
     conjugate (MkIC z p) = MkIC (conjugate z) p
-    imagUnit             = MkIC (C.fromBase imagUnit) (iX^2 + unit)
+    imagUnit             = MkIC (C.fromBase imagUnit) $ mkNormedPoly (iX^2 + unit)
 
 
 -- sollte nicht mit 'stdArgs', sondern einer Beschränkung wie

@@ -183,8 +183,8 @@ divide p c@(Cell2 z0 z1)
 
 -- Für normierte Polynome!
 -- XXX Fehler bei Nicht-Normiertheit bringen
-cauchyRadius :: Poly ComplexRational -> Rational
-cauchyRadius (MkPoly zs) = ((1 +) . maximum) $ map ComplexRational.magnitudeUpperBound zs
+cauchyRadius :: NormedPoly ComplexRational -> Rational
+cauchyRadius (MkNormedPoly (MkPoly zs)) = ((1 +) . maximum) $ map ComplexRational.magnitudeUpperBound zs
 -- erfüllt: |z| <= cauchyRadius f für alle Nullstellen z von f
 
 -- für normierte Polynome (müssen nicht separabel sein)
@@ -235,10 +235,10 @@ rootsA_ f = trace ("Suche Nullstellen von (r=" ++ show radius ++ "): " ++ show f
     let iters' = go i 1 iters in MkAlg $ MkIC (traceEvals ("zero" ++ show i) $ MkComplex (return . (genericIndex iters'))) (fmap F f'')
     where
     (_,_,f',_) = gcd f (derivative f)
-    f''        = normalize f'
+    f''        = normalize' f'
     n          = fromIntegral (degree f') :: Int
     radius     = cauchyRadius $ fmap fromRational f''
-    iters      = subdivisions' radius $ fmap fromRational f''
+    iters      = subdivisions' radius $ unNormedPoly $ fmap fromRational f''
     go :: Int -> Integer -> [[(Rational,ComplexRational)]] -> [ComplexRational]
     go i j (cs:css)
 	| length cs /= n

@@ -122,8 +122,8 @@ funktioniert auch, ist aber sehr langsam in der Nullprüfung
 minimalPolynomial' :: Alg QinC -> Poly Rational
 minimalPolynomial' z = unsafePerformIO . runR $ go 1
     where
-    f         = polynomial . unAlg $ z
-    z'        = number     . unAlg $ z
+    f         = unNormedPoly . polynomial . unAlg $ z
+    z'        = number . unAlg $ z
     (u,v,s,t) = gcd f (derivative f)
     -- Normierung schon hier, damit nicht sehr kleine Konstanten viele
     -- Iterationen unten erzwingen
@@ -140,10 +140,10 @@ minimalPolynomial' z = unsafePerformIO . runR $ go 1
 minimalPolynomial :: Alg QinC -> Poly Rational
 minimalPolynomial z = head $ filter (\p -> zero == A.eval z p) factors
     where
-    f         = polynomial . unAlg $ z
+    f         = unNormedPoly . polynomial . unAlg $ z
     (u,v,s,t) = gcd f (derivative f)
     factors   = fmap normalize $ irreducibleFactors $ fmap unF s
 
 -- XXX: besserer name!
 simplify' :: Alg QinC -> Alg QinC
-simplify' z = MkAlg $ MkIC (number . unAlg $ z) (fmap F $ minimalPolynomial z)
+simplify' z = MkAlg $ MkIC (number . unAlg $ z) (mkNormedPoly $ fmap F $ minimalPolynomial z)

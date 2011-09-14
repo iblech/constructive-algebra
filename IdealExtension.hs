@@ -88,7 +88,7 @@ exF = iX^3 - fromInteger 2
 runISEwithAlgebraic :: Alg QinC -> (forall s. Nondet (ISE Rational s) a) -> a
 runISEwithAlgebraic z = runISE f phi
     where
-    f     = fmap unF . polynomial . unAlg $ z
+    f     = unNormedPoly . fmap unF . polynomial . unAlg $ z
     phi g = zero == A.eval z g
 
 --exRun' = exRun (head $ rootsA $ iX^3 - fromInteger 1)

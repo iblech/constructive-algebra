@@ -55,7 +55,7 @@ galoisGroup' f = trace debugMsg $ (xs, sigmas)
     res'       = 0:res
     hs'        = negate (sum hs + Poly.fromBase a) : hs where a = (!! 1) . reverse . canonCoeffs $ f
     t'         = t  -- simplify' unnötig
-    m          = fmap unF . polynomial . unAlg $ t'  -- Minimalpolynom von t
+    m          = unNormedPoly . fmap unF . polynomial . unAlg $ t'  -- Minimalpolynom von t
     conjs      = rootsA m
     inds       = [0..length xs - 1]
     sigmas     =
@@ -110,8 +110,8 @@ evalResolvent cs ys = sum $ zipWith (*) (map fromInteger cs) ys
 primitiveElement :: Alg QinC -> Alg QinC -> (Integer, Alg QinC, Poly Rational, Poly Rational)
 primitiveElement x y = (lambda, t, hX, hY)
     where
-    f = fmap unF . polynomial . unAlg $ x
-    g = squarefreePart . fmap unF . polynomial . unAlg $ y
+    f = unNormedPoly . fmap unF . polynomial . unAlg $ x
+    g = squarefreePart . unNormedPoly . fmap unF . polynomial . unAlg $ y
     -- Nst. der Minimalpolynome würden genügen
     exceptions :: [Integer]
     exceptions = do
@@ -136,7 +136,7 @@ pseudoResolvent (x:y:zs) =
         u'                  = trace ("vor simplify: " ++ show (polynomial .  unAlg $ u)) $ simplify' u
         (as, t, hU:hs)      = pseudoResolvent (u':zs)
         -- zipWith (*) as (u':zs) = t,  (hs !! i)(t) = (u':zs) !! i
-        reduce p = snd (p `quotRem` fmap unF (polynomial . unAlg $ t))
+        reduce p = snd (p `quotRem` unNormedPoly (fmap unF (polynomial . unAlg $ t)))
     in  (1 : lambda : tail as, t, reduce (hX `compose` hU) : reduce (hY `compose` hU) : hs)
 
 merge :: [a] -> [a] -> [a]

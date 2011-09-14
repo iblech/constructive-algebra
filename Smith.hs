@@ -125,7 +125,7 @@ splice _ _ _      = error "splice"  -- sollte nicht eintreten
 class (Ring a) => HaveAnnihilatingPolynomial a where
     -- | Bestimmt ein normiertes Polynom, welches die gegebene Matrix
     -- annihiliert. Das Nullpolynom zählt nicht als normiert.
-    annihilatingPolynomial :: (ReifyNat n) => SqMatrix n a -> Poly a
+    annihilatingPolynomial :: (ReifyNat n) => SqMatrix n a -> NormedPoly a
 
 -- XXX: QuickCheck für annihilatingPolynomial!
 
@@ -153,7 +153,7 @@ props_annihilatingPolynomial proxy = (:[]) $ forAll (elements [0..maxDim]) $ \n 
         forAll arbitrary $ \mtx ->
             let _ = numRows' mtx `asTypeOf` numCols' mtx `asTypeOf` n'
                 _ = (undefined :: Matrix n m a -> Proxy a) mtx `asTypeOf` proxy
-                p = annihilatingPolynomial mtx
+                MkNormedPoly p = annihilatingPolynomial mtx
             in  leadingCoeff p == unit && eval mtx (fmap M.fromBase p) == zero
     where maxDim = 4
 
@@ -174,14 +174,14 @@ determinant mtx
 -- Smith-Umformungen nutzen zu können. Erfüllt folgende Spezifikation:
 --
 -- > determinant = naiveDeterminant . lambdaMatrix
-charPoly :: (ReifyNat n, Field a, IntegralDomain a, Eq a) => SqMatrix n a -> Poly a
-charPoly = unER . determinant . fmap ER . lambdaMatrix
+charPoly :: (ReifyNat n, Field a, IntegralDomain a, Eq a) => SqMatrix n a -> NormedPoly a
+charPoly = mkNormedPoly . unER . determinant . fmap ER . lambdaMatrix
 
 -- | Berechnet das Minimalpolynom (normiert) einer gegebenen Matrix /A/
 -- über die Smithsche Normalform von /lambda 1 - A/. Das Minimalpolynom
 -- der eindeutigen /0x0/-Matrix ist das Einspolynom.
-minPoly :: (ReifyNat n, Field a, IntegralDomain a, Eq a) => SqMatrix n a -> Poly a
-minPoly = normalize . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix
+minPoly :: (ReifyNat n, Field a, IntegralDomain a, Eq a) => SqMatrix n a -> NormedPoly a
+minPoly = normalize' . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix
     where
     last' xs = if null xs then unit else last xs
     -- Ausnahme für die 0x0-Matrix
