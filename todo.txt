@@ -22,3 +22,8 @@ Field/IntegralDomain-Mess.
 Sollte Field Eq implizieren/erfordern?
 
 Modulimporte sortieren
+
+normedQuotRem so umschreiben, dass Eq-Bedingung unnötig wird.
+Dann nochmal evalAnnihilator prüfen!
+Und auch sumAnnihilator und prodAnnihilator -- kommen die mit
+"pseudo"-normierten Polynomen zurecht? Sonst halt doch wieder fordern...

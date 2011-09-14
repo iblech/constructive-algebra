@@ -11,16 +11,18 @@ module Polynomial
     , derivative, compose
     , squarefreePart
     , couldBeNotX
+    , NormedPoly(..)
     ) where
 
 import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, recip, fromInteger, fromRational, quotRem, sum)
 import qualified Prelude as P
-import Test.QuickCheck
 import Data.List (intersperse, genericLength, foldl')
 import NumericHelper
 import Ring
 import Field
 import Euclidean
+import Testing
+import Control.Monad
 
 -- | Typ der Polynome über 'a', repräsentiert durch die zugehörigen Folgen der
 -- Koeffizienten, von niedrigster zur höchsten Potenz geordnet. Die Darstellung
@@ -71,6 +73,24 @@ instance (Field a, Eq a, IntegralDomain a) => EuclideanRing (Poly a) where
         = let (q,r) = quotRem (f - q' * g) g
               q'    = leadingCoeff f / leadingCoeff g .* (iX^(degree f - degree g))
           in  (q + q', r)
+
+instance (Arbitrary a, Ring a) => Arbitrary (Poly a) where
+    -- Künstlich hinten 0er anfügen, damit auch Polynome getestet werden,
+    -- welche nicht in kanonisierter Form vorliegen.
+    arbitrary = uncanonify =<< liftM MkPoly arbitrary
+
+uncanonify :: (Ring a) => Poly a -> Gen (Poly a)
+uncanonify (MkPoly as) = do
+    i  <- elements [0..5]
+    return . MkPoly $ as ++ replicate i zero
+
+-- | Modifikator für Beschränkung auf normierte Polynome, siehe
+-- "Test.QuickCheck.Modifiers". Beispielanwendung:
+--
+-- > forAll arbitrary $ \NormedPoly p -> ...
+newtype NormedPoly a = NormedPoly (Poly a) deriving (Show)
+instance (Arbitrary a, Ring a) => Arbitrary (NormedPoly a) where
+    arbitrary = liftM NormedPoly . uncanonify =<< liftM (MkPoly . (++ [unit])) arbitrary
 
 -- | Liefert die Liste der Koeffizienten in kanonisierter Form,
 -- also ohne abschließende Nuller.
@@ -146,7 +166,13 @@ fromBase x = MkPoly [x]
 
 -- | Normiert ein Polynom.
 normalize :: (Field a, Eq a) => Poly a -> Poly a
-normalize p = recip (leadingCoeff p) .* p
+normalize p = MkPoly $ map (a *) as where as = canonCoeffs p; a = recip (last as)
+-- Semantisch zu unterscheiden wäre die Alternativdefinition
+-- > normalie p = recip (leadingCoeff p) .* p.
+-- Diese hat den Vorteil, dass das zurückgegebene Polynom gleich schon
+-- in kanonisierter Form vorliegt, also keine unnötigen Nullen besitzt.
+-- Das erhöht die Effizienz in "IntegralClosure" bei der Berechnung von
+-- Ganzheitsgleichungen.
 
 -- | Liefert den Leitkoeffizienten (konventionsgemäß also niemals null).
 -- Auf dem Nullpolynom wird eine Laufzeitausnahme geworfen.

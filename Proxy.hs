@@ -14,3 +14,6 @@ data Proxy s
 
 instance Functor Proxy where
     fmap f _ = undefined
+
+unProxy :: Proxy s -> s
+unProxy = undefined
