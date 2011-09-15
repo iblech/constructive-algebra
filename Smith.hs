@@ -6,7 +6,7 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances #-}
 module Smith
     ( diagonalForm, elementaryDivisors
-    , HaveAnnihilatingPolynomial(..)
+    , HasAnnihilatingPolynomials(..)
     , determinant
     , charPoly, minPoly, lambdaMatrix
     , props_Smith
@@ -123,7 +123,7 @@ splice _ _ _      = error "splice"  -- sollte nicht eintreten
 -- Insbesondere kann man über Körpern auch das Minimalpolynom nehmen,
 -- welches weitere Anwendungen durch seinen geringeren Grad effizienter
 -- werden lässt.
-class (Ring a) => HaveAnnihilatingPolynomial a where
+class (Ring a) => HasAnnihilatingPolynomials a where
     -- | Bestimmt ein normiertes Polynom, welches die gegebene Matrix
     -- annihiliert. Das Nullpolynom zählt nicht als normiert.
     annihilatingPolynomial :: (ReifyNat n) => SqMatrix n a -> NormedPoly a
@@ -143,11 +143,11 @@ instance (EuclideanRing a, Integral a, IntegralDomain a, HasTestableAssociatedne
 -}
 
 -- Über Körpern können wir das Minimalpolynom verwenden.
-instance (Field a, IntegralDomain a, Eq a) => HaveAnnihilatingPolynomial (F a) where
+instance (Field a) => HasAnnihilatingPolynomials (F a) where
     annihilatingPolynomial = minPoly
 
 props_annihilatingPolynomial
-    :: (HaveAnnihilatingPolynomial a, Eq a, Show a, Arbitrary a)
+    :: (HasAnnihilatingPolynomials a, Eq a, Show a, Arbitrary a)
     => Proxy a -> [Property]
 props_annihilatingPolynomial proxy = (:[]) $ forAll (elements [0..maxDim]) $ \n ->
     reflectNat n $ \n' ->
@@ -175,13 +175,13 @@ determinant mtx
 -- Smith-Umformungen nutzen zu können. Erfüllt folgende Spezifikation:
 --
 -- > determinant = naiveDeterminant . lambdaMatrix
-charPoly :: (ReifyNat n, Field a, IntegralDomain a, Eq a) => SqMatrix n a -> NormedPoly a
+charPoly :: (ReifyNat n, Field a) => SqMatrix n a -> NormedPoly a
 charPoly = mkNormedPoly . unER . determinant . fmap ER . lambdaMatrix
 
 -- | Berechnet das Minimalpolynom (normiert) einer gegebenen Matrix /A/
 -- über die Smithsche Normalform von /lambda 1 - A/. Das Minimalpolynom
 -- der eindeutigen /0x0/-Matrix ist das Einspolynom.
-minPoly :: (ReifyNat n, Field a, IntegralDomain a, Eq a) => SqMatrix n a -> NormedPoly a
+minPoly :: (ReifyNat n, Field a) => SqMatrix n a -> NormedPoly a
 minPoly = normalize' . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix
     where
     last' xs = if null xs then unit else last xs

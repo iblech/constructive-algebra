@@ -46,7 +46,7 @@ adjointedRoot = S iX
 instance Error (Poly k, Poly k) where
     strMsg msg = error $ "Error (Poly k): " ++ show msg
 
-instance (Field k, IntegralDomain k, Eq k) => IdealField (ISE k s) where
+instance (Field k) => IdealField (ISE k s) where
     type Nondet (ISE k s) = Ideal (Poly k) (Poly k, Poly k)
     idealRecip (S g) = do
         f <- ask
@@ -56,7 +56,7 @@ instance (Field k, IntegralDomain k, Eq k) => IdealField (ISE k s) where
         trace ("restart!") $ do
         restart (d,s)
 
-canonISE :: (Field k, IntegralDomain k, Eq k) => ISE k s -> Nondet (ISE k s) (Poly k)
+canonISE :: (Field k) => ISE k s -> Nondet (ISE k s) (Poly k)
 canonISE (S g) = do
     f <- ask
     let (q,r) = quotRem g f

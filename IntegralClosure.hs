@@ -64,7 +64,7 @@ fromBase x = r
     mor' = mor ((undefined :: IC m -> Proxy m) r)
 
 
-instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m)) => Ring (IC m) where
+instance (RingMorphism m, HasAnnihilatingPolynomials (Domain m)) => Ring (IC m) where
     MkIC x p + MkIC x' p' = MkIC (x + x') (sumAnnihilator p p')
     MkIC x p * MkIC x' p'
         | couldBeNotX (unNormedPoly p)  == False = zero
@@ -83,10 +83,10 @@ instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m)) => Ring (IC m) 
 instance (RingMorphism m, Eq (Codomain m)) => Eq (IC m) where
     x == y = number x == number y
 
-instance (RingMorphism m, IntegralDomain (Codomain m), HaveAnnihilatingPolynomial (Domain m)) =>
+instance (RingMorphism m, IntegralDomain (Codomain m), HasAnnihilatingPolynomials (Domain m)) =>
     IntegralDomain (IC m)
 
-instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m), HasRationalEmbedding (Domain m)) =>
+instance (RingMorphism m, HasAnnihilatingPolynomials (Domain m), HasRationalEmbedding (Domain m)) =>
     HasRationalEmbedding (IC m) where
     fromRational r = z
         where
@@ -107,7 +107,7 @@ instance (RingMorphism m, HasFloatingApprox (Codomain m)) => HasFloatingApprox (
 --
 -- Die Abbildung /Multiplikation mit (x+y)/ besitzt dann ein annihilierendes
 -- Polynom; dieses berechnen wir.
-sumAnnihilator :: (Ring a, HaveAnnihilatingPolynomial a) => NormedPoly a -> NormedPoly a -> NormedPoly a
+sumAnnihilator :: (Ring a, HasAnnihilatingPolynomials a) => NormedPoly a -> NormedPoly a -> NormedPoly a
 sumAnnihilator f g =
     flip fromArray' annihilatingPolynomial $
         listArray ((0,0), (length inds - 1, length inds - 1)) elts
@@ -129,7 +129,7 @@ sumAnnihilator f g =
 --
 -- > mapM_ (Test.QuickCheck.quickCheckWith stdArgs{maxSize=4}) $
 --       props_sumAnnihilator (undefined :: Proxy (F Rational))
-props_sumAnnihilator :: (HaveAnnihilatingPolynomial a, Show a, Eq a, Arbitrary a) => Proxy a -> [Property]
+props_sumAnnihilator :: (HasAnnihilatingPolynomials a, Show a, Eq a, Arbitrary a) => Proxy a -> [Property]
 props_sumAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), g@(MkNormedPoly g')) ->
     let h  = sumAnnihilator f g `asTypeOf` MkNormedPoly (Poly.fromBase (unProxy proxy))
         -- Hier evaluieren wir per Hand h(X+Y) im Ring (R[Y]/(g))[X]/(f)...
@@ -141,7 +141,7 @@ props_sumAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), g
 -- | Bestimmt zu zwei gegebenen Ganzheitsgleichungen /f/ (eines Elements /x/)
 -- und /g/ (eines Elements /y/) eine, welche das Produkt /x y/ als Nullstelle
 -- besitzt. Das Vorgehen ist das gleiche wie bei 'sumAnnihilator'.
-prodAnnihilator :: (Ring a, HaveAnnihilatingPolynomial a) => NormedPoly a -> NormedPoly a -> NormedPoly a
+prodAnnihilator :: (Ring a, HasAnnihilatingPolynomials a) => NormedPoly a -> NormedPoly a -> NormedPoly a
 prodAnnihilator f g =
     flip fromArray' annihilatingPolynomial $
         listArray ((0,0), (length inds - 1, length inds - 1)) elts
@@ -162,7 +162,7 @@ prodAnnihilator f g =
     (n,m)   = (length xs - 1, length ys - 1)
     (xs,ys) = (canonCoeffs' f, canonCoeffs' g)
 
-props_prodAnnihilator :: (HaveAnnihilatingPolynomial a, Show a, Eq a, Arbitrary a) => Proxy a -> [Property]
+props_prodAnnihilator :: (HasAnnihilatingPolynomials a, Show a, Eq a, Arbitrary a) => Proxy a -> [Property]
 props_prodAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), g@(MkNormedPoly g')) ->
     let h  = prodAnnihilator f g `asTypeOf` MkNormedPoly (Poly.fromBase (unProxy proxy))
         h' = compose (fmap Poly.fromBase (unNormedPoly h)) (Poly.fromBase iX * iX)
@@ -178,7 +178,7 @@ props_prodAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), 
 -- wesentlich effizienter: Sie nutzt die /R/-Algebra /R[x]/ mit dem bekannten
 -- Erzeugendensystem /x^i/, wobei /i/ von /0/ (einschließlich) bis zum
 -- Grad von /f/ läuft (ausschließlich) -- unabhängig vom Grad von /p/!
-evalAnnihilator :: (Ring a, Eq a, HaveAnnihilatingPolynomial a) => Poly a -> NormedPoly a -> NormedPoly a
+evalAnnihilator :: (Ring a, Eq a, HasAnnihilatingPolynomials a) => Poly a -> NormedPoly a -> NormedPoly a
 evalAnnihilator p f =
     flip fromArray' annihilatingPolynomial $ listArray ((0,0), (n-1, n-1)) elts
     where
@@ -186,7 +186,7 @@ evalAnnihilator p f =
     n     = pred . length . canonCoeffs' $ f
     row i = take n . (++ repeat zero) . unsafeCoeffs . snd $ normedQuotRem (p * iX^i) (unNormedPoly f)
 
-props_evalAnnihilator :: (HaveAnnihilatingPolynomial a, Show a, Eq a, Arbitrary a) => Proxy a -> [Property]
+props_evalAnnihilator :: (HasAnnihilatingPolynomials a, Show a, Eq a, Arbitrary a) => Proxy a -> [Property]
 props_evalAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f, p) ->
     let h = evalAnnihilator p f `asTypeOf` MkNormedPoly (Poly.fromBase (unProxy proxy))
     in  normedPolyProp h &&
@@ -199,7 +199,7 @@ props_evalAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f, p) ->
 --
 -- zu unterscheiden, aber durch Verwendung von "evalAnnihilator" schneller.
 eval 
-    :: (RingMorphism m, HaveAnnihilatingPolynomial (Domain m), Eq (Domain m))
+    :: (RingMorphism m, HasAnnihilatingPolynomials (Domain m), Eq (Domain m))
     => IC m
     -> Poly (Domain m)
     -> IC m

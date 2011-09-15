@@ -84,7 +84,7 @@ instance (IntegralDomain a) => IntegralDomain (Poly a)
 instance (HasRationalEmbedding a) => HasRationalEmbedding (Poly a) where
     fromRational = fromBase . fromRational
 
-instance (Field a, Eq a, IntegralDomain a) => EuclideanRing (Poly a) where
+instance (Field a) => EuclideanRing (Poly a) where
     degree = pred . genericLength . canonCoeffs
     quotRem f g
         | degree f < degree g = (MkPoly [], f)
@@ -235,7 +235,7 @@ couldBeNotX _ = True
 -- | Berechnet zu einem gegebenen Polynom /f/ seinen quadratfreien Anteil (als
 -- normiertes Polynom), also /g/ mit /f = dg/, wobei /d/ den größten
 -- gemeinsamen Teiler von /f/ und /f'/ bezeichne.
-squarefreePart :: (Field a, IntegralDomain a, Eq a) => Poly a -> Poly a
+squarefreePart :: (Field a) => Poly a -> Poly a
 squarefreePart f = let (_,_,s,_) = gcd f (derivative f) in normalize s
 
 -- | Mischt zwei Listen vermöge einem gegebenen Operator und einem

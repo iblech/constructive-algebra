@@ -36,12 +36,12 @@ signChanges xs = sum $ map f (pairs xs)
 signChanges' :: (Ring a, Ord a) => a -> a -> [Poly a] -> Rational
 signChanges' a b ps = signChanges (map (eval a) ps) - signChanges (map (eval b) ps)
 
-sturmChain :: (Field a, Eq a, IntegralDomain a) => Poly a -> Poly a -> [Poly a]
+sturmChain :: (Field a) => Poly a -> Poly a -> [Poly a]
 sturmChain r s
     | degree r > degree s = error "sturmChain"
     | otherwise           = euclidChain s r
 
-index :: (Field a, Eq a, IntegralDomain a, Ord a) => a -> a -> Poly a -> Poly a -> Rational
+index :: (Field a, Ord a) => a -> a -> Poly a -> Poly a -> Rational
 index a b r s
     | degree r <= degree s = signChanges' a b (sturmChain r s)
     | otherwise            = signChanges' a b [r,s] - index a b s r
