@@ -28,14 +28,12 @@ newtype (RingMorphism m, Field (Domain m)) => Alg m =
     MkAlg { unAlg :: IC m }
 
 deriving instance (Ring (IC m)) => Ring (Alg m)
-deriving instance (AllowsRationalEmbedding (IC m)) => AllowsRationalEmbedding (Alg m)
-deriving instance (RingMorphism m, Field (Domain m), ApproxFloating (Codomain m)) => ApproxFloating (Alg m)
-deriving instance AllowsConjugation (Alg QinC)
+deriving instance (HasRationalEmbedding (IC m)) => HasRationalEmbedding (Alg m)
+deriving instance (RingMorphism m, Field (Domain m), HasFloatingApprox (Codomain m)) => HasFloatingApprox (Alg m)
+deriving instance HasConjugation (Alg QinC)
 
 instance Field (Alg QinC) where
-    recip z = unsafeRunR $ do
-        Just z' <- invert z
-        return z'
+    recip = unsafeRunR . invert
 
 instance IntegralDomain (Alg QinC)
 
@@ -49,9 +47,7 @@ instance Eq (Alg QinC) where
         where z = x - y
 
 instance Field (Alg QinR) where
-    recip z = unsafeRunR $ do
-        Just z' <- invert' z
-        return z'
+    recip = unsafeRunR . invert'
 
 instance IntegralDomain (Alg QinR)
 
@@ -94,7 +90,7 @@ invert (MkAlg z) = do
 	    | b == 0    = 1  --FIXME
 	    | otherwise
 	    = abs (head bs) / (fromIntegral k * abs b)
-    zInv   = MkAlg $ MkIC (recip (number z)) p'
+    zInv   = MkAlg $ MkIC (recip' . number $ z) p'
     go []     = return False
     go (n:ns) = do
         q <- unComplex (number z) n

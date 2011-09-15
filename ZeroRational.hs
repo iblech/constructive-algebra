@@ -102,7 +102,7 @@ rootsOnRectangle z0 z1 p = sum
     , windingNumber (realPart z0 + imagUnit * imagPart z1) (realPart z0 + imagUnit * imagPart z0) p
     ]
 
-fromComplexRational :: (Ring a, AllowsRationalEmbedding a, AllowsConjugation a) => ComplexRational -> a
+fromComplexRational :: (Ring a, HasRationalEmbedding a, HasConjugation a) => ComplexRational -> a
 fromComplexRational (u :+: v) = fromRational u + imagUnit * fromRational v
 
 -- Voraussetzung:

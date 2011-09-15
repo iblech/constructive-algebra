@@ -12,7 +12,7 @@ import Control.Monad
 import Proxy
 
 newtype Real = MkReal { unReal :: Complex }
-    deriving (Ring,AllowsRationalEmbedding,ApproxFloating)
+    deriving (Ring,HasRationalEmbedding,HasFloatingApprox)
 -- Invariante: Alle epsilon-Näherungen müssen reell sein.
 
 data QinR
@@ -32,6 +32,14 @@ realComponent (MkRat (x :+: y)) = MkReal $ MkRat (x :+: 0)
 realComponent (MkComplex f) = MkReal . MkComplex $ liftM phi . f
     where
     phi (x :+: y) = x :+: 0
+
+data Sign = N | Z | P deriving (Show,Eq,Ord)
+signum :: (Ring a, Ord a) => a -> Sign
+signum x
+    | x  > zero  = P
+    | x ==  zero = Z
+    | x  < zero  = N
+    | otherwise  = error "signum"
 
 -- terminiert bei 0 nicht, gibt sonst N oder P zurück
 signum' :: Real -> Sign

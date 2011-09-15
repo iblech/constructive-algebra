@@ -75,13 +75,13 @@ instance (Ring a) => Ring (Poly a) where
     zero = MkPoly []
     unit = MkPoly [unit]
 
-instance (AllowsConjugation a) => AllowsConjugation (Poly a) where
+instance (HasConjugation a) => HasConjugation (Poly a) where
     conjugate (MkPoly xs) = MkPoly (map conjugate xs)
     imagUnit              = fromBase imagUnit
 
 instance (IntegralDomain a) => IntegralDomain (Poly a)
 
-instance (AllowsRationalEmbedding a) => AllowsRationalEmbedding (Poly a) where
+instance (HasRationalEmbedding a) => HasRationalEmbedding (Poly a) where
     fromRational = fromBase . fromRational
 
 instance (Field a, Eq a, IntegralDomain a) => EuclideanRing (Poly a) where
@@ -165,7 +165,7 @@ normedQuotRem f g
     (f',g') = (MkPoly (canonCoeffs f),   MkPoly (canonCoeffs g))
     (n,m)   = (length (unsafeCoeffs f'), length (unsafeCoeffs g'))
 
-instance (Field a, Eq a) => TestableAssociatedness (Poly a) where
+instance (Field a, Eq a) => HasTestableAssociatedness (Poly a) where
     areAssociated p q
         | p == zero && q == zero = Just unit
         | p /= zero && q /= zero =
@@ -188,8 +188,8 @@ fromBase x = MkPoly [x]
 
 -- | Normiert ein Polynom.
 normalize :: (Field a, Eq a) => Poly a -> Poly a
-normalize p = MkPoly $ map (a *) as where as = canonCoeffs p; a = recip (last as)
--- Semantisch zu unterscheiden wäre die Alternativdefinition
+normalize p = MkPoly $ map (a *) as where as = canonCoeffs p; Just a = recip (last as)
+-- Semantisch nicht zu unterscheiden wäre die Alternativdefinition
 -- > normalie p = recip (leadingCoeff p) .* p.
 -- Diese hat den Vorteil, dass das zurückgegebene Polynom gleich schon
 -- in kanonisierter Form vorliegt, also keine unnötigen Nullen besitzt.

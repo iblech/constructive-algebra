@@ -17,6 +17,7 @@ import Text.Printf
 import Debug.Trace
 import System.Time
 import Nat
+import Data.Maybe
 
 newtype R a = R { runR :: IO a }
     deriving (Functor,Monad)
@@ -48,19 +49,15 @@ instance Ring Complex where
     zero = fromInteger zero
     unit = fromInteger unit
 
-instance AllowsConjugation Complex where
+instance HasConjugation Complex where
     conjugate (MkComplex f) = MkComplex $ liftM conjugate . f
     conjugate (MkRat f)     = MkRat (conjugate f)
     imagUnit = MkRat imagUnit
 
--- XXX: recip-Problematik...
-instance Field Complex where
-    recip = recip'
-
-instance AllowsRationalEmbedding Complex where
+instance HasRationalEmbedding Complex where
     fromRational = MkRat . fromRational
 
-instance ApproxFloating Complex where
+instance HasFloatingApprox Complex where
     approx = approx . unsafeRunR . ($ 100) . unComplex
 
 data QinC
@@ -79,8 +76,8 @@ fromBase :: ComplexRational -> Complex
 fromBase = MkRat
 
 approx' :: Rational -> Complex -> R ComplexRational
-approx' eps (MkRat f) = return f
-approx' eps (MkComplex f) = f $ ceiling (recip eps)
+approx' eps (MkRat f)     = return f
+approx' eps (MkComplex f) = f $ ceiling . fromJust . recip $ eps
 
 traceEvals :: String -> Complex -> Complex
 traceEvals _ = id
@@ -151,11 +148,11 @@ apartnessBound (MkComplex f) = go 1
 -- Vor.: Argument z ist von 0 entfernt
 -- Dann: recip' z stellt 1/z dar.
 recip' :: Complex -> Complex
-recip' (MkRat f) = MkRat (recip f)
+recip' (MkRat f) = MkRat . fromJust . recip $ f
 recip' z@(MkComplex f) = MkComplex $ \n -> do
     n0 <- apartnessBound z
     let n' = halve $ n * n0^2
-    liftM recip $ f n'
+    liftM (fromJust . recip) $ f n'
     where
     halve i
 	| i `mod` 2 == 0 = i `div` 2

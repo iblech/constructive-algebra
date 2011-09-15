@@ -12,6 +12,7 @@ import Ring
 import Field
 import Testing
 import Control.Monad
+import Data.Maybe
 
 -- | Typ für komplexrationale Zahlen in kartesischer Darstellung.
 -- Der Konstruktor ist strikt in seinen beiden Argumenten.
@@ -34,21 +35,21 @@ instance Ring ComplexRational where
 
 instance IntegralDomain ComplexRational
 
-instance AllowsConjugation ComplexRational where
+instance HasConjugation ComplexRational where
     conjugate (x :+: y) = x :+: (-y)
     imagUnit            = 0 :+: 1
 
 instance Field ComplexRational where
     recip (x :+: y)
-	| sq == 0   = error "division by zero (ComplexRational)"
-	| otherwise = (x/sq) :+: (-y/sq)
-	where sq = x^2 + y^2
+	| sq == 0   = Nothing
+        | otherwise = Just $ (x/sq) :+: (-y/sq)
+      where sq = x^2 + y^2
 
-instance AllowsRationalEmbedding ComplexRational where
-    fromRational = (:+: 0)
+instance HasRationalEmbedding ComplexRational where
+  fromRational = (:+: 0)
 
-instance ApproxFloating ComplexRational where
-    approx (x :+: y) = P.fromRational x C.:+ P.fromRational y
+instance HasFloatingApprox ComplexRational where
+  approx (x :+: y) = P.fromRational x C.:+ P.fromRational y
 
 -- | Berechnet das Quadrat /|z|^2/ des Betrags einer Zahl /z/.
 --
@@ -61,10 +62,10 @@ magnitudeSq (x :+: y) = x^2 + y^2
 
 props_magnitudeSq :: [Property]
 props_magnitudeSq =
-    [ property $ magnitudeSq unit == 1
-    , forAll arbitrary $ \z -> forAll arbitrary $ \u ->
-        magnitudeSq (z * u) == magnitudeSq z * magnitudeSq u
-    ]
+  [ property $ magnitudeSq unit == 1
+  , forAll arbitrary $ \z -> forAll arbitrary $ \u ->
+      magnitudeSq (z * u) == magnitudeSq z * magnitudeSq u
+  ]
 
 -- | Liefert eine obere Schranke für den Betrag einer Zahl /z/.
 magnitudeUpperBound :: ComplexRational -> Rational
@@ -80,7 +81,7 @@ props_magnitudeUpperBound = (:[]) $ forAll arbitrary $ \x ->
 -- > |goldenRatioSeq n - φ| < 1/n für alle n >= 1.
 goldenRatioSeq :: Integer -> ComplexRational
 goldenRatioSeq n = xs `genericIndex` (ilogb 2 n)
-    where xs = iterate ((unit +) . recip) unit
+    where xs = iterate ((unit +) . fromJust . recip) unit
 -- a_1 = 1, a_(n+1) = 1 + 1/a_n
 -- erfüllt |a_n - a| < (4/9)^n für alle n >= 2.
 -- Diese Folge hier wird künstlich verlangsamt, sie erfüllt |x_n - x| < 1/n für

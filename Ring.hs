@@ -1,76 +1,175 @@
+-- | Dieses Modul stellt die zentrale Typklasse "Ring" für kommutative Ringe
+-- mit Eins und einige spezialisierte Klassen zur Verfügung.
 {-# LANGUAGE FlexibleInstances #-}
-module Ring where
+module Ring
+    ( -- * Typklassen für Ringe und Ringe mit bestimmten Eigenschaften
+      Ring(..), (-), IntegralDomain(..)
+    , HasTestableAssociatedness(..), HasRationalEmbedding(..), HasConjugation(..)
+    , HasFloatingApprox(..)
+      -- * Allgemeine Funktionen für Ringe
+    , sum, product, (^)
+      -- * Funktionen für Ringe mit komplexer Konjugation
+    , absSq, realPart, imagPart
+    ) where
 
 import qualified Prelude as P
-import Prelude (Maybe, (&&), (||), (==), (/=), abs, otherwise)
+import Prelude (Maybe, (&&), (==), (/=), abs, otherwise, ($), seq)
 import Data.Ratio
 import qualified Data.Complex as C
 
+-- | Klasse für Typen, die Ringe repräsentieren.
+-- Dabei meinen wir stets kommutative Ringe mit Eins.
 class Ring a where
+    -- | Addition.
     (+) :: a -> a -> a
-    (-) :: a -> a -> a
-    (*) :: a -> a -> a
-    zero   :: a
-    unit   :: a
+
+    -- | Negation.
     negate :: a -> a
+
+    -- | Multiplikation.
+    (*) :: a -> a -> a
+
+    -- | Null.
+    zero   :: a
+
+    -- | Eins.
+    unit   :: a
+
+    -- | /fromInteger z/ soll das Bild von /z/ unter dem eindeutigen
+    -- Ringhomomorphismus vom Ring der ganzen Zahlen in /a/, also
+    -- /z 1/, sein.
     fromInteger :: P.Integer -> a
-    x - y = x + negate y
+
     infixl 6 +
-    infixl 6 -
     infixl 7 *
 
-    -- Zur Effizienzsteigerung, damit Null-Koeffizienten bei Polynomen
-    -- gestrichen werden können.
-    -- Es muss gelten: couldBeNonZero x == False  ==>  x == zero.
+    -- | Bei der Rechnung mit Polynomen sammeln sich manchmal abschließende
+    -- Null-Koeffizienten an, die weggelassen werden könnten. Da wir nicht
+    -- fordern wollen, dass jeder Ring diskret ist (etwa weil das nicht stimmt
+    -- oder der Test auf Gleichheit teuer ist), gehen wir hier einen
+    -- Kompromiss:
+    --
+    -- Ein Ring kann die Methode 'couldBeNonZero' implementieren.
+    -- Diese soll nur dann 'False' zurückliefern, wenn das übergebene
+    -- Ringelement null ist. Sie ist aber nicht gezwungen, in diesem
+    -- wirklich 'False' zurückzugeben -- in der Tat ist die
+    -- Standardimplementierung einfach
+    --
+    -- > couldBeNonZero = const True.
+    --
+    -- Die zu erfüllende Spezifikation ist also:
+    --
+    -- > couldBeNonZero x == False  ==>  x == zero.
     couldBeNonZero :: a -> P.Bool
     couldBeNonZero = P.const P.True
 
-class (Ring a) => IntegralDomain a
+-- | Subtraktion, erfüllt folgende Spezifikation:
+--
+-- > x - y = x + negate y.
+(-) :: (Ring a) => a -> a -> a
+x - y = x + negate y
+infixl 6 -
 
-data Sign = N | Z | P deriving (P.Show,P.Eq,P.Ord)
-signum :: (Ring a, P.Ord a) => a -> Sign
-signum x
-    | x P.> zero = P
-    | x ==  zero = Z
-    | x P.< zero = N
-    | otherwise  = P.error "signum"
+-- | Klasse für Typen, die Integritätsbereiche repräsentieren, also
+-- für alle /x/ folgende Bedingung erfüllen: /Entweder/ ist /x/ null,
+-- /oder/ /x/ ist regulär (d.h. die Multiplikationsabbildung mit /x/ ist
+-- injektiv).
+--
+-- Aus dieser Definition folgt sofort, dass Gleichheit im Ring entscheidbar
+-- (für gegebene Ringelemente /x/, /y/ muss nur die Frage stellen, ob /x-y/
+-- null oder regulär ist), daher fordern wir die Zugehörigkeit zur
+-- /Eq/-Typklasse.
+--
+-- Methoden muss ein Typ, der zur 'IntegralDomain'-Klasse gehören möchte,
+-- nicht: Denn da in einem Integritätsbereich ein Element genau dann regulär
+-- ist, wenn es nicht null ist, wird die geforderte Entscheidungsfähigkeit
+-- schon durch '(==)' von 'Eq' geliefert.
+class (Ring a, P.Eq a) => IntegralDomain a
 
--- x ~ y :<=> ex. u inv'bar: y = u x
-class (Ring a) => TestableAssociatedness a where
+-- | Klasse für Ringe, in denen entscheidbar ist, ob zwei gegebene Elemente
+-- /x/ und /y/ zueinander assoziiert sind, ob es also ein invertierbares
+-- Element /u/ mit /y = ux/ gibt.
+class (Ring a) => HasTestableAssociatedness a where
+    -- | /areAssociated x y/ soll genau dann /False/ sein, wenn 'x'
+    -- und 'y' nicht zueinander assoziiert sind, und andernfalls
+    -- /Just u/ zurückgeben, wobei /u/ ein invertierbares Element
+    -- mit /y = ux/ (in dieser Reihenfolge) ist.
+    --
+    -- Richtiger wäre es, den Rückgabetyp auf eine monadischen Typ
+    -- abzuschwächen; in den in diesem Projekt betrachteten Fällen können wir
+    -- aber in der Tat sogar den von diesem Typ geforderten funktionalen
+    -- Zusammenhang bieten.
     areAssociated :: a -> a -> Maybe a
-    -- Nothing, oder Just u (mit y = u x, in der Reihenfolge)
 
-class (Ring a) => AllowsRationalEmbedding a where
+-- | Klasse für Ringe, die eine (dann eindeutige) Einbettung der rationalen
+-- Zahlen zulassen.
+class (Ring a) => HasRationalEmbedding a where
+    -- | /fromRational q/ soll das Bild von /q/ unter der Einbettung der
+    -- rationalen Zahlen in den Ring /a/ sein.
     fromRational :: Rational -> a
 
-class (Ring a) => AllowsConjugation a where
+-- | Klasse für Ringe, in denen der Begriff der komplexen Konjugation definiert
+-- ist.
+class (Ring a) => HasConjugation a where
+    -- | Konjugiert ein Ringelement.
     conjugate :: a -> a
+
+    -- | Liefert die imaginäre Einheit.
     imagUnit  :: a
 
-absSq :: (AllowsConjugation a) => a -> a
-absSq z = z * conjugate z
-
-realPart :: (AllowsConjugation a, AllowsRationalEmbedding a) => a -> a
-realPart z = fromRational (1 P./ 2) * (z + conjugate z)
-
-imagPart :: (AllowsConjugation a, AllowsRationalEmbedding a) => a -> a
-imagPart z = negate imagUnit * fromRational (1 P./ 2) * (z - conjugate z)
-
--- unsafePerformIO zugelassen
-class ApproxFloating a where
+-- | Klasse für Ringe, die für Debuggingzwecke eine Approximation durch
+-- komplexe Fließkommazahlen zulassen.
+class HasFloatingApprox a where
+    -- | Liefert eine Approximation durch eine komplexe Fließkommazahl.
+    -- Diese Methode ist nur für Debuggingzwecke gedacht; die Wahl der
+    -- Genauigkeit bleibt den Instanzen überlassen. Auch muss 'approx'
+    -- nicht referentiell-transparent sein.
     approx :: a -> C.Complex P.Double
 
--- direkt ausm Prelude kopiert
+-- | Summiert eine endliche Liste von Ringelementen, mit der Konvention
+-- /sum [] = zero/.
+sum :: (Ring a) => [a] -> a
+sum = sum' zero
+    where
+    sum' acc []     = acc
+    sum' acc (x:xs) = let y = acc + x in seq y $ sum' y xs
+
+-- | Multipliziert eine endliche Liste von Ringelementen, mit der Konvention
+-- /product [] = unit/.
+product :: (Ring a) => [a] -> a
+product = product' unit
+    where
+    product' acc []     = acc
+    product' acc (x:xs) = let y = acc * x in seq y $ product' y xs
+
+-- | Berechnet das Betragsquadrat einer Zahl /z/, also
+-- das Produkt von /z/ mit seinem komplex Konjugierten.
+absSq :: (HasConjugation a) => a -> a
+absSq z = z * conjugate z
+
+-- | Bestimmt den Realteil einer Zahl.
+realPart :: (HasConjugation a, HasRationalEmbedding a) => a -> a
+realPart z = fromRational (1 P./ 2) * (z + conjugate z)
+
+-- | Bestimmt den Imaginärteil einer Zahl.
+imagPart :: (HasConjugation a, HasRationalEmbedding a) => a -> a
+imagPart z = negate imagUnit * fromRational (1 P./ 2) * (z - conjugate z)
+
+-- | Potenziert ein gegebenes Ringelement mittels binärer Exponentiation
+-- (square and multiply).
 (^) :: (Ring a) => a -> P.Integer -> a
-x ^ 0           = unit
+_ ^ 0           = unit
 x ^ n | n P.> 0 = f x (n-1) x
     where f _ 0 y = y
           f x n y = g x n  where
-                    g x n | P.even n  = g (x*x) (n `P.quot` 2)
+                    g x n | P.even n    = g (x*x) (n `P.quot` 2)
                           | P.otherwise = f x (n-1) (x*y)
-_ ^ _           = P.error "Prelude.^: negative exponent"
+_ ^ _           = P.error "Ring.^: negative exponent"
 infixr 8 ^
+-- Quelle: Das Haskell-Prelude.
 
+-- Die größenbeschränkten Ganzzahlen bilden einen bestimmten Faktorring
+-- des echten Rings der ganzen Zahlen.
 instance Ring P.Int where
     (+)    = (P.+)
     (*)    = (P.*)
@@ -79,9 +178,10 @@ instance Ring P.Int where
     negate = P.negate
     fromInteger = P.fromInteger
     couldBeNonZero = (/= 0)
-instance ApproxFloating P.Int where
+instance HasFloatingApprox P.Int where
     approx = P.fromIntegral
 
+-- Der richtige Ring aller ganzen Zahlen, ohne Größenbeschränkung.
 instance Ring P.Integer where
     (+)    = (P.+)
     (*)    = (P.*)
@@ -91,13 +191,15 @@ instance Ring P.Integer where
     fromInteger = P.fromInteger
     couldBeNonZero = (/= 0)
 instance IntegralDomain P.Integer
-instance TestableAssociatedness P.Integer where
+instance HasTestableAssociatedness P.Integer where
     areAssociated x y
         | abs x == abs y = P.Just (P.signum x * P.signum y)
         | otherwise      = P.Nothing
-instance ApproxFloating P.Integer where
+instance HasFloatingApprox P.Integer where
     approx = P.fromIntegral
 
+-- Quotientenkörper.
+-- Die Integral-Beschränkung stammt von
 instance (IntegralDomain a, P.Integral a) => Ring (Ratio a) where
     (+)    = (P.+)
     (*)    = (P.*)
@@ -107,26 +209,16 @@ instance (IntegralDomain a, P.Integral a) => Ring (Ratio a) where
     fromInteger = P.fromInteger
     couldBeNonZero = (/= 0)
 instance (IntegralDomain a, P.Integral a) => IntegralDomain (Ratio a)
-instance (IntegralDomain a, P.Integral a) => TestableAssociatedness (Ratio a) where
+instance (IntegralDomain a, P.Integral a) => HasTestableAssociatedness (Ratio a) where
     areAssociated x y
         | x == zero && y == zero = P.Just 1
         | x /= zero && y /= zero = P.Just (y * P.recip x)
         | otherwise              = P.Nothing
-instance AllowsRationalEmbedding (Ratio P.Integer) where
-    fromRational = P.fromRational
-instance (IntegralDomain a, P.Integral a, ApproxFloating a) => ApproxFloating (Ratio a) where
+instance (IntegralDomain a, P.Integral a) => HasRationalEmbedding (Ratio a) where
+    fromRational z =
+        let (p,q) = (numerator z, denominator z)
+        in  fromInteger p * P.recip (fromInteger q)
+instance (IntegralDomain a, P.Integral a, HasFloatingApprox a) => HasFloatingApprox (Ratio a) where
     approx x =
-        let (p,q) = (numerator x,denominator x)
+        let (p,q) = (numerator x, denominator x)
         in  approx p P./ approx q
-
-sum :: (Ring a) => [a] -> a
-sum = sum' zero
-    where
-    sum' acc []     = acc
-    sum' acc (x:xs) = sum' (acc + x) xs
-
-product :: (Ring a) => [a] -> a
-product = product' unit
-    where
-    product' acc []     = acc
-    product' acc (x:xs) = product' (acc * x) xs

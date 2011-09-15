@@ -80,17 +80,20 @@ instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m)) => Ring (IC m) 
     zero = IntegralClosure.fromBase zero
     unit = IntegralClosure.fromBase unit
 
+instance (RingMorphism m, Eq (Codomain m)) => Eq (IC m) where
+    x == y = number x == number y
+
 instance (RingMorphism m, IntegralDomain (Codomain m), HaveAnnihilatingPolynomial (Domain m)) =>
     IntegralDomain (IC m)
 
-instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m), AllowsRationalEmbedding (Domain m)) =>
-    AllowsRationalEmbedding (IC m) where
+instance (RingMorphism m, HaveAnnihilatingPolynomial (Domain m), HasRationalEmbedding (Domain m)) =>
+    HasRationalEmbedding (IC m) where
     fromRational r = z
         where
         mor' = mor ((undefined :: IC m -> Proxy m) z)
         z    = MkIC (mor' (fromRational r)) (MkNormedPoly $ iX - fromRational r)
 
-instance (RingMorphism m, ApproxFloating (Codomain m)) => ApproxFloating (IC m) where
+instance (RingMorphism m, HasFloatingApprox (Codomain m)) => HasFloatingApprox (IC m) where
     approx = approx . number
 
 
@@ -221,7 +224,7 @@ goldenRatio = MkIC C.goldenRatio $ mkNormedPoly (iX^2 - iX - unit)
 sqrt2 :: IC QinC
 sqrt2 = MkIC C.sqrt2 $ mkNormedPoly (iX^2 - unit - unit)
 
-instance AllowsConjugation (IC QinC) where
+instance HasConjugation (IC QinC) where
     conjugate (MkIC z p) = MkIC (conjugate z) p
     imagUnit             = MkIC (C.fromBase imagUnit) $ mkNormedPoly (iX^2 + unit)
 

@@ -34,7 +34,7 @@ idealEquals x y = liftM isNothing $ idealRecip (x - y)
 
 -- IdealSimpleExtension
 newtype ISE k s = S (Poly k)
-    deriving (Show,Ring,AllowsRationalEmbedding)
+    deriving (Show,Ring,HasRationalEmbedding)
 
 fromBase :: k -> ISE k s
 fromBase = S . Poly.fromBase
@@ -51,7 +51,7 @@ instance (Field k, IntegralDomain k, Eq k) => IdealField (ISE k s) where
     idealRecip (S g) = do
         f <- ask
         let (u,v,s,t) = gcd f g; d = u*f + v*g
-        if degree d == 0        then return . Just . S $ recip (leadingCoeff d) .* v else do
+        if degree d == 0        then return . Just . S $ fromJust (recip (leadingCoeff d)) .* v else do
         if degree d == degree f then return Nothing else do
         trace ("restart!") $ do
         restart (d,s)

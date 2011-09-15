@@ -27,7 +27,7 @@ import Testing
 -- dazu wird der größte gemeinsame Teiler vom /(0,0)/- und /(0,j)/-Element
 -- genutzt. Die zugehörige Transformationsmatrix hat stets Determinante /1/.
 makeZeroInFirstRow
-    :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, TestableAssociatedness a)
+    :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, HasTestableAssociatedness a)
     => Nat -> Matrix (S n) m a -> Matrix (S n) m a
 makeZeroInFirstRow j mtx@(MkMatrix arr) = MkMatrix (arr // updates) `asTypeOf` mtx
     where
@@ -48,7 +48,7 @@ makeZeroInFirstRow j mtx@(MkMatrix arr) = MkMatrix (arr // updates) `asTypeOf` m
 -- dazu wird der größte gemeinsame Teiler vom /(0,0)/- und /(j,0)/-Element
 -- genutzt. Die zugehörige Transformationsmatrix hat stets Determinante /1/.
 makeZeroInFirstCol
-    :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, TestableAssociatedness a)
+    :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, HasTestableAssociatedness a)
     => Nat -> Matrix n (S m) a -> Matrix n (S m) a
 makeZeroInFirstCol i = transpose . makeZeroInFirstRow i . transpose
 
@@ -58,7 +58,7 @@ makeZeroInFirstCol i = transpose . makeZeroInFirstRow i . transpose
 -- muss hier nicht unbedingt erfüllt sein.
 --
 -- Die verwendeten Transformationen haben stets Determinante /1/.
-diagonalForm :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, TestableAssociatedness a) => Matrix n m a -> [a]
+diagonalForm :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, HasTestableAssociatedness a) => Matrix n m a -> [a]
 diagonalForm mtx
     | numRows mtx == 0 || numCols mtx == 0
     = []
@@ -81,14 +81,14 @@ diagonalForm mtx
 -- das in einem beliebigen euklidischen Ring auch sein?), sollten also
 -- nur bis auf Assoziiertheit verstanden werden.
 elementaryDivisors
-    :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, TestableAssociatedness a)
+    :: (ReifyNat n, ReifyNat m, EuclideanRing a, Eq a, HasTestableAssociatedness a)
     => Matrix n m a -> [a]
 elementaryDivisors = divisors . diagonalForm
 
 -- | Formt eine gegebene Liste von Ringelementen (die wir uns als
 -- Hauptdiagonalelemente einer rechteckigen Diagonalmatrix vorstellen) so um,
 -- dass aufeinanderfolgende Elemente einander teilen.
-divisors :: (EuclideanRing a, Eq a, TestableAssociatedness a) => [a] -> [a]
+divisors :: (EuclideanRing a, Eq a, HasTestableAssociatedness a) => [a] -> [a]
 divisors [] = []
 divisors as = go (length as - 1) as
     where
@@ -132,7 +132,7 @@ class (Ring a) => HaveAnnihilatingPolynomial a where
 
 {-
  - XXX: noch verbessern: Sollte für jeden IntBer. funktionieren. Hat mit ER nichts zu tun!
-instance (EuclideanRing a, Integral a, IntegralDomain a, TestableAssociatedness a, Eq a) => HaveAnnihilatingPolynomial (ER a) where
+instance (EuclideanRing a, Integral a, IntegralDomain a, HasTestableAssociatedness a, Eq a) => HaveAnnihilatingPolynomial (ER a) where
     annihilatingPolynomial = fmap unsafeFromRatio . charPoly . fmap toRatio
 	where
 	toRatio = (% unit)
@@ -160,7 +160,7 @@ props_annihilatingPolynomial proxy = (:[]) $ forAll (elements [0..maxDim]) $ \n 
 
 -- | Berechnet die Determinante, indem Determinante-/1/-Transformationen
 -- verwendet werden, um die gegebene Matrix auf Dreiecksform zu bringen.
-determinant :: (ReifyNat n, EuclideanRing a, Eq a, TestableAssociatedness a) => SqMatrix n a -> a
+determinant :: (ReifyNat n, EuclideanRing a, Eq a, HasTestableAssociatedness a) => SqMatrix n a -> a
 determinant mtx
     | numRows mtx == 0 = unit
     | null badCols     = (mtx !! (0,0)) * restDet
