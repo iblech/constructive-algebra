@@ -40,11 +40,16 @@ signChanges xs = sum $ map f (pairs xs)
 signChanges' :: (Ring a, Ord a) => a -> a -> [Poly a] -> Rational
 signChanges' a b ps = signChanges (map (eval a) ps) - signChanges (map (eval b) ps)
 
+-- | Berechnet zu einer rationalen Funktion /R\/S/, wobei /R/ und /S/ Polynome
+-- sind, ihre zugehörige Sturmkette. Dabei soll der Grad von /R/ kleinergleich
+-- dem von /S/ sein, sonst wird eine Laufzeitausnahme geworfen.
 sturmChain :: (Field a) => Poly a -> Poly a -> [Poly a]
 sturmChain r s
-    | degree r > degree s = error "sturmChain"
-    | otherwise           = euclidChain s r
+    | degree r > degree s = error "sturmChain: Zählergrad > Nennergrad"
+    | otherwise           = euclidChain r s
 
+-- | Bestimmt zu einer rationalen Funktion /R\/S/ und Intervallgrenzen /a/ und
+-- /b/ ihren Cauchyindex.
 index :: (Field a, Ord a) => a -> a -> Poly a -> Poly a -> Rational
 index a b r s
     | degree r <= degree s = signChanges' a b (sturmChain r s)
@@ -52,6 +57,10 @@ index a b r s
 
 toReal (x :+: y) = x
 
+-- | /windingNumber z z' p/ berechnet die algebraische Windungszahl des
+-- Wegs /γ/ mit /γ(t) = p(z + t (z' - z))/ um den Ursprung. Dazu berechnen wir
+-- Sturmketten von Real- und Imaginärteil von /γ/. Anders als bei analytischen
+-- Definitionen der Windungszahl sind Nullstellen von /γ/ zugelassen.
 windingNumber :: ComplexRational -> ComplexRational -> Poly ComplexRational -> Rational
 windingNumber z z' p
     = index zero unit (fmap toReal $ realPart gamma) (fmap toReal $ imagPart gamma) / 2
