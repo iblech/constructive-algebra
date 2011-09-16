@@ -236,3 +236,4 @@ instance (IntegralDomain a, P.Integral a, HasFloatingApprox a) => HasFloatingApp
     approx x =
         let (p,q) = (numerator x, denominator x)
         in  approx p P./ approx q
+instance OrderedRing (Ratio P.Integer)

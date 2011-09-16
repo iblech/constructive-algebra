@@ -29,7 +29,13 @@ newtype (RingMorphism m, Field (Domain m)) => Alg m =
 deriving instance (Ring (IC m)) => Ring (Alg m)
 deriving instance (HasRationalEmbedding (IC m)) => HasRationalEmbedding (Alg m)
 deriving instance (RingMorphism m, Field (Domain m), HasFloatingApprox (Codomain m)) => HasFloatingApprox (Alg m)
-deriving instance HasConjugation (Alg QinC)
+
+instance HasConjugation (Alg QinC) where
+    type RealSubring (Alg QinC) = Alg QinR
+    conjugate (MkAlg z) = MkAlg (conjugate z)
+    realPart  (MkAlg z) = MkAlg (realPart  z)
+    imagUnit            = MkAlg imagUnit
+--deriving instance HasConjugation (Alg QinC)
 
 instance Field (Alg QinC) where
     recip = unsafeRunR . invert
