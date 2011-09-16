@@ -1,3 +1,6 @@
+-- | Dieses Modul implementiert den Fundamentalsatz der Algebra, stellt also
+-- eine Funktion 'roots' zur Verfügung, die zu einem gegebenen Polynom seine
+-- Nullstellen berechnet.
 {-# LANGUAGE PatternGuards, TupleSections #-}
 module ZeroRational where
 
@@ -20,8 +23,9 @@ import System.IO.Unsafe
 import Data.IORef
 import qualified Data.Map as M
 
--- Zählt die Anzahl von Vorzeichenänderungen, Wechsel von/auf 0 zählen 1/2
-signChanges :: (Ring a, Ord a) => [a] -> Rational
+-- | Zählt die Anzahl von Vorzeichenwechseln einer endlichen Liste von Zahlen
+-- eines geordneten Rings.  Wechsel von/auf null zählen /1\/2/.
+signChanges :: (OrderedRing a) => [a] -> Rational
 signChanges xs = sum $ map f (pairs xs)
     where
     pairs []       = []

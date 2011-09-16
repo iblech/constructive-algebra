@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Ring
     ( -- * Typklassen für Ringe und Ringe mit bestimmten Eigenschaften
-      Ring(..), (-), IntegralDomain(..)
+      Ring(..), (-), IntegralDomain(..), OrderedRing(..)
     , HasTestableAssociatedness(..), HasRationalEmbedding(..), HasConjugation(..)
     , HasFloatingApprox(..)
       -- * Allgemeine Funktionen für Ringe
@@ -85,6 +85,14 @@ infixl 6 -
 -- ist, wenn es nicht null ist, wird die geforderte Entscheidungsfähigkeit
 -- schon durch '(==)' von 'Eq' geliefert.
 class (Ring a, P.Eq a) => IntegralDomain a
+
+-- | Klasse für geordnete Ringe, also Ringe mit einer totalen Relation
+-- /(<=)/ (reflexiv, transitiv, antisymmetrisch, je zwei Elemente
+-- vergleichbar), die folgende zwei Kompatibilitätsaxiome erfüllt:
+--
+-- > a <= b          ==>  a + c <= b + c
+-- > 0 <= a, 0 <= b  ==>  0 <= ab.
+class (Ring a, Ord a) => OrderedRing a
 
 -- | Klasse für Ringe, in denen entscheidbar ist, ob zwei gegebene Elemente
 -- /x/ und /y/ zueinander assoziiert sind, ob es also ein invertierbares
