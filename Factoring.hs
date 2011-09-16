@@ -1,7 +1,11 @@
+-- | Dieses Modul stellt Funktionen zur Faktorisierung von rationalen Polynomen
+-- zur Verfügung; das sind hauptsächlich 'isIrreducible' und
+-- 'irreducibleFactors'.
 {-# LANGUAGE PatternGuards #-}
 module Factoring where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
+import qualified Prelude as P
 import Ring
 import Polynomial as Poly
 import ZeroRational
@@ -19,37 +23,84 @@ import Data.Ratio
 import System.IO.Unsafe
 import Cyclotomic
 
--- soll mind. Grad 1 haben
-isIrreducible :: Poly Rational -> Maybe (Poly Rational,Poly Rational)
-isIrreducible f = trace ("isIrreducible: " ++ show f) $ isIrreducible_ f
+-- | Berechnet den Inhalt eines Polynoms.
+content :: Poly Rational -> Rational
+content f
+    | abs a == 1 = fromInteger . abs $ foldl1' P.gcd $ map numerator as 
+    | abs a /= 1 = content (abs a .* f) / abs a
+    where
+    as = canonCoeffs f
+    a  = fromInteger . foldl1' P.lcm $ map denominator as
 
-isIrreducible_ f
+-- | Entscheidet zu einem gegebenen Polynom (welches mindestens Grad 1,
+-- sonst aber keine Zusatzvoraussetzungen erfüllen muss), ob es irreduzibel
+-- über den rationalen Zahlen ist, und extrahiert im reduziblen Fall
+-- zwei Faktoren.
+isIrreducible
+    :: Poly Rational  -- ^ /f/
+    -> Maybe (Poly Rational,Poly Rational)
+                      -- ^ entweder Nothing (irreduzibel)
+                      -- oder /Just (g,h)/ mit /f = gh/ und
+                      -- /deg f, deg g >= 1/.
+isIrreducible f = trace ("isIrreducible: " ++ show f) $ isIrreducible' f
+
+isIrreducible' f
+    -- Triviale Fälle
     | n <  1 = error "isIrreducible"
     | n == 1 = Nothing
+
+    -- Hat f einen nichttrivialen Faktor mit seiner Ableitung gemein?
     | degree d > 0 = Just (s,d)  -- den kleineren Faktor vorne
+
+    -- Wir normieren f, falls nötig. Denn dann können wir uns im Hauptteil des
+    -- Verfahrens darauf beschränken, von gewissen algebraischen Zahlen zu
+    -- prüfen, ob sie ganzzahlig sind.
     | leadingCoeff f /= 1 = do
         (g,h) <- isIrreducible (normalize f)
         return (g, leadingCoeff f .* h)
+
+    -- Abkürzung eines häufigen Falls: Können wir X ausklammern?
     | eval0 f == 0 = Just (iX,fst (f `quotRem` iX))
+
+    -- Ist f ein Kreisteilungspolynom, oder ein anderes bekanntes irreduzibles
+    -- Polynom? Das ist natürlich eigentlich "cheaten", aber so sehen können
+    -- wir ein paar mehr Galoisgruppenbeispiele rechnen.
     | f `elem` (relevantCyclotomics ++ knownIrreds)
     = Nothing
+
+    -- Oder ist f ein Vielfaches eines Kreisteilungspolynoms?
     | (g,(h,_)):_ <- cyclotomicResiduals
     = Just (g,h)
+
+    -- Ist f von der Form g(X^n) für ein n >= 2? Dann versuchen wir zunächst,
+    -- g zu zuerlegen. Vielleicht haben wir Glück, denn aus einer Zerlegung von
+    -- g folgt natürlich auch eine von f -- da die Umkehrung aber nicht gelten
+    -- muss, müssen wir, falls g irreduzibel ist, trotzdem noch die eigentliche
+    -- Prüfung durchführen.
     | Just (g,h) <- isComposedPoly f, Just (p,q) <- isIrreducible g
     = Just (p `compose` h, q `compose` h)
+
+    -- Das eigentliche Verfahren: Die Nullstellen finden (hier können wir
+    -- bereits davon ausgehen, dass f normiert und separabel ist) und Auswahlen
+    -- der Nullstellen betrachten.
     | otherwise
     = listToMaybe $ do
+        let contentInv = 1 / content f
+        -- alle Auswahlen von Nullstellen;
+        -- wir wollen kleinere Auswahlen zuerst überprüfen...
 	xs <- sortBy (\xs ys -> length xs `compare` length ys) $ subsequences zeros
+        -- ...und triviale bzw. unnötige gar nicht.
 	guard $ not $ null xs
 	guard $ length xs <= fromIntegral n `div` 2
+
 	trace ("BEARBEITE: " ++ show (map approx xs)) $ do
 	let p = product $ map ((iX -) . Poly.fromBase) xs
-	Just p' <- [isGoodPoly p]
+	Just p' <- [isApproxIntegerPoly (fromRational contentInv .* p)]
 	--trace ("isgood is: " ++ show (map approx xs)) $ do
-	let (q,r) = f `quotRem` p'
+	let (q,r) = f `quotRem` fmap fromInteger p'
         -- für isApproxIntegerPoly
         guard $ r == zero
-	return (p',q)
+	return (fmap fromInteger p', q)
     where
     --zeros = zipWith (\z i -> traceEvals' ("root" ++ show i) z) (rootsA f) [0..]
     zeros = roots f

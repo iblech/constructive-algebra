@@ -25,3 +25,5 @@ Einheitliches Fehlermeldungsschema
 Fortschaltung in euclidChain
 
 Newton überlegen
+
+Besserer Ganzheitscheck in Algebraic

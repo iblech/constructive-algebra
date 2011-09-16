@@ -41,7 +41,9 @@ main = do
     print $ as
 -}
 
-main = do
+main = print . isIrreducible $ iX^6 - fromInteger 4
+
+main'' = do
     let fi = fromInteger :: P.Integer -> Poly P.Rational
     let gs = galoisGroup $ (iX^3 - fi 1) * (iX^2 + fi 5)
     print $ snd gs

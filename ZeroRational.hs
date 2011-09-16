@@ -4,7 +4,7 @@
 --
 -- Das Verfahren funktioniert wie folgt: Ausgehend von einem großen Rechteck,
 -- welches aufgrund einer a-priori-Abschätzung alle Nullstellen enthalten muss,
--- zählen wir mithilfe von Sturm-Sequenzen die Anzahl der Nullstellen auf den
+-- zählen wir mithilfe von Sturmketten die Anzahl der Nullstellen auf den
 -- Kanten und den vier Teilrechtecken. Teile ohne Nullstellen werden verworfen,
 -- auf den anderen wird das Verfahren rekursiv fortgesetzt.
 -- In jedem Schritt halbiert sich also die Größe der einzelnen Suchzellen.
@@ -15,7 +15,14 @@
 -- an elementary real-algebraic proof via Sturm chains. 2009.
 -- arXiv:0808.0097v2 [math.AG]
 {-# LANGUAGE PatternGuards, TupleSections #-}
-module ZeroRational where
+module ZeroRational
+    ( signChanges, signChanges'
+    , sturmChain, index
+    , rootsOnSegment, windingNumber, rootsOnRectangle
+    , Cell(..), midpoint
+    , divide, cauchyRadius, roots
+    , subdivisions, newton, newtonPrecondition
+    ) where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, quotRem, gcd)
 import Polynomial
@@ -381,6 +388,7 @@ roots' f =
         -- Iterationen in 'css' untersuchen.
 	| otherwise
 	= go i j css 
+    go _ _ _ = error "roots'"  -- kann nicht eintreten
 
 {-
 -- muss weder normiert noch separabel sein; liefert die Nst. mit Vf.
@@ -422,7 +430,7 @@ subdivisions radius f =
     go r cs = map ((r,) . mid . snd) cs : merge (map (uncurry process) cs)
 	where
 	process :: Poly (ComplexRational) -> Cell -> [[(Rational, ComplexRational)]]
-	process f' (Cell0 z0) = repeat [(0, fromComplexRational z0)]
+	process _  (Cell0 z0) = repeat [(0, fromComplexRational z0)]
 	process f' c
             -- XXX: Vorerst Newton ausgestellt.
             -- Grund: Zähler und Nenner riesig! Zieht Berechnungstempo enorm runter.
