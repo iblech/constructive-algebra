@@ -51,6 +51,16 @@ instance HasRationalEmbedding ComplexRational where
 instance HasFloatingApprox ComplexRational where
   approx (x :+: y) = P.fromRational x C.:+ P.fromRational y
 
+-- | Ringe, die eine Einbettung der rationalen Zahlen zulassen und außerdem
+-- über eine komplexe Konjugation verfügen, erlauben auch eine Einbettung
+-- der komplexrationalen Zahlen. Diese ist eindeutig, wenn man fordert, dass
+-- die imaginäre Einheit /0 :+: 1/ der komplexrationalen Zahlen auf die
+-- ausgezeichnete imaginäre Einheit /imagUnit/ des Zielrings gehen soll.
+--
+-- /fromComplexRational z/ ist dann das Bild von /z/ unter dieser Einbettung.
+fromComplexRational :: (Ring a, HasRationalEmbedding a, HasConjugation a) => ComplexRational -> a
+fromComplexRational (u :+: v) = fromRational u + imagUnit * fromRational v
+
 -- | Berechnet das Quadrat /|z|^2/ des Betrags einer Zahl /z/.
 --
 -- (Oftmals sind wir eigentlich am Betrag selbst, und nicht an seinem

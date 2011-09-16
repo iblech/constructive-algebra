@@ -65,10 +65,38 @@ gcd_ associatednessTest a b
         s             = t' + q * s'
         t             = s'
 
+-- | Eine Folge /(S_0,...,S_n)/ von Polynomen heißt genau dann /Sturmkette
+-- bezüglich des Intervalls [a,b]/, wenn für alle /x aus [a,b]/ gilt:
+-- Sollte /S_k(x) = 0/ für ein /k/ mit /0 < k < n/ sein, so gilt
+-- /S_(k-1)(x) S_(k+1)(x) < 0/.
+--
+-- Zu jeder rationalen Funktion /R\/S/, wobei /R/ und /S/ Polynome sind,
+-- gibt es /die zugehörige Sturmkette/. Diese ist definiert als
+-- /(S_0,...,S_n)/, wobei /S_k = P_k\/P_n/ (die Division geht auf) und die
+-- /P_i/ aus dem euklidischen Algorithmus, angewendet auf /R/ und /S/ stammen,
+-- also
+--
+-- > P_0 = S
+-- > P_1 = R
+-- > P_(k-1) = Q_k P_k - P_(k+1)
+--
+-- für gewisse Reste /P_(k+1)/ für alle /k >= 1/ erfüllen.
+--
+-- Angewendet wird die Funktion 'euclidChain' in "ZeroRational" auf Polynome.
+-- Derart spezialisiert bestimmt sie zu zwei gegebenen Polynomen /R/ und /S/ 
+-- ihre zugehörige Sturmkette. Sie funktioniert aber auch allgemeiner in
+-- beliebigen euklidischen Ringen.
+--
+-- (Der Begriff der /zum Bruch zugeordneten/ Euklidkette ist eigentlich nicht
+-- wohldefiniert, da verschiedene Wahlen des Rests in 'quotRem' zu
+-- verschiedenen Ketten führen. Das ist aber auch das einzige Hindernis:
+-- Trifft man die Wahlen konsistent, etwa indem man bei ganzen Zahlen fordert,
+-- dass der Rest positiv ist, so sind die Ketten aller Darstellungen eines
+-- Bruchs gleich.
 euclidChain :: (EuclideanRing a, Eq a) => a -> a -> [a]
 euclidChain a b = map (fst . (`quotRem` d)) xs
     where
-    xs = euclidChain' a b
+    xs = euclidChain' b a
     d  = last xs
 
 -- Vorzeichenkonvention für sturmChain

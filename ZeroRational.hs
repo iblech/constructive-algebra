@@ -1,6 +1,19 @@
 -- | Dieses Modul implementiert den Fundamentalsatz der Algebra, stellt also
 -- eine Funktion 'roots' zur Verfügung, die zu einem gegebenen Polynom seine
 -- Nullstellen berechnet.
+--
+-- Das Verfahren funktioniert wie folgt: Ausgehend von einem großen Rechteck,
+-- welches aufgrund einer a-priori-Abschätzung alle Nullstellen enthalten muss,
+-- zählen wir mithilfe von Sturm-Sequenzen die Anzahl der Nullstellen auf den
+-- Kanten und den vier Teilrechtecken. Teile ohne Nullstellen werden verworfen,
+-- auf den anderen wird das Verfahren rekursiv fortgesetzt.
+--
+-- In jedem Schritt halbiert sich also die Größe der einzelnen Suchzellen.
+--
+-- Das Verfahren entstammt folgendem Artikel:
+-- Michael Eisermann. The Fundamental Theorem of Algebra made effective: an
+-- elementary real-algebraic proof via Sturm chains. 2009.
+-- arXiv:0808.0097v2 [math.AG]
 {-# LANGUAGE PatternGuards, TupleSections #-}
 module ZeroRational where
 
@@ -32,10 +45,10 @@ signChanges xs = sum $ map f (pairs xs)
     pairs [x]      = []
     pairs (x:y:zs) = (x,y) : pairs (y:zs)
     f (x,y)
-        | signum (x*y) == N      = 1
-        | x == zero && y /= zero = 1/2
-        | x /= zero && y == zero = 1/2
-        | otherwise              = 0
+        | x*y `compare` zero == LT = 1
+        | x == zero && y /= zero   = 1/2
+        | x /= zero && y == zero   = 1/2
+        | otherwise                = 0
 
 signChanges' :: (Ring a, Ord a) => a -> a -> [Poly a] -> Rational
 signChanges' a b ps = signChanges (map (eval a) ps) - signChanges (map (eval b) ps)
@@ -50,12 +63,35 @@ sturmChain r s
 
 -- | Bestimmt zu einer rationalen Funktion /R\/S/ und Intervallgrenzen /a/ und
 -- /b/ ihren Cauchyindex.
-index :: (Field a, Ord a) => a -> a -> Poly a -> Poly a -> Rational
+--
+-- Zwei Spezialfälle des Index sind wichtig: Der Index von /f'\/f/, wobei
+-- /f/ ein Polynom und /f'/ seine Ableitung bezeichnet, ist die Anzahl der
+-- Nullstellen von /f/ auf /[a,b]/, wobei die Nullstellen ohne Vielfachheit
+-- gezählt werden und Nullstellen in den Randpunkten /a/ und /b/ /1\/2/
+-- beitragen.
+--
+-- Der Index von /Re γ \/ Im γ/ ist das doppelte der Windungszahl der
+-- Einschränkung des polynomiellen Wegs /γ/ auf das Segment /[a,b]/ der
+-- komplexen Zahlenebene, siehe 'windingNumber'.
+index :: (Field a, OrderedRing a) => a -> a -> Poly a -> Poly a -> Rational
 index a b r s
     | degree r <= degree s = signChanges' a b (sturmChain r s)
     | otherwise            = signChanges' a b [r,s] - index a b s r
 
-toReal (x :+: y) = x
+-- | /rootsOnSegment z0 z1 p/ zählt die Anzahl der Nullstellen des
+-- Polynoms /p/ im Segment /[z0,z1]/ der komplexen Ebene. Dabei muss /f/
+-- keine bestimmten Voraussetzungen erfüllen.
+--
+-- Die Nullstellen werden ohne Vielfachheit gezählt, wobei Nullstelen auf
+-- den Ecken /1\/2/ beitragen.
+rootsOnSegment :: ComplexRational -> ComplexRational -> Poly ComplexRational -> Rational
+rootsOnSegment z0 z1 p = index zero unit (derivative f) f
+    where
+    gamma = compose p alpha
+    alpha = fromComplexRational z0 + iX * fromComplexRational (z1 - z0)
+    p1    = fmap toReal $ realPart gamma
+    p2    = fmap toReal $ imagPart gamma
+    f     = let (u,v,_,_) = gcd p1 p2 in u*p1 + v*p2
 
 -- | /windingNumber z z' p/ berechnet die algebraische Windungszahl des
 -- Wegs /γ/ mit /γ(t) = p(z + t (z' - z))/ um den Ursprung. Dazu berechnen wir
@@ -69,43 +105,6 @@ windingNumber z z' p
     alpha = fromComplexRational z + iX * fromComplexRational (z' - z)
     toReal (x :+: y) = x
 
-ex :: Poly ComplexRational
-ex = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Poly.fromBase imagUnit))
-
-ex2 :: Poly ComplexRational
-ex2 = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Poly.fromBase imagUnit)) * (iX + negate (fromInteger 9 + fromInteger 8 * Poly.fromBase imagUnit))
-
-ex' :: Poly ComplexRational
-ex' = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 4))  -- + fromInteger 4 * Poly.fromBase imagUnit))
-
-ex3 :: Poly Rational
-ex3 = iX^2 + fromInteger 1
-
-ex4 :: Poly Rational
-ex4 = iX^2 + iX + fromInteger 1
-
-ex5 :: Poly Rational
-ex5 = iX^3 - fromInteger 1
-
-ex6 :: Poly Rational
-ex6 = Poly.fromBase (1/8)*iX^3 + Poly.fromBase (1/2)*iX
-
-data Cell
-    = Cell0 ComplexRational
-    | Cell1 ComplexRational ComplexRational  -- Anfangs- und Endpunkt
-    | Cell2 ComplexRational ComplexRational  -- untere linke und obere rechte Ecke
-    deriving (Show,Eq)
-
--- keine spez. Voraussetzungen, ohne Vielfachheit (1/2 auf Ecke)
-rootsOnSegment :: ComplexRational -> ComplexRational -> Poly ComplexRational -> Rational
-rootsOnSegment z0 z1 p = index zero unit (derivative f) f
-    where
-    gamma = compose p alpha
-    alpha = fromComplexRational z0 + iX * fromComplexRational (z1 - z0)
-    p1    = fmap toReal $ realPart gamma
-    p2    = fmap toReal $ imagPart gamma
-    f     = let (u,v,_,_) = gcd p1 p2 in u*p1 + v*p2
-
 -- keine Nullstellen auf Ecken, mit Vielfachheit (1/2 auf Kante)
 rootsOnRectangle :: ComplexRational -> ComplexRational -> Poly ComplexRational -> Rational
 rootsOnRectangle z0 z1 p = sum
@@ -115,8 +114,13 @@ rootsOnRectangle z0 z1 p = sum
     , windingNumber (realPart z0 + imagUnit * imagPart z1) (realPart z0 + imagUnit * imagPart z0) p
     ]
 
-fromComplexRational :: (Ring a, HasRationalEmbedding a, HasConjugation a) => ComplexRational -> a
-fromComplexRational (u :+: v) = fromRational u + imagUnit * fromRational v
+toReal (x :+: y) = x
+
+data Cell
+    = Cell0 ComplexRational
+    | Cell1 ComplexRational ComplexRational  -- Anfangs- und Endpunkt
+    | Cell2 ComplexRational ComplexRational  -- untere linke und obere rechte Ecke
+    deriving (Show,Eq)
 
 -- Voraussetzung:
 -- Bei 1- und 2-Zellen liegen keine Nullstellen auf den Eckpunkten.
@@ -331,3 +335,25 @@ newtonPrecondition f x = eval x f /= zero && eval x (derivative f) /= zero && an
     -- XXX: okay, dass coeffs Nuller liefert?
     cs       = unsafeCoeffs $ compose f (iX + fromComplexRational x)
     c1sq     = magnSq (cs !! 1)
+
+ex :: Poly ComplexRational
+ex = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Poly.fromBase imagUnit))
+
+ex2 :: Poly ComplexRational
+ex2 = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Poly.fromBase imagUnit)) * (iX + negate (fromInteger 9 + fromInteger 8 * Poly.fromBase imagUnit))
+
+ex' :: Poly ComplexRational
+ex' = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 4))  -- + fromInteger 4 * Poly.fromBase imagUnit))
+
+ex3 :: Poly Rational
+ex3 = iX^2 + fromInteger 1
+
+ex4 :: Poly Rational
+ex4 = iX^2 + iX + fromInteger 1
+
+ex5 :: Poly Rational
+ex5 = iX^3 - fromInteger 1
+
+ex6 :: Poly Rational
+ex6 = Poly.fromBase (1/8)*iX^3 + Poly.fromBase (1/2)*iX
+

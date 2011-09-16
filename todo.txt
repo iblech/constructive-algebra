@@ -21,3 +21,5 @@ Und auch sumAnnihilator und prodAnnihilator -- kommen die mit
 "pseudo"-normierten Polynomen zurecht? Sonst halt doch wieder fordern...
 
 Einheitliches Fehlermeldungsschema
+
+Fortschaltung in euclidChain
