@@ -2,7 +2,7 @@
 -- Zu einem 'RingMorphism' /m/ ist 'IC' /m/ der Ring derjenigen Elemente
 -- von 'Codomain' /m/, welche über 'Domain'  /m/ ganz sind, also eine
 -- normierte Polynomgleichung mit Koeffizienten aus 'Domain' /m/ erfüllen.
-{-# LANGUAGE FlexibleContexts, UndecidableInstances, FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts, UndecidableInstances, FlexibleInstances, TypeFamilies #-}
 module IntegralClosure
     ( -- * Typen
       IC(..)
@@ -17,7 +17,7 @@ module IntegralClosure
     , props_IntegralClosure
     ) where
 
-import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (^), negate)
+import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (^), (/), negate)
 import Complex hiding (goldenRatio, sqrt2)
 import qualified Complex as C
 import qualified Polynomial as Poly
@@ -225,8 +225,11 @@ sqrt2 :: IC QinC
 sqrt2 = MkIC C.sqrt2 $ mkNormedPoly (iX^2 - unit - unit)
 
 instance HasConjugation (IC QinC) where
+    type RealSubring (IC QinC) = IC QinR
     conjugate (MkIC z p) = MkIC (conjugate z) p
     imagUnit             = MkIC (C.fromBase imagUnit) $ mkNormedPoly (iX^2 + unit)
+    realPart  z          = MkIC (realPart (number z')) (polynomial z')
+        where z' = fromRational (1/2) * (z + conjugate z)
 
 
 -- sollte nicht mit 'stdArgs', sondern einer Beschränkung wie

@@ -1,6 +1,6 @@
 -- | Dieses Modul stellt für jeden Ring /a/ seinen Polynomring /Poly a/ in
 -- einer Variablen zur Verfügung.
-{-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards, TypeFamilies #-}
 module Polynomial
     ( Poly(MkPoly)
     , NormedPoly(..), mkNormedPoly
@@ -76,7 +76,9 @@ instance (Ring a) => Ring (Poly a) where
     unit = MkPoly [unit]
 
 instance (HasConjugation a) => HasConjugation (Poly a) where
+    type RealSubring (Poly a) = Poly (RealSubring a)
     conjugate (MkPoly xs) = MkPoly (map conjugate xs)
+    realPart  (MkPoly xs) = MkPoly (map realPart xs)
     imagUnit              = fromBase imagUnit
 
 instance (IntegralDomain a) => IntegralDomain (Poly a)

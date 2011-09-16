@@ -1,5 +1,6 @@
 -- | Dieses Modul stellt den Datentyp 'ComplexRational' komplexrationaler
 -- Zahlen, also den Elementen von /Q(i)/, bereit.
+{-# LANGUAGE TypeFamilies #-}
 module ComplexRational where
 
 import Data.List (genericIndex)
@@ -36,7 +37,9 @@ instance Ring ComplexRational where
 instance IntegralDomain ComplexRational
 
 instance HasConjugation ComplexRational where
+    type RealSubring ComplexRational = Rational
     conjugate (x :+: y) = x :+: (-y)
+    realPart  (x :+: _) = x
     imagUnit            = 0 :+: 1
 
 instance Field ComplexRational where

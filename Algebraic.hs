@@ -16,7 +16,6 @@ import Data.Maybe
 import Control.Monad
 import Control.Arrow
 import Data.Ratio
-import Real
 import Euclidean
 import Debug.Trace
 import Control.Exception
@@ -55,11 +54,13 @@ instance Eq (Alg QinR) where
     x == y = unsafeRunR . liftM isNothing $ invert' (x - y)
 
 instance Ord (Alg QinR) where
-    compare x y
+    compare x y = undefined
+    {-
         | x == y    = EQ
         | otherwise = case signum' . number . unAlg $ x - y of
             N -> LT
             P -> GT
+            -}
 
 goldenRatio :: Alg QinC
 goldenRatio = MkAlg $ IC.goldenRatio

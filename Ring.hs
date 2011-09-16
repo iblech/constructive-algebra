@@ -1,15 +1,16 @@
 -- | Dieses Modul stellt die zentrale Typklasse "Ring" für kommutative Ringe
 -- mit Eins und einige spezialisierte Klassen zur Verfügung.
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, TypeFamilies, FlexibleContexts #-}
 module Ring
     ( -- * Typklassen für Ringe und Ringe mit bestimmten Eigenschaften
       Ring(..), (-), IntegralDomain, OrderedRing
-    , HasTestableAssociatedness(..), HasRationalEmbedding(..), HasConjugation(..)
+    , HasTestableAssociatedness(..), HasRationalEmbedding(..)
+      -- * Unterstützung von Ringen mit einer "komplexen Konjugation"
+    , HasConjugation(..), absSq, imagPart
+      -- * Näherungen für Debugging-Zwecke
     , HasFloatingApprox(..)
       -- * Allgemeine Funktionen für Ringe
     , sum, product, (^)
-      -- * Funktionen für Ringe mit komplexer Konjugation
-    , absSq, realPart, imagPart
     ) where
 
 import qualified Prelude as P
@@ -118,12 +119,30 @@ class (Ring a) => HasRationalEmbedding a where
 
 -- | Klasse für Ringe, in denen der Begriff der komplexen Konjugation definiert
 -- ist.
-class (Ring a) => HasConjugation a where
+class (Ring a, Ring (RealSubring a)) => HasConjugation a where
+    -- | Zugehöriger Unterring der reellen Elemente, also solcher, die von
+    -- der komplexen Konjugation invariant gelassen werden.
+    type RealSubring a :: *
+
     -- | Konjugiert ein Ringelement.
     conjugate :: a -> a
 
     -- | Liefert die imaginäre Einheit.
     imagUnit  :: a
+
+    -- | Liefert den Realteil.
+    --
+    -- Daraus wird dann auch 'absSq' und 'imagPart' definiert.
+    realPart  :: a -> RealSubring a
+
+-- | Berechnet das Betragsquadrat einer Zahl /z/, also
+-- das Produkt von /z/ mit seinem komplex Konjugierten.
+absSq :: (HasConjugation a) => a -> a
+absSq z = z * conjugate z
+
+-- | Bestimmt den Imaginärteil einer Zahl.
+imagPart :: (HasConjugation a, HasRationalEmbedding a) => a -> a
+imagPart z = negate imagUnit * fromRational (1 P./ 2) * (z - conjugate z)
 
 -- | Klasse für Ringe, die für Debuggingzwecke eine Approximation durch
 -- komplexe Fließkommazahlen zulassen.
@@ -149,19 +168,6 @@ product = product' unit
     where
     product' acc []     = acc
     product' acc (x:xs) = let y = acc * x in seq y $ product' y xs
-
--- | Berechnet das Betragsquadrat einer Zahl /z/, also
--- das Produkt von /z/ mit seinem komplex Konjugierten.
-absSq :: (HasConjugation a) => a -> a
-absSq z = z * conjugate z
-
--- | Bestimmt den Realteil einer Zahl.
-realPart :: (HasConjugation a, HasRationalEmbedding a) => a -> a
-realPart z = fromRational (1 P./ 2) * (z + conjugate z)
-
--- | Bestimmt den Imaginärteil einer Zahl.
-imagPart :: (HasConjugation a, HasRationalEmbedding a) => a -> a
-imagPart z = negate imagUnit * fromRational (1 P./ 2) * (z - conjugate z)
 
 -- | Potenziert ein gegebenes Ringelement mittels binärer Exponentiation
 -- (square and multiply).

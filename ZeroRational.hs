@@ -11,8 +11,8 @@
 -- In jedem Schritt halbiert sich also die Größe der einzelnen Suchzellen.
 --
 -- Das Verfahren entstammt folgendem Artikel:
--- Michael Eisermann. The Fundamental Theorem of Algebra made effective: an
--- elementary real-algebraic proof via Sturm chains. 2009.
+-- [1] Michael Eisermann. The Fundamental Theorem of Algebra made effective:
+-- an elementary real-algebraic proof via Sturm chains. 2009.
 -- arXiv:0808.0097v2 [math.AG]
 {-# LANGUAGE PatternGuards, TupleSections #-}
 module ZeroRational where
@@ -21,14 +21,12 @@ import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRationa
 import Polynomial
 import Ring
 import Field
-import NumericHelper
 import Complex
 import Algebraic hiding (eval)
 import Polynomial as Poly
 import Control.Monad
 import Euclidean
 import ComplexRational
-import Real
 import IntegralClosure hiding (eval)
 import Debug.Trace
 import Data.List hiding (sum)
@@ -42,15 +40,15 @@ signChanges :: (OrderedRing a) => [a] -> Rational
 signChanges xs = sum $ map f (pairs xs)
     where
     pairs []       = []
-    pairs [x]      = []
+    pairs [_]      = []
     pairs (x:y:zs) = (x,y) : pairs (y:zs)
     f (x,y)
-        | x*y `compare` zero == LT = 1
-        | x == zero && y /= zero   = 1/2
-        | x /= zero && y == zero   = 1/2
-        | otherwise                = 0
+        | (x*y) `compare` zero == LT = 1
+        | x == zero && y /= zero     = 1/2
+        | x /= zero && y == zero     = 1/2
+        | otherwise                  = 0
 
-signChanges' :: (Ring a, Ord a) => a -> a -> [Poly a] -> Rational
+signChanges' :: (OrderedRing a) => a -> a -> [Poly a] -> Rational
 signChanges' a b ps = signChanges (map (eval a) ps) - signChanges (map (eval b) ps)
 
 -- | Berechnet zu einer rationalen Funktion /R\/S/, wobei /R/ und /S/ Polynome
@@ -84,6 +82,8 @@ index a b r s
 --
 -- Die Nullstellen werden ohne Vielfachheit gezählt, wobei Nullstelen auf
 -- den Ecken /1\/2/ beitragen.
+--
+-- Siehe: Korollar 3.8 von [1].
 rootsOnSegment :: ComplexRational -> ComplexRational -> Poly ComplexRational -> Rational
 rootsOnSegment z0 z1 p = index zero unit (derivative f) f
     where
@@ -97,15 +97,24 @@ rootsOnSegment z0 z1 p = index zero unit (derivative f) f
 -- Wegs /γ/ mit /γ(t) = p(z + t (z' - z))/ um den Ursprung. Dazu berechnen wir
 -- Sturmketten von Real- und Imaginärteil von /γ/. Anders als bei analytischen
 -- Definitionen der Windungszahl sind Nullstellen von /γ/ zugelassen.
+--
+-- Siehe: Abschnitt 4.3 in [1].
 windingNumber :: ComplexRational -> ComplexRational -> Poly ComplexRational -> Rational
 windingNumber z z' p
     = index zero unit (fmap toReal $ realPart gamma) (fmap toReal $ imagPart gamma) / 2
     where
     gamma = compose p alpha
     alpha = fromComplexRational z + iX * fromComplexRational (z' - z)
-    toReal (x :+: y) = x
 
--- keine Nullstellen auf Ecken, mit Vielfachheit (1/2 auf Kante)
+-- | /rootsOnRectangle z0 z1 p/ zählt die Anzahl der Nullstellen von /p/ in
+-- dem Rechteck, dessen zwei gegenüberliegende Eckpunkte durch /z0/ und /z1/
+-- gegeben sind. Das Polynom /p/ darf dabei keine Nullstellen auf den
+-- vier Eckpunkten des Rechtecks besitzen, kann sonst aber beliebig sein.
+--
+-- Die Nullstellen im Inneren des Rechtecks zählen mit ihrer Vielfachheit,
+-- die auf den Kanten mit der Hälfte ihrer Vielfachheit.
+--
+-- Siehe: Theorem 5.1 von [1].
 rootsOnRectangle :: ComplexRational -> ComplexRational -> Poly ComplexRational -> Rational
 rootsOnRectangle z0 z1 p = sum
     [ windingNumber (realPart z0 + imagUnit * imagPart z0) (realPart z1 + imagUnit * imagPart z0) p

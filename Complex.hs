@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, EmptyDataDecls, TypeFamilies #-}
 module Complex where
 
-import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, abs)
+import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, abs, Real)
 import qualified Prelude as P
 import Control.Monad (liftM, liftM2)
 import ComplexRational hiding (magnitudeUpperBound)
@@ -29,6 +29,10 @@ unComplex :: Complex -> Nat -> R ComplexRational
 unComplex (MkRat f) _ = return f
 unComplex (MkComplex f) n = f n
 
+newtype Real = MkReal { unReal :: Complex }
+    deriving (Ring,HasRationalEmbedding,HasFloatingApprox)
+-- Invariante: Alle epsilon-Näherungen müssen reell sein.
+
 instance Ring Complex where
     MkRat f + MkComplex g = MkComplex $ liftM (f +) . g
     MkComplex f + MkRat g = MkComplex $ liftM (+ g) . f
@@ -50,8 +54,11 @@ instance Ring Complex where
     unit = fromInteger unit
 
 instance HasConjugation Complex where
+    type RealSubring Complex = Real
     conjugate (MkComplex f) = MkComplex $ liftM conjugate . f
     conjugate (MkRat f)     = MkRat (conjugate f)
+    realPart  (MkRat f)     = MkReal $ MkRat $ fromRational . realPart $ f
+    realPart  (MkComplex f) = MkReal $ MkComplex $ liftM (fromRational . realPart) . f
     imagUnit = MkRat imagUnit
 
 instance HasRationalEmbedding Complex where
@@ -65,6 +72,12 @@ instance RingMorphism QinC where
     type Domain   QinC = F Rational
     type Codomain QinC = Complex
     mor _ = MkRat . fromRational . unF
+
+data QinR
+instance RingMorphism QinR where
+    type Domain   QinR = F Rational
+    type Codomain QinR = Real
+    mor _ = MkReal . MkRat . fromRational . unF
 
 magnitudeUpperBound :: Complex -> R Rational
 magnitudeUpperBound (MkRat f) = return $ ComplexRational.magnitudeUpperBound f
