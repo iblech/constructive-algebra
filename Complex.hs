@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, EmptyDataDecls, TypeFamilies #-}
 module Complex where
 
-import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, abs, Real)
+import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real)
 import qualified Prelude as P
 import Control.Monad (liftM, liftM2)
 import ComplexRational hiding (magnitudeUpperBound)
@@ -39,6 +39,8 @@ instance Ring Complex where
     MkRat f + MkRat g     = MkRat (f + g)
     MkComplex f + MkComplex g = MkComplex $ \n -> liftM2 (+) (f (2*n)) (g (2*n))
     MkRat f * MkRat g = MkRat (f * g)
+    MkRat q * MkComplex g = MkComplex $ liftM (q *) . g . roundUp . (ComplexRational.magnitudeUpperBound q *) . fromInteger
+    MkComplex g * MkRat q = MkComplex $ liftM (q *) . g . roundUp . (ComplexRational.magnitudeUpperBound q *) . fromInteger
     f * g = MkComplex $ \n -> liftM2 (*) (unComplex f (n*k)) (unComplex g (n*k))
 	where
 	k = unsafeRunR $ do

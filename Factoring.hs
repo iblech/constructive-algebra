@@ -86,6 +86,7 @@ isIrreducible' f
     | otherwise
     = listToMaybe $ do
         let contentInv = 1 / content f
+        trace (show contentInv) $do
         -- alle Auswahlen von Nullstellen;
         -- wir wollen kleinere Auswahlen zuerst überprüfen...
 	xs <- sortBy (\xs ys -> length xs `compare` length ys) $ subsequences zeros
