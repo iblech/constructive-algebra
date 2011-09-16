@@ -237,8 +237,8 @@ couldBeNotX _ = True
 -- | Berechnet zu einem gegebenen Polynom /f/ seinen quadratfreien Anteil (als
 -- normiertes Polynom), also /g/ mit /f = dg/, wobei /d/ den größten
 -- gemeinsamen Teiler von /f/ und /f'/ bezeichne.
-squarefreePart :: (Field a) => Poly a -> Poly a
-squarefreePart f = let (_,_,s,_) = gcd f (derivative f) in normalize s
+squarefreePart :: (Field a) => Poly a -> NormedPoly a
+squarefreePart f = let (_,_,s,_) = gcd f (derivative f) in normalize' s
 
 -- | Mischt zwei Listen vermöge einem gegebenen Operator und einem
 -- Standardargument, was genau dann verwendet wird, wenn eine der beiden Listen

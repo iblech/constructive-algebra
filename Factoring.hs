@@ -52,7 +52,7 @@ isIrreducible_ f
 	return (p',q)
     where
     --zeros = zipWith (\z i -> traceEvals' ("root" ++ show i) z) (rootsA f) [0..]
-    zeros = rootsA f
+    zeros = roots f
     traceEvals' str (MkAlg (MkIC z p)) = MkAlg (MkIC (traceEvals str z) p)
     n         = degree f
     aN        = leadingCoeff f

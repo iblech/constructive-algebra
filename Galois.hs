@@ -27,12 +27,12 @@ linearResolvent f = do
         c   = fromIntegral n * (squareRoot csq + 1)
     return $ take n $ let as = 1 : map (c*) as in as
     where
-    xs     = map (number . unAlg) $ rootsA f
+    xs     = map (number . unAlg) $ roots f
     n      = length xs
     bounds = do
         (a,b) <- pairs xs
         (u,v) <- pairs xs
-        let q = magnitudeUpperBound $ absSq ((a - b) * recip' (u - v))
+        let q = magnitudeUpperBound . unReal $ absSq ((a - b) * recip' (u - v))
         return $ liftM roundUp q
 
 -- normiert, separabel
@@ -50,13 +50,13 @@ galoisGroup f
 galoisGroup' :: Poly Rational -> ([Alg QinC], [[Int]])
 galoisGroup' f = trace debugMsg $ (xs, sigmas)
     where
-    xs         = map simplify' $ rootsA f
+    xs         = map simplify' $ roots f
     (res,t,hs) = pseudoResolvent (tail xs)
     res'       = 0:res
     hs'        = negate (sum hs + Poly.fromBase a) : hs where a = (!! 1) . reverse . canonCoeffs $ f
     t'         = t  -- simplify' unnötig
     m          = unNormedPoly . fmap unF . polynomial . unAlg $ t'  -- Minimalpolynom von t
-    conjs      = rootsA m
+    conjs      = roots m
     inds       = [0..length xs - 1]
     sigmas     =
         flip map conjs $ \t0 ->
@@ -111,12 +111,12 @@ primitiveElement :: Alg QinC -> Alg QinC -> (Integer, Alg QinC, Poly Rational, P
 primitiveElement x y = (lambda, t, hX, hY)
     where
     f = unNormedPoly . fmap unF . polynomial . unAlg $ x
-    g = squarefreePart . unNormedPoly . fmap unF . polynomial . unAlg $ y
+    g = unNormedPoly . squarefreePart . unNormedPoly . fmap unF . polynomial . unAlg $ y
     -- Nst. der Minimalpolynome würden genügen
     exceptions :: [Integer]
     exceptions = do
-        x' <- rootsA f
-        y' <- rootsA g
+        x' <- roots f
+        y' <- roots g
         r  <- maybeToList $ unsafeRunR $ invert (y - y')
         maybeToList $ isApproxInteger $ (x' - x) * r
     lambda = head $ filter (\q -> all (/= q) exceptions) allIntegers

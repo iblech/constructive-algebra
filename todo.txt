@@ -23,3 +23,5 @@ Und auch sumAnnihilator und prodAnnihilator -- kommen die mit
 Einheitliches Fehlermeldungsschema
 
 Fortschaltung in euclidChain
+
+Newton überlegen

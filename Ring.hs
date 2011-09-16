@@ -14,7 +14,7 @@ module Ring
     ) where
 
 import qualified Prelude as P
-import Prelude (Maybe, (&&), (==), (/=), abs, otherwise, ($), seq)
+import Prelude (Maybe, (&&), (==), (/=), abs, otherwise, ($), (.), seq)
 import Data.Ratio
 import qualified Data.Complex as C
 
@@ -137,12 +137,12 @@ class (Ring a, Ring (RealSubring a)) => HasConjugation a where
 
 -- | Berechnet das Betragsquadrat einer Zahl /z/, also
 -- das Produkt von /z/ mit seinem komplex Konjugierten.
-absSq :: (HasConjugation a) => a -> a
-absSq z = z * conjugate z
+absSq :: (HasConjugation a) => a -> RealSubring a
+absSq z = realPart $ z * conjugate z
 
 -- | Bestimmt den Imaginärteil einer Zahl.
-imagPart :: (HasConjugation a, HasRationalEmbedding a) => a -> a
-imagPart z = negate imagUnit * fromRational (1 P./ 2) * (z - conjugate z)
+imagPart :: (HasConjugation a, HasRationalEmbedding a) => a -> RealSubring a
+imagPart = negate . realPart . (imagUnit *)
 
 -- | Klasse für Ringe, die für Debuggingzwecke eine Approximation durch
 -- komplexe Fließkommazahlen zulassen.
