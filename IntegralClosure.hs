@@ -96,7 +96,7 @@ instance (RingMorphism m, HasAnnihilatingPolynomials (Domain m), HasRationalEmbe
         z    = MkIC (mor' (fromRational r)) (MkNormedPoly $ iX - fromRational r)
 
 instance (RingMorphism m, HasFloatingApprox (Codomain m)) => HasFloatingApprox (IC m) where
-    approx = approx . number
+    unsafeApprox = unsafeApprox . number
 
 
 -- | Bestimmt zu zwei gegebenen Ganzheitsgleichungen /f/ (eines Elements /x/)

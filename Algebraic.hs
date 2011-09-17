@@ -77,7 +77,7 @@ sqrt2 = MkAlg $ IC.sqrt2
 invert :: Alg QinC -> R (Maybe (Alg QinC))
 invert (MkAlg z) = do
     -- Optimierung
-    --trace ("invert: " ++ show (approx z)) $ do
+    --trace ("invert: " ++ show (unsafeApprox z)) $ do
     foundApartness <- go [1,10,100]
     if foundApartness then return $ Just zInv else do
     if null bounds then return Nothing else do
@@ -100,7 +100,7 @@ invert (MkAlg z) = do
     zInv   = MkAlg $ MkIC (recip' . number $ z) p'
     go []     = return False
     go (n:ns) = do
-        q <- unComplex (number z) n
+        q <- approx n (number z)
         if magnitudeSq q >= 1/fromIntegral n^2
             then return True
             else go ns
@@ -115,7 +115,7 @@ tr q = trace ("ANTW.: " ++ show q) $ q
 -- FIXME: auch isComplexRational implementieren
 -- FIXME: UNBEDINGT Korrektheit mit Skript überprüfen!
 isRational :: Alg QinC -> Maybe Rational
---isRational z = tr $ trace ("PRÜFE AUF RAT.: " ++ show (approx z, polynomial . unAlg $ z)) $ listToMaybe $ do
+--isRational z = tr $ trace ("PRÜFE AUF RAT.: " ++ show (unsafeApprox z, polynomial . unAlg $ z)) $ listToMaybe $ do
 isRational z = listToMaybe $ do
     cand <- [zero] ++ nonNegativeCandidates ++ map negate nonNegativeCandidates
     guard $ fromRational cand == z
@@ -144,10 +144,10 @@ isApproxInteger :: Alg QinC -> Maybe Integer
 isApproxInteger z = unsafeRunR $ do
     R $ putStrLn "* isApproxInteger betreten."
     R . putStrLn $ "  AST: " ++ show (number (unAlg z))
-    R . putStrLn $ "  Apr: " ++ show (approx z)
-    --zz <- R $ evaluate (approx z)
+    R . putStrLn $ "  Apr: " ++ show (unsafeApprox z)
+    --zz <- R $ evaluate (unsafeApprox z)
     --R $ putStrLn $ "isApproxInteger: " ++ show zz
-    z0@(q :+: _) <- unComplex (number . unAlg $ z) 100
+    z0@(q :+: _) <- approx 100 (number . unAlg $ z)
     R . putStrLn $ "  z0:  " ++ show z0
     let (a,b) = (floor q, ceiling q)
     --_ <- R $ evaluate a

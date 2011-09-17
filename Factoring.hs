@@ -94,10 +94,10 @@ isIrreducible' f
 	guard $ not $ null xs
 	guard $ length xs <= fromIntegral n `div` 2
 
-	trace ("BEARBEITE: " ++ show (map approx xs)) $ do
+	trace ("BEARBEITE: " ++ show (map unsafeApprox xs)) $ do
 	let p = product $ map ((iX -) . Poly.fromBase) xs
 	Just p' <- [isApproxIntegerPoly (fromRational contentInv .* p)]
-	--trace ("isgood is: " ++ show (map approx xs)) $ do
+	--trace ("isgood is: " ++ show (map unsafeApprox xs)) $ do
 	let (q,r) = f `quotRem` fmap fromInteger p'
         -- für isApproxIntegerPoly
         guard $ r == zero

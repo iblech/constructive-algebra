@@ -1,25 +1,26 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, DeriveFunctor, FlexibleContexts, UndecidableInstances, EmptyDataDecls #-}
 module Complex
-    ( R(..), unsafeRunR, magnitudeUpperBound
+    ( R(..), unsafeRunR
     , AST(..)
-    , Complex, Real, Approx(..), QinC, QinR, unComplex, dummy
+    , Complex, Real, Approx(..), QinC, QinR, approx
     , sqrt2, goldenRatio
     , fromBase
-    , magnitudeZeroTestR, traceEvals
+    , normUpperBoundR, magnitudeZeroTestR, traceEvals
     , recip') where
 
 import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real)
 import qualified Prelude as P
 import Control.Monad (liftM, liftM2)
-import ComplexRational hiding (magnitudeUpperBound)
+import ComplexRational
 import qualified ComplexRational as ComplexRational
-import Ring hiding (approx)
-import qualified Ring as Ring
+import Ring
+import NormedRing
 import Field
 import RingMorphism
 import NumericHelper
 import System.IO.Unsafe
 import System.IO
+import Control.Exception
 import Text.Printf
 import Debug.Trace
 import System.Time
@@ -27,31 +28,96 @@ import Nat
 import Data.Maybe
 import Data.Ratio
 
-unComplex :: Complex -> Integer -> R ComplexRational
-unComplex = flip approx
+-- | Der Typ der komplexen Zahlen.
+type Complex = AST ComplexRational
 
+-- | Der Typ der reellen Zahlen.
+type Real    = AST Rational
+
+-- | Elemente in /AST ex/ beschreiben Rechnungen, die man mit Werten aus /ex/,
+-- den Ringoperationen (Addition und Multiplikation -- Negation kann man als
+-- Multiplikation mit /-unit/ gewinnen) und zusätzlichen nur durch
+-- Approximationsprozeduren gegebenen ideellen Elementen führen kann.
+-- Gleichheit solcher Rechnungen ist natürlich nicht entscheidbar.
+--
+-- Beispielsweise ist /AST ComplexRational/ der Typ der komplexen Zahlen,
+-- /AST Rational/ der der reellen Zahlen.
+--
+-- /AST ex/ kann man sich auch als die freie Ringerweiterung von /ex/ durch
+-- Approximationsprozeduren vorstellen, und man könnte auch kürzer /AST ex/
+-- durch
+--
+-- > data AST ex = Exact ex | Ext String (Approx ex)
+--
+-- definieren, denn da Prozeduren vom Typ /Approx ex/ beliebige Rechnungen
+-- durchführen dürfen, können diese die in dieser Definition fehlenden
+-- Konstruktoren emulieren.
+--
+-- Die hier gegebene Definition hat den Vorteil, dass man einige rudimentäre
+-- Optimierungen vornehmen kann. Möchte man beispielsweise /x_1 + ... + x_n/
+-- auf Genauigkeit /1\/N/ auswerten, benötigt man bei naiver Klammerung, /x_1 +
+-- (x_2 + (x_3 + ...))/, eine Approximation von /x_n/ mit Genauigkeit
+-- /1\/(2^n N)/. Bei balancierter Auswertung dagegen benötigt man von jedem
+-- Summanden nur eine Approximation mit Genauigkeit /1\/(n N)/.
+--
+-- /Warnung/: /AST ex/ ist natürlich funktoriell in /ex/. Man kann jedoch
+-- von einer allgemeinen Funktion /f/ nicht erwarten, dass
+--
+-- > approx n (fmap f ast)
+--
+-- auch eine /1\/n/-Approximation an /liftM f (approx n ast)/ liefert.
+-- Damit das garantiert ist, muss /f/ Lipschitz mit Konstante /1/ sein,
+-- wie beispielsweise /f = negate/ oder /f = conjugate/.
+data AST ex
+    = Exact ex                    -- ^ Einbettung exakter Werte
+    | Add   [AST ex]              -- ^ Addition beliebig (endlich) vieler Terme
+    | Mult  (AST ex) (AST ex)     -- ^ Multiplikation zweier Terme
+    | Ext   String   (Approx ex)  -- ^ ideeller Wert, gegeben durch einen
+                                  -- Approximationsalgorithmus. Die übergebene
+                                  -- Zeichenkette kann als Bezeichner für
+                                  -- Debugging-Zwecke dienen.
+    deriving (Show,Functor)
+
+-- | Monade für nicht-deterministische Approximationsalgorithmen.
 newtype R a = R { runR :: IO a }
     deriving (Functor,Monad)
 
+-- | Typ der Approximationsalgorithmen mit Approximationen aus /ex/.
+-- Dabei fordern wir folgende Bedingung (die sich aber leider in Haskell
+-- nicht auf Typebene festschreiben ließe):
+--
+-- Mit einer positiven natürlichen Zahl /n/ aufgerufen, muss der
+-- Approximationsalgorithmus eine Näherung produzieren, die von einer gewissen
+-- festen Zahl Abstand echt kleiner als /1\/n/ hat.
+newtype Approx ex = MkApprox { unApprox :: Nat -> R ex }
+    deriving (Functor)
+
+-- | /unsafeRunR m/ lässt die nicht-deterministische Operation /m/ laufen
+-- und gibt ihr Ergebnis zurück.
+--
+-- Das ist im Allgemeinen gefährlich, denn jedes Mal, wenn das Ergebnis dann
+-- ausgewertet wird, kann jeweils ein anderer Wert resultieren, da /m/ ja nicht
+-- als deterministisch vorausgesetzt wird. Außerdem werden die Nebeneffekte in /m/
+-- möglicherweise mehrmals ausgeführt.
+--
+-- Verwendet man 'unsafeRunR' in einer Funktion, muss man daher darauf achten,
+-- dass der Rückgabewert nicht von den verschiedenen Ergebnissen von
+-- 'unsafeRunR' abhängt -- sonst verletzt man das Prinzip der referentiellen
+-- Transparenz.
 unsafeRunR :: R a -> a
 unsafeRunR = unsafePerformIO . runR
 
-data AST ex
-    = Exact ex
-    | Add   [AST ex]
-    | Mult  (AST ex) (AST ex)
-    | Ext   String   (Approx ex)
-    deriving (Show,Functor)
--- Vorsicht: Nur Funktoren mit Lipschitzkonstante 1 verwenden!
-
-traceEvals :: String -> Complex -> Complex
-traceEvals _ = id
-
-type Complex = AST ComplexRational
-type Real    = AST Rational
-
-newtype Approx ex = MkApprox { unApprox :: Nat -> R ex }
-    deriving (Functor)
+-- | /traceEvals name z/ ist semantisch nicht von /z/ zu unterscheiden,
+-- gibt aber bei jeder Auswertung Debugging-Informationen auf die
+-- Standardfehlerkonsole aus.
+traceEvals :: (Show ex, NormedRing ex) => String -> AST ex -> AST ex
+traceEvals name z = Ext name $ MkApprox $ \n -> do
+    n' <- R $ evaluate n
+    R $ hPutStrLn stderr $ printf "%-5s_%2d = ..." ("[" ++ name ++ "]") n'
+    q  <- approx n' z
+    q' <- R $ evaluate q
+    R $ hPutStrLn stderr $ printf "%-5s_%2d = %s" ("[" ++ name ++ "]") n' (show q')
+    return q'
 
 instance Show (Approx ex) where
     show _ = "<<nondet>>"
@@ -64,35 +130,23 @@ instance (Ring ex, Eq ex) => Ring (AST ex) where
     unit        = Exact unit
     fromInteger = Exact . fromInteger
 
-dummy :: String -> ex -> AST ex
-dummy name x = Ext name $ MkApprox $ const $ return x
-
-class (Ring a) => HasMUP a where
-    mup :: a -> Rational
-
-instance HasMUP ComplexRational where
-    mup = ComplexRational.magnitudeUpperBound
-
-instance HasMUP (Ratio Integer) where
-    mup = abs
-
 instance (HasConjugation ex, Eq ex, Eq (RealSubring ex)) => HasConjugation (AST ex) where
     type RealSubring (AST ex) = AST (RealSubring ex)
-    conjugate (Exact q)  = Exact (conjugate q)
-    conjugate (Add zs)  = Add $ map conjugate zs
-    conjugate (Mult z w) = Mult (conjugate z) (conjugate w)
-    conjugate (Ext n f)  = Ext n (fmap conjugate f)
+    conjugate (Exact q)   = Exact (conjugate q)
+    conjugate (Add   zs)  = Add $ map conjugate zs
+    conjugate (Mult  z w) = Mult (conjugate z) (conjugate w)
+    conjugate (Ext   n f) = Ext n (fmap conjugate f)
     imagUnit = Exact imagUnit
-    realPart (Exact q) = Exact (realPart q)
-    realPart (Add zs) = Add $ map realPart zs
-    realPart (Mult z w) = realPart z * realPart w - imagPart z * imagPart w
-    realPart (Ext n f) = Ext n (fmap realPart f)
+    realPart (Exact q)   = Exact (realPart q)
+    realPart (Add   zs)  = Add $ map realPart zs
+    realPart (Mult  z w) = realPart z * realPart w - imagPart z * imagPart w
+    realPart (Ext   n f) = Ext n (fmap realPart f)
 
 instance (HasRationalEmbedding ex, Eq ex) => HasRationalEmbedding (AST ex) where
     fromRational = Exact . fromRational
 
-instance (HasFloatingApprox ex, HasMUP ex, Eq ex) => HasFloatingApprox (AST ex) where
-    approx = Ring.approx . unsafeRunR . approx 100
+instance (NormedRing ex, HasFloatingApprox ex, Eq ex) => HasFloatingApprox (AST ex) where
+    unsafeApprox = unsafeApprox . unsafeRunR . approx 100
 
 data QinC
 instance RingMorphism QinC where
@@ -106,7 +160,7 @@ instance RingMorphism QinR where
     type Codomain QinR = Real
     mor _ = Exact . fromRational . unF
 
-approx :: (HasMUP ex) => Integer -> AST ex -> R ex
+approx :: (NormedRing ex) => Integer -> AST ex -> R ex
 approx _ (Exact q)           = return q
 approx _ (Add   [])          = return zero
 approx n (Add   (Exact q : zs)) = liftM (q +) $ approx n $ Add zs
@@ -114,24 +168,25 @@ approx n (Add   zs) = do
     let k = length zs
     vs <- mapM (approx (fromIntegral k*n)) zs
     return $ Ring.sum vs
-approx n (Mult  (Exact q) z) = liftM (q *) $ approx (roundUp (mup q * fromInteger n)) z
+approx n (Mult  (Exact q) z) = liftM (q *) $ approx (roundUp (normUpperBound q * fromInteger n)) z
 approx n (Mult  z         w) = do
-    fBound <- magnitudeUpperBound z
-    gBound <- magnitudeUpperBound w
+    fBound <- normUpperBoundR z
+    gBound <- normUpperBoundR w
     --R . putStrLn $ "k für-Erg " ++ show (roundUp $ fBound + gBound + 1)
     let k = roundUp $ fBound + gBound + 1
     R . putStrLn $ "fürs produkt(" ++ show n ++ ") brauche ich k=" ++ show k ++ ", also insges. " ++ show (n*k)
     liftM2 (*) (approx (n*k) z) (approx (n*k) w)
 approx n (Ext   _         (MkApprox f)) = f n
 
-magnitudeUpperBound :: (HasMUP ex) => AST ex -> R Rational
-magnitudeUpperBound (Exact q) = return $ mup q
-magnitudeUpperBound z         = liftM ((+1) . mup) $ approx 1 z
+normUpperBoundR :: (NormedRing ex) => AST ex -> R Rational
+normUpperBoundR (Exact q) = return $ normUpperBound q
+normUpperBoundR z         = liftM ((+1) . normUpperBound) $ approx 1 z
 -- Eigenschaft: Stelle f die komplexe Zahl a dar. Dann gilt:
 --     |a| <= magnitudeBound f
 
 simplify :: (Ring ex, Eq ex) => AST ex -> AST ex
 simplify (Add (z : Add zs : rs)) = simplify $ Add (z:zs ++ rs)
+simplify (Add (Add zs : rs)) = simplify $ Add (zs ++ rs)
 simplify (Add [z]) = z
 simplify (Add (Exact q : Exact r : zs)) = simplify $ Add (Exact (q+r) : zs)
 simplify (Add (Exact q : zs)) | q == zero = Add zs

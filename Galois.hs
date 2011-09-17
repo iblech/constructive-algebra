@@ -3,6 +3,7 @@ module Galois where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
 import Ring
+import NormedRing
 import Field
 import Polynomial as Poly
 import Factoring
@@ -32,7 +33,7 @@ linearResolvent f = do
     bounds = do
         (a,b) <- pairs xs
         (u,v) <- pairs xs
-        let q = magnitudeUpperBound $ absSq ((a - b) * recip' (u - v))
+        let q = normUpperBoundR $ absSq ((a - b) * recip' (u - v))
         return $ liftM roundUp q
 
 -- normiert, separabel
@@ -64,10 +65,10 @@ galoisGroup' f = trace debugMsg $ (xs, sigmas)
                 head [ j | j <- inds, xs !! j == A.eval t0 (hs' !! i) ]
     debugMsg = concat $ intersperse "\n"
         [ "Zur Galoisgruppe von: " ++ show f
-        , "Nullstellen:          " ++ show (map approx xs)
-        , "Prim. Element:        " ++ show res' ++ " * xs ~~ " ++ show (approx t')
+        , "Nullstellen:          " ++ show (map unsafeApprox xs)
+        , "Prim. Element:        " ++ show res' ++ " * xs ~~ " ++ show (unsafeApprox t')
         , "Min. Polynom:         " ++ show m
-        , "Gal. Konjugierte:     " ++ show (map approx conjs)
+        , "Gal. Konjugierte:     " ++ show (map unsafeApprox conjs)
         ]
 
 {-

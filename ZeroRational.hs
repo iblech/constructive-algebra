@@ -34,6 +34,7 @@ import Polynomial as Poly
 import Control.Monad
 import Euclidean
 import ComplexRational
+import NormedRing
 import IntegralClosure hiding (eval)
 import Debug.Trace
 import Data.List hiding (sum)
@@ -294,7 +295,7 @@ divide p c@(Cell2 z0 z1)
 -- liegen.
 cauchyRadius :: NormedPoly ComplexRational -> Rational
 cauchyRadius (MkNormedPoly (MkPoly zs)) =
-    ((1 +) . maximum) $ map ComplexRational.magnitudeUpperBound zs
+    ((1 +) . maximum) $ map normUpperBound zs
 
 {-
 -- für normierte Polynome (müssen nicht separabel sein)

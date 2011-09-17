@@ -10,6 +10,7 @@ import qualified Data.Complex as C
 
 import NumericHelper
 import Ring
+import NormedRing
 import Field
 import Testing
 import Control.Monad
@@ -34,6 +35,10 @@ instance Ring ComplexRational where
     unit = fromInteger 1
     couldBeNonZero = (/= zero)
 
+instance NormedRing ComplexRational where
+    norm (x :+: y) q = x^2 + y^2 <= q^2
+    normUpperBound (x :+: y) = abs x + abs y
+
 instance IntegralDomain ComplexRational
 
 instance HasConjugation ComplexRational where
@@ -52,7 +57,7 @@ instance HasRationalEmbedding ComplexRational where
   fromRational = (:+: 0)
 
 instance HasFloatingApprox ComplexRational where
-  approx (x :+: y) = P.fromRational x C.:+ P.fromRational y
+  unsafeApprox (x :+: y) = P.fromRational x C.:+ P.fromRational y
 
 -- | Ringe, die eine Einbettung der rationalen Zahlen zulassen und außerdem
 -- über eine komplexe Konjugation verfügen, erlauben auch eine Einbettung
@@ -79,14 +84,6 @@ props_magnitudeSq =
   , forAll arbitrary $ \z -> forAll arbitrary $ \u ->
       magnitudeSq (z * u) == magnitudeSq z * magnitudeSq u
   ]
-
--- | Liefert eine obere Schranke für den Betrag einer Zahl /z/.
-magnitudeUpperBound :: ComplexRational -> Rational
-magnitudeUpperBound (x :+: y) = abs x + abs y
-
-props_magnitudeUpperBound :: [Property]
-props_magnitudeUpperBound = (:[]) $ forAll arbitrary $ \x ->
-    magnitudeUpperBound x >= 0 && magnitudeSq x <= (magnitudeUpperBound x)^2
 
 -- | Liefert Approximationen an den goldenen Schnitt. Erfüllt folgende
 -- Spezifikation:
@@ -116,12 +113,11 @@ sqrt2Seq n = xs `genericIndex` ((1 + ilogb 2 n) `div` 2)
 
 props_Approximation :: (Integer -> ComplexRational) -> C.Complex P.Double -> [Property]
 props_Approximation f x = (:[]) $ forAll positive $ \n ->
-    C.magnitude (approx (f n) P.- x) < P.recip (P.fromInteger n)
+    C.magnitude (unsafeApprox (f n) P.- x) < P.recip (P.fromInteger n)
 
 props_ComplexRational :: [Property]
 props_ComplexRational = concat
     [ props_magnitudeSq
-    , props_magnitudeUpperBound
     , props_Approximation goldenRatioSeq ((1 P.+ sqrt 5) P./ 2)
     , props_Approximation sqrt2Seq       (sqrt 2)
     ]

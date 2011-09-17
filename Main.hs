@@ -18,9 +18,9 @@ import System.IO
 import Field
 
 --main = print =<< runR (ex exPoly)
---main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^4 - fromRational 10*iX^2 + unit
---main = mapM_ print $ map (map approx) $ galoisGroup $ rootsA $ iX^2 - unit - unit
---main = mapM_ print $ (map approx) $ rootsA $ iX^2 - unit - unit
+--main = mapM_ print $ map (map unsafeApprox) $ galoisGroup $ rootsA $ iX^4 - fromRational 10*iX^2 + unit
+--main = mapM_ print $ map (map unsafeApprox) $ galoisGroup $ rootsA $ iX^2 - unit - unit
+--main = mapM_ print $ (map unsafeApprox) $ rootsA $ iX^2 - unit - unit
 
 --main = print $ minimalPolynomial' $ A.eval u (iX^4)
 --    where u = A.sqrt2 + A.goldenRatio
@@ -28,27 +28,27 @@ import Field
 --main = print $ irreducibleFactors $ iX^9 - fromInteger 243 * iX^3
 --main = mapM_ print $ map (unsafePerformIO . runR . flip unComplex 10000 . number . unAlg) $ rootsA $ iX^3 - fromRational 2
 
---main = print (approx z) >> print (polynomial . unAlg $ z) where z = foldl1 primitiveElement $ tail $ rootsA $ iX^3 - unit - unit
---main = print $ approx $ foldl1 primitiveElement $ tail $ rootsA $ iX^4 + unit
+--main = print (unsafeApprox z) >> print (polynomial . unAlg $ z) where z = foldl1 primitiveElement $ tail $ rootsA $ iX^3 - unit - unit
+--main = print $ unsafeApprox $ foldl1 primitiveElement $ tail $ rootsA $ iX^4 + unit
 
 {-
 main = do
     let [a,b,c] = rootsA $ iX^3 + unit
         (as,t)  = pseudoResolvent [a,b]
-    print $ approx t
+    print $ unsafeApprox t
     print $ polynomial . unAlg $ t
     putStrLn ""
     print $ as
 -}
 
-main = print . isIrreducible $ iX^6 - fromInteger 4
+main'''' = print . isIrreducible $ iX^6 - fromInteger 4
 
-main'' = do
+main = do
     let fi = fromInteger :: P.Integer -> Poly P.Rational
-    let gs = galoisGroup $ (iX^3 - fi 1) * (iX^2 + fi 5)
+    let gs = galoisGroup $ (iX^5 - fi 1)  -- * (iX^2 + fi 5)
     print $ snd gs
-    print . map approx $ fst gs
-    print . map approx $ fst gs
+    print . map unsafeApprox $ fst gs
+    print . map unsafeApprox $ fst gs
     print $ snd gs
 
 {-

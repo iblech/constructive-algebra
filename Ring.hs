@@ -149,9 +149,9 @@ imagPart = negate . realPart . (imagUnit *)
 class HasFloatingApprox a where
     -- | Liefert eine Approximation durch eine komplexe Fließkommazahl.
     -- Diese Methode ist nur für Debuggingzwecke gedacht; die Wahl der
-    -- Genauigkeit bleibt den Instanzen überlassen. Auch muss 'approx'
+    -- Genauigkeit bleibt den Instanzen überlassen. Auch muss 'unsafeApprox'
     -- nicht referentiell-transparent sein.
-    approx :: a -> C.Complex P.Double
+    unsafeApprox :: a -> C.Complex P.Double
 
 -- | Summiert eine endliche Liste von Ringelementen, mit der Konvention
 -- /sum [] = zero/.
@@ -193,7 +193,7 @@ instance Ring P.Int where
     fromInteger = P.fromInteger
     couldBeNonZero = (/= 0)
 instance HasFloatingApprox P.Int where
-    approx = P.fromIntegral
+    unsafeApprox = P.fromIntegral
 
 -- Der richtige Ring aller ganzen Zahlen, ohne Größenbeschränkung.
 instance Ring P.Integer where
@@ -210,7 +210,7 @@ instance HasTestableAssociatedness P.Integer where
         | abs x == abs y = P.Just (P.signum x * P.signum y)
         | otherwise      = P.Nothing
 instance HasFloatingApprox P.Integer where
-    approx = P.fromIntegral
+    unsafeApprox = P.fromIntegral
 
 -- Quotientenkörper.
 -- Die Integral-Beschränkung stammt von
@@ -233,7 +233,7 @@ instance (IntegralDomain a, P.Integral a) => HasRationalEmbedding (Ratio a) wher
         let (p,q) = (numerator z, denominator z)
         in  fromInteger p * P.recip (fromInteger q)
 instance (IntegralDomain a, P.Integral a, HasFloatingApprox a) => HasFloatingApprox (Ratio a) where
-    approx x =
+    unsafeApprox x =
         let (p,q) = (numerator x, denominator x)
-        in  approx p P./ approx q
+        in  unsafeApprox p P./ unsafeApprox q
 instance OrderedRing (Ratio P.Integer)
