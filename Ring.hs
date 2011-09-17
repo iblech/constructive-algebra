@@ -141,7 +141,7 @@ absSq :: (HasConjugation a) => a -> RealSubring a
 absSq z = realPart $ z * conjugate z
 
 -- | Bestimmt den Imaginärteil einer Zahl.
-imagPart :: (HasConjugation a, HasRationalEmbedding a) => a -> RealSubring a
+imagPart :: (HasConjugation a) => a -> RealSubring a
 imagPart = negate . realPart . (imagUnit *)
 
 -- | Klasse für Ringe, die für Debuggingzwecke eine Approximation durch
