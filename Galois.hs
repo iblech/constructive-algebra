@@ -1,9 +1,12 @@
+-- | Dieses Modul stellt die Funktionalität zur Berechnung von Galoisgruppen.
+-- Dazu bestimmen zu einem gegebenen normierten separablen Polynom /f/ zunächst
+-- die Nullstellen, bestimmen dann ein primitives Element und schließlich über die
+-- galoisch Konjugierten des primitiven Elements die Elemente der Galoisgruppe.
 {-# LANGUAGE TupleSections, PatternGuards #-}
 module Galois where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
 import Ring
-import NormedRing
 import Field
 import Polynomial as Poly
 import Factoring
@@ -20,7 +23,11 @@ import IdealExtension as I
 import IdealEuclidean
 import Euclidean
 
--- Vor.: f normiert, separabel
+-- | Berechnet eine lineare galoissche Resolvente eines normierten separablen
+-- Polynoms über eine Abschätzung, in der die Nullstellen des Polynoms
+-- eingehen.
+--
+-- Siehe: Algebra I, Übungsblatt 11, Aufgabe 12
 linearResolvent :: Poly Rational -> R [Integer]
 linearResolvent f = do
     bounds' <- sequence bounds
@@ -36,9 +43,13 @@ linearResolvent f = do
         let q = normUpperBoundR $ absSq ((a - b) * recip' (u - v))
         return $ liftM roundUp q
 
--- normiert, separabel
+-- | Bestimmt die Galoisgruppe eines normierten separablen Polynoms.
+-- Zurückgegeben werden die Nullstellen (als algebraische Zahlen)
+-- und die Elemente der Galoisgruppe.
 galoisGroup :: Poly Rational -> ([Alg QinC], [[Int]])
 galoisGroup f
+    -- Die Galoisgruppe des Produkts ist das Produkt der Galoisgruppen.
+    -- Diese einfache Optimierung bringt sehr viel!
     | Just (g,h) <- isIrreducible f
     = let (xs,gs) = galoisGroup g
           (ys,hs) = galoisGroup h
@@ -145,7 +156,7 @@ merge []     ys = ys
 merge (x:xs) ys = x : merge ys xs
 
 cross :: (a -> b -> r) -> [a] -> [b] -> [r]
-cross (#) []     _  = []
+cross _   []     _  = []
 cross (#) (x:xs) ys = map (x #) ys `merge` cross (#) xs ys
 
 crossN :: [[a]] -> [[a]]

@@ -41,11 +41,11 @@ main = do
     print $ as
 -}
 
-main = let fs = irreducibleFactors $ iX^10 - unit in print fs >> print fs
+main'''''' = let fs = irreducibleFactors $ iX^10 - unit in print fs >> print fs
 
-main''''' = do
+main = do
     let fi = fromInteger :: P.Integer -> Poly P.Rational
-    let gs = galoisGroup $ (iX^5 - fi 1)  -- * (iX^2 + fi 5)
+    let gs = galoisGroup $ (iX^6 - fi 1)  -- * (iX^2 + fi 5)
     print $ snd gs
     print . map unsafeApprox $ fst gs
     print . map unsafeApprox $ fst gs
