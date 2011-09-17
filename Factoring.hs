@@ -20,19 +20,18 @@ import IntegralClosure hiding (eval)
 import Field
 import Debug.Trace
 import Data.Ratio
-import System.IO.Unsafe
-import Cyclotomic
+import Testing
 
--- | Berechnet den Inhalt eines Polynoms.
+-- | Berechnet den Inhalt eines nicht-verschwindenden Polynoms.
 content :: Poly Rational -> Rational
 content f
     | abs a == 1 = fromInteger . abs $ foldl1' P.gcd $ map numerator as 
-    | abs a /= 1 = content (abs a .* f) / abs a
+    | otherwise  = content (abs a .* f) / abs a
     where
     as = canonCoeffs f
     a  = fromInteger . foldl1' P.lcm $ map denominator as
 
--- | Entscheidet zu einem gegebenen Polynom (welches mindestens Grad 1,
+-- | Entscheidet zu einem gegebenen Polynom (welches mindestens Grad 1 haben,
 -- sonst aber keine Zusatzvoraussetzungen erfüllen muss), ob es irreduzibel
 -- über den rationalen Zahlen ist, und extrahiert im reduziblen Fall
 -- zwei Faktoren.
@@ -44,9 +43,10 @@ isIrreducible
                       -- /deg f, deg g >= 1/.
 isIrreducible f = trace ("isIrreducible: " ++ show f) $ isIrreducible' f
 
+isIrreducible' :: Poly Rational -> Maybe (Poly Rational,Poly Rational)
 isIrreducible' f
     -- Triviale Fälle
-    | n <  1 = error "isIrreducible"
+    | n <  1 = error "isIrreducible: Polynom konstant"
     | n == 1 = Nothing
 
     -- Hat f einen nichttrivialen Faktor mit seiner Ableitung gemein?
@@ -61,16 +61,6 @@ isIrreducible' f
 
     -- Abkürzung eines häufigen Falls: Können wir X ausklammern?
     | eval0 f == 0 = Just (iX,fst (f `quotRem` iX))
-
-    -- Ist f ein Kreisteilungspolynom, oder ein anderes bekanntes irreduzibles
-    -- Polynom? Das ist natürlich eigentlich "cheaten", aber so sehen können
-    -- wir ein paar mehr Galoisgruppenbeispiele rechnen.
-    | f `elem` (relevantCyclotomics ++ knownIrreds)
-    = Nothing
-
-    -- Oder ist f ein Vielfaches eines Kreisteilungspolynoms?
-    | (g,(h,_)):_ <- cyclotomicResiduals
-    = Just (g,h)
 
     -- Ist f von der Form g(X^n) für ein n >= 2? Dann versuchen wir zunächst,
     -- g zu zerlegen. Vielleicht haben wir Glück, denn aus einer Zerlegung von
@@ -108,29 +98,15 @@ isIrreducible' f
     where
     zeros     = roots f
     n         = degree f
-    aN        = leadingCoeff f
-    (u,v,s,t) = gcd f (derivative f)
+    (u,v,s,_) = gcd f (derivative f)
     d         = u*f + v*derivative f
-    -- Liste relevanter Kreisteilungspolynome. Da der Grad der
-    -- Kreisteilungspolynome nicht monoton steigt, und ich zu faul war, mir
-    -- genauere Gedanken zu machen, nutzen wir hier eine einfache Heuristik,
-    -- um Relevanz zu entscheiden. (Diese Prüfungen dienen eh nur der Effizienz
-    -- und ändern nicht die Korrektheit des Verfahrens.)
-    relevantCyclotomics = []
-        --takeWhile (\p -> degree p <= 3 * degree f) $ map (fmap fromInteger) cyclotomicPolynomials
-    -- Für jedes als relevant empfundene Kreisteilungspolynom g, welches auch
-    -- ein Teiler von f ist, also für das es ein h mit f = gh gibt, schreiben
-    -- wir das h in die Liste 'cyclotomicResiduals'.
-    cyclotomicResiduals =
-        filter ((== zero) . snd . snd) $ map (\p -> (p, f `quotRem` p)) relevantCyclotomics
 
--- | Liste bekannter irreduzibler Polynome.
-knownIrreds :: [Poly Rational]
-knownIrreds = []
-
--- isComposedPoly f = Just (g,h) ==> g . h = f, isComposedPoly g = Nothing.
+-- | Prüft, ob ein übergebenes nichtkonstantes Polynom /f/ von der Form
+-- /f = g(X^n)/ für ein /n >= 2/ ist. Wenn nein, wird /Nothing/ zurückgegeben;
+-- sonst /Just (g, iX^n)/.
 isComposedPoly :: Poly Rational -> Maybe (Poly Rational, Poly Rational)
 isComposedPoly f 
+    | length as < 2 = error "isComposedPoly: Polynom konstant"
     | null cands = Nothing
     | otherwise  =
         let n = last cands
@@ -141,7 +117,17 @@ isComposedPoly f
     usedExps = [ i | i <- [0..length as - 1], as !! i /= 0 ]
     as       = canonCoeffs f
 
--- soll mind. Grad 1 haben
+props_isComposedPoly :: [Property]
+props_isComposedPoly = (:[]) $ forAll arbitrary $ \f -> forAll (elements [0..30]) $ \n ->
+    degree f >= 1 ==>
+    let f' = f `compose` (iX^n)
+    in  if n >= 2 then isComposedPoly f' == Just (f,iX^n) else isComposedPoly f' == Nothing
+
+-- | Bestimmt die irreduziblen Faktoren eines nichtkonstanten Polynoms.
+-- Es gilt folgende Spezifikation:
+--
+-- > product fs == f && all (isNothing . isIrreducible) fs
+-- >     where fs = irreducibleFactors f
 irreducibleFactors :: Poly Rational -> [Poly Rational]
 irreducibleFactors f
     | Nothing <- test
@@ -157,46 +143,24 @@ irreducibleFactors f
         in  if s == zero
                 then (mapFirst ((leadingCoeff q / leadingCoeff p) .*) ps) ++ go p ps r
                 else if degree q < 1 then [] else irreducibleFactors q
-    mapFirst f (x:xs) = f x:xs
+    mapFirst g (x:xs) = g x:xs
+    mapFirst _ _      = error "irreducibleFactors.mapFirst"  -- kann nicht eintreten
 
--- sollte dann in allen Vorkommen von z das MP liefern (überschreiben)
-{- Spezifikation:
-minimalPolynomial :: Alg QinC -> Poly Rational
-minimalPolynomial z = go (fmap unF . polynomial . unAlg $ z)
-    where
-    go f
-	| degree f <= 1 = norm f
-	| otherwise     = case isIrreducible f of
-	    Nothing    -> norm f
-	    Just (p,q) -> if eval z (fmap fromRational p) == zero then go p else go q
-funktioniert auch, ist aber sehr langsam in der Nullprüfung
-(Ganzheitsgleichungen haben hohen Grad...)
--}
+props_irreducibleFactors :: [Property]
+props_irreducibleFactors = (:[]) $
+    forAll (elements [1..5]) $ \n ->
+    forAll (replicateM n arbitrary) $ \fs ->
+    all ((>= 1) . degree) fs ==>
+    let f   = product fs
+        fs' = irreducibleFactors f
+    in  all (isNothing . isIrreducible) fs' && product fs' == f
 
--- langsamer als minimalPolynomial
-minimalPolynomial' :: Alg QinC -> Poly Rational
-minimalPolynomial' z = unsafePerformIO . runR $ go 1
-    where
-    f         = unNormedPoly . polynomial . unAlg $ z
-    z'        = number . unAlg $ z
-    (u,v,s,t) = gcd f (derivative f)
-    -- Normierung schon hier, damit nicht sehr kleine Konstanten viele
-    -- Iterationen unten erzwingen
-    factors   = map normalize $ irreducibleFactors $ fmap unF s
-    isApproxZero n g = magnitudeZeroTestR n $ eval z' (fmap fromRational g)
-    go n = do
-        R $ putStrLn $ "go " ++ show n
-        candidates <- filterM (isApproxZero n) factors
-        R $ putStrLn $ "candidates: " ++ show candidates
-        if length candidates == 1
-            then return $ head candidates
-            else go (2*n)
-
+-- | Bestimmt das Minimalpolynom einer algebraischen Zahl.
 minimalPolynomial :: Alg QinC -> Poly Rational
 minimalPolynomial z = head $ filter (\p -> zero == A.eval z p) factors
     where
     f         = unNormedPoly . polynomial . unAlg $ z
-    (u,v,s,t) = gcd f (derivative f)
+    (_,_,s,_) = gcd f (derivative f)
     factors   = fmap normalize $ irreducibleFactors $ fmap unF s
 
 -- XXX: besserer name!
