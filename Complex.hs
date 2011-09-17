@@ -37,10 +37,10 @@ unsafeRunR :: R a -> a
 unsafeRunR = unsafePerformIO . runR
 
 data AST ex
-    = Exact !ex
-    | Add   !(AST ex) !(AST ex)
-    | Mult  !(AST ex) !(AST ex)
-    | Ext   !String   !(Approx ex)
+    = Exact ex
+    | Add   [AST ex]
+    | Mult  (AST ex) (AST ex)
+    | Ext   String   (Approx ex)
     deriving (Show,Functor)
 -- Vorsicht: Nur Funktoren mit Lipschitzkonstante 1 verwenden!
 
@@ -57,10 +57,10 @@ instance Show (Approx ex) where
     show _ = "<<nondet>>"
 
 instance (Ring ex, Eq ex) => Ring (AST ex) where
-    z + w = simplify $! Add z w
-    z * w = simplify $! Mult z w
-    negate z    = simplify $! Mult (Exact (negate unit)) z
-    zero        = Exact zero
+    z + w       = simplify $ Add [z,w]
+    (*)         = (simplify .) . Mult
+    negate      = simplify . Mult (Exact (negate unit))
+    zero        = Add []
     unit        = Exact unit
     fromInteger = Exact . fromInteger
 
@@ -79,12 +79,12 @@ instance HasMUP (Ratio Integer) where
 instance (HasConjugation ex, Eq ex, Eq (RealSubring ex)) => HasConjugation (AST ex) where
     type RealSubring (AST ex) = AST (RealSubring ex)
     conjugate (Exact q)  = Exact (conjugate q)
-    conjugate (Add z w)  = Add (conjugate z) (conjugate w)
+    conjugate (Add zs)  = Add $ map conjugate zs
     conjugate (Mult z w) = Mult (conjugate z) (conjugate w)
     conjugate (Ext n f)  = Ext n (fmap conjugate f)
     imagUnit = Exact imagUnit
     realPart (Exact q) = Exact (realPart q)
-    realPart (Add z w) = Add (realPart z) (realPart w)
+    realPart (Add zs) = Add $ map realPart zs
     realPart (Mult z w) = realPart z * realPart w - imagPart z * imagPart w
     realPart (Ext n f) = Ext n (fmap realPart f)
 
@@ -108,8 +108,12 @@ instance RingMorphism QinR where
 
 approx :: (HasMUP ex) => Integer -> AST ex -> R ex
 approx _ (Exact q)           = return q
-approx n (Add   (Exact q) z) = liftM (q +) $ approx n z
-approx n (Add   z         w) = liftM2 (+) (approx (2*n) z) (approx (2*n) w)
+approx _ (Add   [])          = return zero
+approx n (Add   (Exact q : zs)) = liftM (q +) $ approx n $ Add zs
+approx n (Add   zs) = do
+    let k = length zs
+    vs <- mapM (approx (fromIntegral k*n)) zs
+    return $ Ring.sum vs
 approx n (Mult  (Exact q) z) = liftM (q *) $ approx (roundUp (mup q * fromInteger n)) z
 approx n (Mult  z         w) = do
     fBound <- magnitudeUpperBound z
@@ -127,16 +131,17 @@ magnitudeUpperBound z         = liftM ((+1) . mup) $ approx 1 z
 --     |a| <= magnitudeBound f
 
 simplify :: (Ring ex, Eq ex) => AST ex -> AST ex
-simplify (Add (Exact q) (Exact r)) = Exact (q+r)
-simplify (Add (Exact q) (Add (Exact r) z)) = Add (Exact (q+r)) z
-simplify (Add (Exact q) z) | q == zero = z
-simplify (Add z (Exact q)) = simplify $ Add (Exact q) z
+simplify (Add (z : Add zs : rs)) = simplify $ Add (z:zs ++ rs)
+simplify (Add [z]) = z
+simplify (Add (Exact q : Exact r : zs)) = simplify $ Add (Exact (q+r) : zs)
+simplify (Add (Exact q : zs)) | q == zero = Add zs
+simplify (Add zs) | not (null zs), Exact q <- last zs = simplify $ Add $ Exact q : init zs
 simplify (Mult (Exact q) (Exact r)) = Exact (q*r)
 simplify (Mult (Exact q) (Mult (Exact r) z)) = Mult (Exact (q*r)) z
 simplify (Mult (Exact q) z) | q == zero = zero
 simplify (Mult (Exact q) z) | q == unit = z
-simplify (Mult (Exact q) (Add z w)) = simplify $
-    Add (simplify (Mult (Exact q) z)) (simplify (Mult (Exact q) w))
+simplify (Mult (Exact q) (Add zs)) = simplify $
+    Add $ map (simplify . (Mult (Exact q))) zs
 simplify (Mult z (Exact q)) = simplify $ Mult (Exact q) z
 simplify z = z
 
