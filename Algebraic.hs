@@ -106,10 +106,10 @@ invert (MkAlg z) = do
             else go ns
 
 invert' :: Alg QinR -> R (Maybe (Alg QinR))
-invert' (MkAlg (MkIC z p)) = liftM (fmap f) (invert (MkAlg (MkIC (unReal z) p)))
+invert' (MkAlg (MkIC z p)) = liftM (fmap f) (invert (MkAlg (MkIC (fmap fromRational z) p)))
     where
     f :: Alg QinC -> Alg QinR
-    f (MkAlg (MkIC z' p')) = MkAlg (MkIC (MkReal z') p')
+    f (MkAlg (MkIC z' p')) = MkAlg (MkIC (realPart z') p')
 
 tr q = trace ("ANTW.: " ++ show q) $ q
 -- FIXME: auch isComplexRational implementieren
@@ -142,16 +142,20 @@ isInteger z
 -- ganzzahlig sein kann.
 isApproxInteger :: Alg QinC -> Maybe Integer
 isApproxInteger z = unsafeRunR $ do
+    R $ putStrLn "* isApproxInteger betreten."
+    R . putStrLn $ "  AST: " ++ show (number (unAlg z))
+    R . putStrLn $ "  Apr: " ++ show (approx z)
     --zz <- R $ evaluate (approx z)
     --R $ putStrLn $ "isApproxInteger: " ++ show zz
     z0@(q :+: _) <- unComplex (number . unAlg $ z) 100
+    R . putStrLn $ "  z0:  " ++ show z0
     let (a,b) = (floor q, ceiling q)
     --_ <- R $ evaluate a
     --_ <- R $ evaluate b
     --R $ putStrLn $ "isApproxInteger! " ++ show zz ++ ": " ++ show (magnitudeSq (z0 - fromInteger a) <= 1/100^2 || magnitudeSq (z0 - fromInteger b) <= 1/100^2)
-    if magnitudeSq (z0 - fromInteger a) <= 1/100^2 then return $ Just a else do
-    if magnitudeSq (z0 - fromInteger b) <= 1/100^2 then return $ Just b else do
-    return Nothing
+    let res = if magnitudeSq (z0 - fromInteger a) <= 1/100^2 then Just a else if magnitudeSq (z0 - fromInteger b) <= 1/100^2 then Just b else Nothing
+    R . putStrLn $ "  Erg: " ++ show res
+    return res
 
 isRationalPoly :: Poly (Alg QinC) -> Maybe (Poly Rational)
 isRationalPoly = isGoodPoly isRational

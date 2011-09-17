@@ -1,5 +1,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, DeriveFunctor, FlexibleContexts, UndecidableInstances, EmptyDataDecls #-}
-module ComplexAST where
+module Complex
+    ( R(..), unsafeRunR, magnitudeUpperBound
+    , AST(..)
+    , Complex, Real, Approx(..), QinC, QinR, unComplex, dummy
+    , sqrt2, goldenRatio
+    , fromBase
+    , magnitudeZeroTestR, traceEvals
+    , recip') where
 
 import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real)
 import qualified Prelude as P
@@ -20,6 +27,9 @@ import Nat
 import Data.Maybe
 import Data.Ratio
 
+unComplex :: Complex -> Integer -> R ComplexRational
+unComplex = flip approx
+
 newtype R a = R { runR :: IO a }
     deriving (Functor,Monad)
 
@@ -27,11 +37,15 @@ unsafeRunR :: R a -> a
 unsafeRunR = unsafePerformIO . runR
 
 data AST ex
-    = Exact ex
-    | Add   (AST ex) (AST ex)
-    | Mult  (AST ex) (AST ex)
-    | Ext   String   (Approx ex)
-    deriving (Show)
+    = Exact !ex
+    | Add   !(AST ex) !(AST ex)
+    | Mult  !(AST ex) !(AST ex)
+    | Ext   !String   !(Approx ex)
+    deriving (Show,Functor)
+-- Vorsicht: Nur Funktoren mit Lipschitzkonstante 1 verwenden!
+
+traceEvals :: String -> Complex -> Complex
+traceEvals _ = id
 
 type Complex = AST ComplexRational
 type Real    = AST Rational
@@ -43,12 +57,15 @@ instance Show (Approx ex) where
     show _ = "<<nondet>>"
 
 instance (Ring ex, Eq ex) => Ring (AST ex) where
-    (+)         = (simplify .) . Add
-    (*)         = (simplify .) . Mult
-    negate      = simplify . Mult (Exact (negate unit))
+    z + w = simplify $! Add z w
+    z * w = simplify $! Mult z w
+    negate z    = simplify $! Mult (Exact (negate unit)) z
     zero        = Exact zero
     unit        = Exact unit
     fromInteger = Exact . fromInteger
+
+dummy :: String -> ex -> AST ex
+dummy name x = Ext name $ MkApprox $ const $ return x
 
 class (Ring a) => HasMUP a where
     mup :: a -> Rational
@@ -99,6 +116,7 @@ approx n (Mult  z         w) = do
     gBound <- magnitudeUpperBound w
     --R . putStrLn $ "k für-Erg " ++ show (roundUp $ fBound + gBound + 1)
     let k = roundUp $ fBound + gBound + 1
+    R . putStrLn $ "fürs produkt(" ++ show n ++ ") brauche ich k=" ++ show k ++ ", also insges. " ++ show (n*k)
     liftM2 (*) (approx (n*k) z) (approx (n*k) w)
 approx n (Ext   _         (MkApprox f)) = f n
 
@@ -179,4 +197,7 @@ recip' z = Ext "recip'" $ MkApprox $ \n -> do
     -- Eigenschaft: halve i = Aufrundung(i / 2).
 
 sqrt2 :: Complex
-sqrt2 = Ext "sqrt2" (MkApprox $ return . sqrt2Seq)
+sqrt2 = Ext "sqrt2" $ MkApprox $ return . sqrt2Seq
+
+goldenRatio :: Complex
+goldenRatio = Ext "goldenRatio" $ MkApprox $ return . goldenRatioSeq

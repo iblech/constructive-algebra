@@ -32,7 +32,7 @@ linearResolvent f = do
     bounds = do
         (a,b) <- pairs xs
         (u,v) <- pairs xs
-        let q = magnitudeUpperBound . unReal $ absSq ((a - b) * recip' (u - v))
+        let q = magnitudeUpperBound $ absSq ((a - b) * recip' (u - v))
         return $ liftM roundUp q
 
 -- normiert, separabel

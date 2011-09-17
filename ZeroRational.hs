@@ -356,7 +356,7 @@ roots' f =
     flip map [0..n-1] $ \i ->
         let iters' = go i 1 iters
         in  MkAlg $ MkIC
-                (traceEvals ("zero" ++ show i) $ MkComplex (return . genericIndex iters'))
+                (Ext ("zero" ++ show i) $ MkApprox $ return . genericIndex iters')
                 (fmap F f'')
     where
     f''        = squarefreePart f
@@ -444,7 +444,7 @@ subdivisions radius f =
 	    = tail $ zipWith (\n x -> [(r / 2^(2^n - 1), x)]) [0..] (newton f' (mid c))
 	    | otherwise
             -}
-	    = go (r/2) $ divide f' c
+	    = go (r/2) $ trace (show c) $ divide f' c
     mid (Cell0 z0)    = fromComplexRational $ z0
     mid (Cell1 z0 z1) = fromComplexRational $ (z0 + z1) / fromInteger 2
     mid (Cell2 z0 z1) = fromComplexRational $ (z0 + z1) / fromInteger 2
