@@ -73,7 +73,7 @@ isIrreducible' f
     = Just (g,h)
 
     -- Ist f von der Form g(X^n) für ein n >= 2? Dann versuchen wir zunächst,
-    -- g zu zuerlegen. Vielleicht haben wir Glück, denn aus einer Zerlegung von
+    -- g zu zerlegen. Vielleicht haben wir Glück, denn aus einer Zerlegung von
     -- g folgt natürlich auch eine von f -- da die Umkehrung aber nicht gelten
     -- muss, müssen wir, falls g irreduzibel ist, trotzdem noch die eigentliche
     -- Prüfung durchführen.
@@ -97,33 +97,36 @@ isIrreducible' f
 	trace ("BEARBEITE: " ++ show (map unsafeApprox xs)) $ do
 	let p = product $ map ((iX -) . Poly.fromBase) xs
 	Just p' <- [isApproxIntegerPoly (fromRational contentInv .* p)]
-	--trace ("isgood is: " ++ show (map unsafeApprox xs)) $ do
+        -- Da wir nicht isIntegerPoly, sondern nur isApproxIntegerPoly
+        -- verwendet haben, kann es sein, dass contentInv * p doch gar
+        -- kein ganzzahliges Polynom ist. Daher machen wir mithilfe der
+        -- Polynomdivision...
 	let (q,r) = f `quotRem` fmap fromInteger p'
-        -- für isApproxIntegerPoly
+        -- ...noch die Probe:
         guard $ r == zero
 	return (fmap fromInteger p', q)
     where
-    --zeros = zipWith (\z i -> traceEvals' ("root" ++ show i) z) (rootsA f) [0..]
-    zeros = roots f
-    traceEvals' str (MkAlg (MkIC z p)) = MkAlg (MkIC (traceEvals str z) p)
+    zeros     = roots f
     n         = degree f
     aN        = leadingCoeff f
     (u,v,s,t) = gcd f (derivative f)
     d         = u*f + v*derivative f
-    isGoodPoly
-        | all isInteger' (unsafeCoeffs f) && leadingCoeff f == 1
-        = fmap (fmap fromInteger) . isApproxIntegerPoly
-        | otherwise
-        = isRationalPoly
-    isInteger' q = numerator q `mod` denominator q == 0
-    -- die 3 ist Heuristik
-    relevantCyclotomics =
-        takeWhile (\p -> degree p <= 3 * degree f) $ map (fmap fromInteger) cyclotomicPolynomials
+    -- Liste relevanter Kreisteilungspolynome. Da der Grad der
+    -- Kreisteilungspolynome nicht monoton steigt, und ich zu faul war, mir
+    -- genauere Gedanken zu machen, nutzen wir hier eine einfache Heuristik,
+    -- um Relevanz zu entscheiden. (Diese Prüfungen dienen eh nur der Effizienz
+    -- und ändern nicht die Korrektheit des Verfahrens.)
+    relevantCyclotomics = []
+        --takeWhile (\p -> degree p <= 3 * degree f) $ map (fmap fromInteger) cyclotomicPolynomials
+    -- Für jedes als relevant empfundene Kreisteilungspolynom g, welches auch
+    -- ein Teiler von f ist, also für das es ein h mit f = gh gibt, schreiben
+    -- wir das h in die Liste 'cyclotomicResiduals'.
     cyclotomicResiduals =
         filter ((== zero) . snd . snd) $ map (\p -> (p, f `quotRem` p)) relevantCyclotomics
 
+-- | Liste bekannter irreduzibler Polynome.
 knownIrreds :: [Poly Rational]
-knownIrreds = [iX^6 + fromInteger 108]
+knownIrreds = []
 
 -- isComposedPoly f = Just (g,h) ==> g . h = f, isComposedPoly g = Nothing.
 isComposedPoly :: Poly Rational -> Maybe (Poly Rational, Poly Rational)
