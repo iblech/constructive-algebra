@@ -29,3 +29,5 @@ Newton überlegen
 Besserer Ganzheitscheck in Algebraic
 
 Ist die Galgruppe von X^6 - 1 korrekt?
+
+transzendente zahl!

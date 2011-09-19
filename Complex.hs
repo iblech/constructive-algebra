@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, DeriveFunctor, FlexibleContexts, UndecidableInstances, EmptyDataDecls #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, DeriveFunctor, FlexibleContexts, UndecidableInstances, EmptyDataDecls, PatternGuards #-}
 module Complex
     ( R(..), unsafeRunR
     , AST(..)
@@ -8,7 +8,7 @@ module Complex
     , normUpperBoundR, magnitudeZeroTestR, traceEvals
     , recip') where
 
-import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real)
+import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real, catch)
 import qualified Prelude as P
 import Control.Monad (liftM, liftM2)
 import ComplexRational
@@ -27,6 +27,7 @@ import System.Time
 import Nat
 import Data.Maybe
 import Data.Ratio
+import Data.IORef
 
 -- | Der Typ der komplexen Zahlen.
 type Complex = AST ComplexRational
@@ -79,6 +80,13 @@ data AST ex
     deriving (Show,Functor)
 
 -- | Monade für nicht-deterministische Approximationsalgorithmen.
+--
+-- Wir verwenden dazu einfach die 'IO'-Monade, weil wir beliebige externe
+-- Kommunikation (beispielsweise Nutzereingaben oder Zufallszahlen) erlauben
+-- wollen.
+--
+-- Wahrscheinlich sollten wir aber Operationen, die den Kontrollfluss
+-- beeinflussen (wie beispielsweise 'forkIO'), verbieten.
 newtype R a = R { runR :: IO a }
     deriving (Functor,Monad)
 
@@ -86,11 +94,38 @@ newtype R a = R { runR :: IO a }
 -- Dabei fordern wir folgende Bedingung (die sich aber leider in Haskell
 -- nicht auf Typebene festschreiben ließe):
 --
--- Mit einer positiven natürlichen Zahl /n/ aufgerufen, muss der
--- Approximationsalgorithmus eine Näherung produzieren, die von einer gewissen
--- festen Zahl Abstand echt kleiner als /1\/n/ hat.
+-- Es muss eine bestimmte Zahl /z/ geben, sodass der Algorithmus, mit einer
+-- positiven natürlichen Zahl /n/ aufgerufen, eine Näherung an /z/ produziert,
+-- deren Abstand zu /z/ echt kleiner als /1\/n/ ist.
+--
+-- Ansonsten ist dem Approximationsalgorithmus keinen Beschränkungen
+-- unterworfen. Insbesondere darf er beliebige nicht-deterministische Prozesse
+-- anstoßen, und kann bei der wiederholten Fragen nach einer /1\/n/-Näherung
+-- jedes Mal ein anderes Resultat liefern.
 newtype Approx ex = MkApprox { unApprox :: Nat -> R ex }
     deriving (Functor)
+
+-- | Erzeugt einen interaktiven Approximationsalgorithmus, welcher Näherungen
+-- dadurch produziert, indem er den Nutzer auf der Standardkonsole fragt.
+newInteractiveApprox :: (Read ex) => String -> IO (Approx ex)
+newInteractiveApprox name = do
+    val <- newIORef (0, undefined)
+    return . MkApprox $ \n -> R $ do
+        (n0,q0) <- readIORef val
+        -- Genügt die Genauigkeit des gemerkten Werts?
+        if n0 >= n then return q0 else do
+        let prompt = do
+            putStr $ "Naeherung von " ++ name ++ " auf < 1/" ++ show n ++ ": "
+            q <- readLn
+            writeIORef val (n,q)
+            return q
+        let loop = do
+            catch prompt $ \e -> do
+                putStrLn $ "* Fehler: " ++ show (e :: IOException)
+                loop
+        -- Wenn nein, so lange den Nutzer fragen, bis er etwas verständliches
+        -- eingegeben hat.
+        loop
 
 -- | /unsafeRunR m/ lässt die nicht-deterministische Operation /m/ laufen
 -- und gibt ihr Ergebnis zurück.
@@ -106,6 +141,10 @@ newtype Approx ex = MkApprox { unApprox :: Nat -> R ex }
 -- Transparenz.
 unsafeRunR :: R a -> a
 unsafeRunR = unsafePerformIO . runR
+
+-- | Hebt exakte Werte vom Typ /ex/ in den Typ /AST ex/.
+fromBase :: ex -> AST ex
+fromBase = Exact
 
 -- | /traceEvals name z/ ist semantisch nicht von /z/ zu unterscheiden,
 -- gibt aber bei jeder Auswertung Debugging-Informationen auf die
@@ -160,70 +199,132 @@ instance RingMorphism QinR where
     type Codomain QinR = Real
     mor _ = Exact . fromRational . unF
 
-approx :: (NormedRing ex) => Integer -> AST ex -> R ex
-approx _ (Exact q)           = return q
-approx _ (Add   [])          = return zero
-approx n (Add   (Exact q : zs)) = liftM (q +) $ approx n $ Add zs
-approx n (Add   zs) = do
+-- | /approx n z/ bestimmt eine Näherung von /z/, die vom wahren Wert im
+-- Betrag um weniger (<) als /1\/n/ abweicht. Im Allgemeinen werden wiederholte
+-- Aufrufe andere Näherungen zurückgeben.
+approx :: (NormedRing ex) => Nat -> AST ex -> R ex
+
+-- Einfachster Fall:
+approx _ (Exact q) = return q
+
+-- Addition eines exakten Werts
+approx n (Add (Exact q : zs)) = liftM (q +) $ approx n $ Add zs
+-- Stelle der Prozess (z_i) eine Zahl i dar.
+-- Dann gilt in der Tat: |(q + z_n) - (q + z)| = |z_n - z| < 1/n.
+
+-- Addition beliebig (endlich) vieler Terme
+approx n (Add zs) = do
     let k = length zs
     vs <- mapM (approx (fromIntegral k*n)) zs
     return $ Ring.sum vs
-approx n (Mult  (Exact q) z) = liftM (q *) $ approx (roundUp (normUpperBound q * fromInteger n)) z
-approx n (Mult  z         w) = do
-    fBound <- normUpperBoundR z
-    gBound <- normUpperBoundR w
-    --R . putStrLn $ "k für-Erg " ++ show (roundUp $ fBound + gBound + 1)
-    let k = roundUp $ fBound + gBound + 1
-    R . putStrLn $ "fürs produkt(" ++ show n ++ ") brauche ich k=" ++ show k ++ ", also insges. " ++ show (n*k)
-    liftM2 (*) (approx (n*k) z) (approx (n*k) w)
-approx n (Ext   _         (MkApprox f)) = f n
+-- Seien die Zahlen z^1, ..., z^k durch (z_i^1), ... (z_i^k) dargestellt.
+-- Dann gilt in der Tat: |z^1_(kn) + ... + z^k_(kn) - (z^1 + ... + z^k)| < k * 1/(nk) = 1/n.
 
+-- Multiplikation mit einem exakten Wert
+approx n (Mult (Exact q) z)
+    | k == 0    = return zero
+    | otherwise = liftM (q *) $ approx k z
+    where k = roundUp (normUpperBound q * fromInteger n)
+-- Sei z durch den Prozess (z_i) dargestellt.
+-- Sei k = roundUp (normUpperBound q * fromInteger n).
+-- Ist k = 0, so muss (wegen n >= 1 und der Eigenschaft von normUpperBound)
+-- q = 0 gewesen sein.
+-- Andernfalls gilt folgende Abschätzung:
+-- |q z_k - q z| < normUpperBound q * 1/k <= 1/n.
+
+-- Multiplikation zweier Terme
+approx n (Mult z w) = do
+    zBound <- normUpperBoundR z
+    wBound <- normUpperBoundR w
+    let k = roundUp $ zBound + wBound + 1
+    liftM2 (*) (approx (n*k) z) (approx (n*k) w)
+-- Sei z durch den Prozess (z_i), w durch (w_i) dargestellt.
+-- Sei k wie im Code. Dann gilt:
+-- |z_(kn) w_(kn) - z w|
+--   <= |z_(kn) w_(kn) - z_(kn) w| + |z_(kn) w - z w|
+--   <= |z_(kn)| |w_(kn) - w| + |z_(kn) - z| |w|
+--   <  (zBound + 1) 1/(kn) + 1/(kn) wBound
+--   <= 1/n.
+
+-- Auswertung einer Zahl, die durch einen Approximationsalgorithmus gegeben ist.
+-- Das ist an dieser Stelle einfach, denn der Approximationsalgorithmus steht
+-- der Pflicht, eine geeignete Näherung zu konstruieren.
+approx n (Ext _ (MkApprox f)) = f n
+
+-- | Bestimmt eine obere Schranke (im Sinn von '<=') für den Betrag der
+-- gegebenen Zahl.
+--
+-- Mehrmalige Aufrufe dieser Funktion können verschiedene obere Schranken
+-- produzieren.
 normUpperBoundR :: (NormedRing ex) => AST ex -> R Rational
 normUpperBoundR (Exact q) = return $ normUpperBound q
 normUpperBoundR z         = liftM ((+1) . normUpperBound) $ approx 1 z
--- Eigenschaft: Stelle f die komplexe Zahl a dar. Dann gilt:
---     |a| <= magnitudeBound f
+-- Sei z_1 eine 1/1-Näherung von z.
+-- Dann gilt: |z| <= |z_1| + |z - z_1| <= |z_1| + 1.
 
+-- | Vereinfacht einen gegebenen Syntaxbaum unter der Annahme, dass er aus
+-- einem bereits vereinfachten Baum durch eine einzige Operation in der
+-- Implementierung der Ring-Instanz hervorging.
 simplify :: (Ring ex, Eq ex) => AST ex -> AST ex
+
+-- Assoziativität ausnutzen
 simplify (Add (z : Add zs : rs)) = simplify $ Add (z:zs ++ rs)
 simplify (Add (Add zs : rs)) = simplify $ Add (zs ++ rs)
 simplify (Add [z]) = z
+
+-- Addition mit exakt gegebenen Summanden sofort durchführen
 simplify (Add (Exact q : Exact r : zs)) = simplify $ Add (Exact (q+r) : zs)
+
+-- Addition von 0
 simplify (Add (Exact q : zs)) | q == zero = Add zs
+
+-- Kommutativität (und Assoziativität) ausnutzen, um die Addition mit
+-- exakten Werten von rechts zu vereinfachen
 simplify (Add zs) | not (null zs), Exact q <- last zs = simplify $ Add $ Exact q : init zs
+
+-- Multiplikation exakter Werte
 simplify (Mult (Exact q) (Exact r)) = Exact (q*r)
 simplify (Mult (Exact q) (Mult (Exact r) z)) = Mult (Exact (q*r)) z
+
+-- Multiplikation mit 0 und 1 vereinfachen
 simplify (Mult (Exact q) z) | q == zero = zero
 simplify (Mult (Exact q) z) | q == unit = z
+
+-- Multiplikation einer exakt gegebenen Zahl mit einer Summe
 simplify (Mult (Exact q) (Add zs)) = simplify $
     Add $ map (simplify . (Mult (Exact q))) zs
+
+-- Kommutativität ausnutzen, um Multiplikation mit exakten Werten von rechts
+-- ebenfalls zu vereinfachen
 simplify (Mult z (Exact q)) = simplify $ Mult (Exact q) z
+
+-- Sonst.
 simplify z = z
 
-fromBase :: ex -> AST ex
-fromBase = Exact
-
--- Sei x komplex und n fest. Dann gilt stets:
---   |x| > 0 oder |x| < 1/n.
--- magnitudeZero n x gibt im ersten Fall False, im zweiten True zurück,
--- es gilt also:
---     magnitudeZero n x == False  ==>  |x| > 0,
--- aber die Umkehrung stimmt nicht.
+-- | Sei /z/ eine Zahl. Dann ist nicht entscheidbar, ob /|z| = 0/ oder
+-- ob nicht /|z| = 0/. Für festes /n >= 1/ gilt aber stets:
+--
+-- > |z| > 0  oder  |z| < 1/n,
+--
+-- wobei das /oder/ natürlich kein /entweder oder/ ist. Gibt 'magnitudeZeroTestR'
+-- /False/ zurück, so liegt der erste Fall vor, andernfalls der zweite.
 magnitudeZeroTestR :: Nat -> Complex -> R Bool
-magnitudeZeroTestR n (Exact f) = if f /= zero then return False else return True
+magnitudeZeroTestR n (Exact q) = return $ q == zero
 magnitudeZeroTestR n z = do
-    appr <- approx (2 * n) z
-    return $ magnitudeSq appr < 1 / (2*fromInteger n)^2
--- |approx - z| < 1/(2n)
--- Beweis:
--- Gelte |approx| <  1/(2n). Dann |x| <= |approx| + |x - approx| < 1/n.
--- Gelte |approx| >= 1/(2n). Dann |x| >= |approx| - |approx - x| > 0.
+    q <- approx (2 * n) z
+    return $ magnitudeSq q <= 1 / (2*fromInteger n)^2
+-- Korrektheitsbeweis:
+-- Gelte |z_(2n)| <= 1/(2n). Dann |z| <= |z_(2n)| + |z - z_(2n)| < 1/n.
+-- Gelte |z_(2n)| >= 1/(2n). Dann |z| >= |z_(2n)| - |z_(2n) - z| > 0.
 
--- Sei (z_n) von 0 entfernt in dem Sinn, dass
--- es eine rationale Zahl q > 0 mit |z_n| > q gibt.
--- Dann ist |z_n| > 1/N für alle n >= N
--- und |z| > 2/N mit N = apartnessBound.
-apartnessBound :: Complex -> R Integer
+-- | Sei die gegebene Zahl /z/ von null entfernt, existiere also eine rationale
+-- Zahl /q/ mit /|z| >= q > 0/. Dann liefert /apartnessBound z/ eine positive
+-- natürliche Zahl /n/ mit
+--
+-- > |z_n| > 1/N für alle n >= N  und  |z| > 2/N,
+--
+-- wobei /z_n/ für jede mögliche /1\/n/-Näherung von /z/ steht.
+apartnessBound :: Complex -> R Nat
 apartnessBound z = go 1
     where
     go i = do
@@ -231,21 +332,23 @@ apartnessBound z = go 1
 	if magnitudeSq appr >= (3/fromInteger i)^2
 	    then return i
 	    else go (i + 1)
-{-
-  Beh.:
-    a) |x_N| >= 3/N  ==>  |x_n| >= 1/N f.a. n >= N  und  |x| >= 2/N.
-    b) x # 0  ==>  es gibt ein N wie in a)
+-- Zur Korrektheit und Terminierung:
+-- a) |z_N| >= 3/N  ==>  |z_n| > 1/N f.a. n >= N  und  |z| > 2/N.
+-- b) z # 0  ==>  es gibt ein N wie in a)
+--
+-- Zu a):
+-- |z_n| >= |z_N| - |z_N - z_n| > 3/N - (1/N + 1/n) >= 1/N.
+-- |z|   >= |z_N| - |z_N - z|   > 2/N - 1/N = 1/N.
+--
+-- Zu b):
+-- Sei |z| >= q > 0. Sei q >= 1/k, k >= 1.
+-- Setze N := 4k.
+-- Dann gilt: |z_N| >= |z| - |z - z_N| > 1/k - 1/(4k) = (4k-1)/(4k) >= 3/N.
 
-  Bew.:
-    a) nachrechnen
-    b) Sei |x| >= q > 0. Sei q >= 1/k.
-       Setze dann N := 4k.
--}
-
--- Vor.: Argument z ist von 0 entfernt
--- Dann: recip' z stellt 1/z dar.
+-- | Sei /z/ von null entfernt, es existiere also eine rationale Zahl /q/ mit
+-- /|z| >= q > 0/. Dann stellt /recip z/ die Zahl /1\/z/ dar.
 recip' :: Complex -> Complex
-recip' (Exact f) = Exact . fromJust . recip $ f
+recip' (Exact q) = Exact . fromJust . recip $ q
 recip' z = Ext "recip'" $ MkApprox $ \n -> do
     n0 <- apartnessBound z
     let n' = halve $ n * n0^2
@@ -255,6 +358,9 @@ recip' z = Ext "recip'" $ MkApprox $ \n -> do
 	| i `mod` 2 == 0 = i `div` 2
 	| otherwise      = i `div` 2 + 1
     -- Eigenschaft: halve i = Aufrundung(i / 2).
+-- Beweis:
+-- |1/z_n' - 1/z| = |z - z_n'| / (|z_n'| |z|) <
+-- n' = Aufr(n/2 n0^2) >= n0? 
 
 sqrt2 :: Complex
 sqrt2 = Ext "sqrt2" $ MkApprox $ return . sqrt2Seq
