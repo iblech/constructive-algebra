@@ -52,7 +52,7 @@ data (RingMorphism m) => IC m = MkIC
     { number     :: Codomain m
         -- ^ Element des Zielrings
     , polynomial :: NormedPoly (Domain m)
-        -- ^ eine die Zugehörigkeit zum Ganzheitsring beweisende Ganzheitsgleichung
+        -- ^ eine die Zugehörigkeit zum Ganzheitsring bezeugende Ganzheitsgleichung
     }
 
 -- | Liftet Elemente /x/ des Quellrings in den Ganzheitsring,

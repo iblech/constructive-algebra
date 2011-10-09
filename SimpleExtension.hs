@@ -1,27 +1,43 @@
+-- | Dieses Modul stellt einfache Ring- und Körpererweiterungen der Form
+-- /R[X]\/(f)/ bereit. Das Polynom /f/ wird ausschließlich im Typ mitgeführt
+-- und befindet sich nicht auf Wertebene; das verhindert unabsichtliches
+-- Vermischung von Elementen verschiedener Quotientenringe.
 {-# LANGUAGE TypeFamilies, FlexibleContexts, UndecidableInstances, GeneralizedNewtypeDeriving, EmptyDataDecls, StandaloneDeriving #-}
-module SimpleExtension where
+module SimpleExtension
+    ( -- * Klassen für Polynome auf Typebene
+      ReifyPoly, ReifyIrreduciblePoly
+      -- * Datentyp und Funktionen zu einfachen Erweiterungen
+    , SE, canonRep, adjointedRoot, fromBase
+      -- * Beispiele
+    , MinPolySqrt2, Qsqrt2inC
+    ) where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
 import Ring
 import Field
-import Polynomial as Poly
-import Factoring
-import Data.List hiding (sum)
-import Complex
-import Control.Monad
+import Polynomial hiding (fromBase)
+import qualified Polynomial as Poly
+import Complex hiding (fromBase)
 import RingMorphism
 import Proxy
 import Euclidean
 import Data.Maybe
 import Algebraic
-import IntegralClosure
+import IntegralClosure hiding (fromBase)
 
+-- | Klasse für Typen, die Polynome auf Typebene darstellen.
+-- Das Gegenstück wäre in Anlehnung an die üblichen Konventionen zur
+-- Programmierung auf Typniveau die Funktion 'reflectPoly', die wir aber nicht
+-- benötigen und daher auch nicht implementiert haben.
 class (Ring (BaseRing p)) => ReifyPoly p where
     type BaseRing p :: *
+    -- | Gibt das zu /p/ gehörige Polynom auf Wertebene zurück.
     reifyPoly :: Proxy p -> Poly (BaseRing p)
 
+-- | Klasse für Typen, die irreduzible Polynome auf Typebene darstellen.
 class (ReifyPoly p) => ReifyIrreduciblePoly p
 
+-- | Typ der Elemente der einfachen Erweiterung (simple extension) /R[X]\/(p)/.
 newtype (ReifyPoly p) => SE p = MkSE (Poly (BaseRing p))
 
 deriving instance (ReifyPoly p) => Ring (SE p)
@@ -29,45 +45,65 @@ deriving instance (ReifyPoly p) => Ring (SE p)
 instance (ReifyPoly p, Field (BaseRing p), Show (BaseRing p)) => Show (SE p) where
     show z = "[" ++ show (canonRep z) ++ "]"
 
+-- | Gibt das zu /SE p/ gehörige Moduluspolynom auf Wertebene zurück.
 modulus :: (ReifyPoly p) => Proxy (SE p) -> Poly (BaseRing p)
 modulus = reifyPoly . (undefined :: Proxy (SE p) -> Proxy p)
 
+-- | Bestimmt zu einem Element des Faktorrings seinen kanonischen
+-- Repräsentanten mittels Polynomdivision durch das herausgeteilte Polynom.
+--
+-- Da wir nicht fordern, dass der Modulus ein normiertes Polynom ist,
+-- ist diese Funktion auf solche Grundringe beschränkt, die Körper sind.
 canonRep :: (ReifyPoly p, Field (BaseRing p)) => SE p -> Poly (BaseRing p)
 canonRep z@(MkSE f) = snd $ f `quotRem` modulus (toProxy z)
 
+-- | Liefert das Element /[X]/ im Quotientenring /R[X]\/(p)/, also die
+-- künstliche Nullstelle von /p/.
 adjointedRoot :: (ReifyPoly p) => SE p
 adjointedRoot = MkSE iX
 
+-- | Hebt ein Element des Grundrings in den Quotientenring hoch.
 fromBase :: (ReifyPoly p) => BaseRing p -> SE p
 fromBase = MkSE . Poly.fromBase
 
+-- Wenn wir kanonische Repräsentanten zur Verfügung haben, können wir auf
+-- Gleichheit testen.
 instance (ReifyPoly p, Field (BaseRing p)) => Eq (SE p) where
    z == w = canonRep z == canonRep w
 
 instance (ReifyIrreduciblePoly p, Field (BaseRing p)) => IntegralDomain (SE p) where
 
 instance (ReifyIrreduciblePoly p, Field (BaseRing p)) => Field (SE p) where
-    recip z@(MkSE p)
+    -- Unter der gegebenen Voraussetzung, dass der Modulus p irreduzibel ist,
+    -- kann ein ggT von f und p nur konstant oder assoziiert zu p sein.
+    -- Im ersten Fall erhalten wir daraus eine Darstellung des Inverses von [f],
+    -- im zweiten den Beweis, dass [f] nicht invertierbar ist.
+    recip z@(MkSE f)
         | degree d == 0        = Just . MkSE $ fromJust (recip (leadingCoeff d)) .* v
-        | degree d == degree f = Nothing
+        | degree d == degree p = Nothing
         | otherwise            =
             error "SimpleExtension.recip: Echten Faktor des angeblich irreduziblen Modulus gefunden!"
         where
-        f = modulus (toProxy z)
-        (u,v,s,t) = gcd f p
-        d = u*f + v*p
+        p         = modulus (toProxy z)
+        (u,v,_,_) = gcd p f
+        d         = u*f + v*p
 
+-- | Dummytyp, der das Minimalpolynom der Quadratwurzel aus 2, /X^2 - 2/,
+-- repräsentiert.
 data MinPolySqrt2
 instance ReifyPoly MinPolySqrt2 where
     type BaseRing MinPolySqrt2 = Rational
     reifyPoly _ = iX^2 - fromInteger 2
 instance ReifyIrreduciblePoly MinPolySqrt2
 
+-- | Dummytyp, der die kanonische Einbettung der rationalen Zahlen in
+-- die Erweiterung /Q[X]\/(X^2-2)/ repräsentiert.
 data Qsqrt2inC
 instance RingMorphism Qsqrt2inC where
     type Domain   Qsqrt2inC = SE MinPolySqrt2
     type Codomain Qsqrt2inC = Complex
     mor _ = Poly.eval Complex.sqrt2 . fmap fromRational . canonRep
 
+-- Beispiel: sqrt2 als Element vom Grad 1 in Q(sqrt2).
 ex :: Alg Qsqrt2inC
 ex = MkAlg $ MkIC Complex.sqrt2 $ mkNormedPoly (iX - Poly.fromBase adjointedRoot)
