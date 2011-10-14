@@ -188,11 +188,12 @@ iX = MkPoly [zero, unit]
 fromBase :: a -> Poly a
 fromBase x = MkPoly [x]
 
--- | Normiert ein Polynom.
+-- | Normiert ein Polynom. Angewendet aufs Nullpolynom wird eine Laufzeitausnahme
+-- geworfen.
 normalize :: (Field a, Eq a) => Poly a -> Poly a
 normalize p = MkPoly $ map (a *) as where as = canonCoeffs p; Just a = recip (last as)
 -- Semantisch nicht zu unterscheiden wäre die Alternativdefinition
--- > normalie p = recip (leadingCoeff p) .* p.
+-- > normalize p = recip (leadingCoeff p) .* p.
 -- Diese hat den Vorteil, dass das zurückgegebene Polynom gleich schon
 -- in kanonisierter Form vorliegt, also keine unnötigen Nullen besitzt.
 -- Das erhöht die Effizienz in "IntegralClosure" bei der Berechnung von

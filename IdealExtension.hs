@@ -29,14 +29,16 @@
 --
 -- Nützlich sind ideelle Erweiterungen in folgenden Situationen:
 --
--- 1. Wenn (etwa in einem intuitionistischen Kontext) nicht klar ist, dass+
+-- 1. Wenn (etwa in einem intuitionistischen Kontext) nicht klar ist, dass
 -- die Zahl /z/ ein Minimalpolynom besitzt,
 --
 -- 2. wenn man das Minimalpolynom aus Effizienzgründen nicht bestimmen möchte
 -- oder
 --
 -- 3. wenn man das Minimalpolynom nur zur Laufzeit als Wert vorliegen hat und
--- es nicht auf Typebene holen möchte.
+-- es nicht auf Typebene holen möchte. (Ist es statisch bekannt, so sollte man
+-- besser das Modul "SimpleExtension" verwenden, welches richtige,
+-- nicht-ideelle Körpererweiterungen bietet.)
 {-# LANGUAGE TypeFamilies, FlexibleContexts, GeneralizedNewtypeDeriving, RankNTypes, FlexibleInstances #-}
 module IdealExtension where
 
@@ -51,7 +53,6 @@ import Debug.Trace
 import Algebraic as A
 import IntegralClosure
 import Complex
-import ZeroRational
 import Data.Maybe
 
 -- | Monade für /ideelle Berechnungen/, also solche, die eine Umgebung vom
@@ -107,7 +108,8 @@ idealEquals :: (IdealField a) => a -> a -> Nondet a Bool
 idealEquals x y = liftM isNothing $ idealRecip (x - y)
 
 -- | Datentyp für die Elemente einer einfachen ideellen Ringerweiterung
--- /k[X]\/(p)/ des Grundrings /k/.
+-- /k[X]\/(p)/ des Grundrings /k/. Das dynamische Moduluspolynom /p/
+-- kann durch 'ask' der 'Ideal'-Monade erfragt werden.
 --
 -- Den Phantomtyp /s/ verwenden wir, um unabsichtliche Vermischungen von
 -- Elementen verschiedener ideeller Erweiterungen zu verhindern.
@@ -149,25 +151,60 @@ instance (Field k) => IdealField (ISE k s) where
         trace ("restart!") $ do
         restart (d,s)
 
-canonISE :: (Field k) => ISE k s -> Nondet (ISE k s) (Poly k)
-canonISE (S g) = do
+-- | Zu jedem gegebenen Zeitpunkt ist die ideelle Körpererweiterung /ISE k s/
+-- ein Faktorring /k[X]\/(p)/ modulo eines dynamisch durch 'restart' änderbaren
+-- Polynoms /p/.
+--
+-- Diese Funktion bestimmt zu einem Element des Faktorrings seinen kanonischen
+-- Repräsentanten mittels Polynomdivision durch das herausgeteilte Polynom.
+--
+-- Nützlich ist das beispielsweise dann, wenn man im Körper /Q(x)/ rechnen
+-- möchte, wobei /x/ eine algebraische Zahl ist, von der man nur ein normiertes
+-- Polynom /f/ mit /f(x) = 0/ (nicht aber das Minimalpolynom) kennt.
+--
+-- Ist dann /y/ ein Element dieses Körpers (dargestellt als Element von /ISE k s/),
+-- so bestimmt /canonRep y/ ein Polynom /g/ derart, dass /g(x) = y/.
+--
+-- /Kanonisch/ ist dieses Polynom /g/ nur in der Hinsicht, als dass es
+-- bezüglich des aktuell bekannten Moduluspolynoms reduziert wurde. Abhängig
+-- von zuvor ausgeführten Rechnungen in der 'Ideal'-Monade kann dieses aber
+-- ein echter Faktor des Anfangsmodulus /f/ sein.
+canonRep :: (Field k) => ISE k s -> Nondet (ISE k s) (Poly k)
+canonRep (S g) = do
     f <- ask
-    let (q,r) = quotRem g f
+    let (_,r) = quotRem g f
     return r
 
-runISE
+-- | Führt eine Berechnung in der 'Ideal'-Monade aus.
+--
+-- Bei Neustarts wird die übergebene Funktion genutzt, um zu entscheiden,
+-- welcher von zwei gefundenen Faktoren des ursprünglichen Moduluspolynoms für
+-- die neu aufgewickelte Rechnung verwendet werden soll.
+execISE
     :: (Field k)
-    => Poly k -> (Poly k -> Bool)
+    => Poly k
+        -- ^ Startwert fürs Moduluspolynom
+    -> (Poly k -> Bool)
+        -- ^ Funktionen, die zu einem gegebenen Polynom entscheidet, ob es
+        -- auch als Moduluspolynom verwendet werden könnte
     -> (forall s. Nondet (ISE k s) a)
+        -- ^ die auszuführende Berechnung
     -> a
-runISE f phi m =
+        -- ^ das Ergebnis der (nötigenfalls mehrfach neugestarteten) Berechnung
+execISE f phi m =
     case runReaderT m f of
+        -- Hat die Berechnung ein Ergebnis produzieren können, ohne einen
+        -- Neustart fordern zu müssen?
         Right x     -> x
+
+        -- Wenn nicht, dann sind d und s Faktoren von f, wir müssen die
+        -- Rechnung mit einem dieser Faktoren neustarten.
         Left  (d,s) ->
             if phi d
-                then runISE d phi m
-                else runISE s phi m
+                then execISE d phi m
+                else execISE s phi m
 
+{-
 ex :: Nondet (ISE Rational s) (Maybe (ISE Rational s))
 ex = do
     Just x <- idealRecip $ adjointedRoot - unit
@@ -176,12 +213,19 @@ ex = do
     idealRecip z
 
 exF :: Poly Rational
-exF = iX^3 - fromInteger 2
+ex F = iX^3 - fromInteger 2
+-}
 
-runISEwithAlgebraic :: Alg QinC -> (forall s. Nondet (ISE Rational s) a) -> a
-runISEwithAlgebraic z = runISE f phi
+-- | /execISEwithAlgebraic z m/ führt die Berechnung /m/ im Körper /Q(z)/ aus.
+-- Da wir das Minimalpolynom von /z/ nicht bestimmen wollen, realisieren wir
+-- /Q(z)/ als ideellen Oberkörper /Q[X]\/(f)\/, wobei /f/ das durch die
+-- Algebraizität von /z/ gegebene normierte Polynom mit /f(z) = 0/ ist.
+--
+-- In "Galois" wird das beispielsweise benutzt, um nach Berechnung eines
+-- primitiven Elements /t/ zu gegebenen Zahlen /x/ und /y/ durch eine Rechnung
+-- in /Q(t)/ ein nichttriviales Polynom /h/ mit /h(t) = x/ zu finden.
+execISEwithAlgebraic :: Alg QinC -> (forall s. Nondet (ISE Rational s) a) -> a
+execISEwithAlgebraic z = execISE f phi
     where
     f     = unNormedPoly . fmap unF . polynomial . unAlg $ z
     phi g = zero == A.eval z g
-
---exRun' = exRun (head $ rootsA $ iX^3 - fromInteger 1)

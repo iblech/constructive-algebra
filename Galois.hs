@@ -143,14 +143,14 @@ primitiveElement x y = (lambda, t, hX, hY)
     -- richtigen Erweiterung Q[X]/(m_t) statt der ideellen Erweiterung rechnen.
     -- Dazu müssten wir aber das Minimalpolynom von t auf Typniveau heben, und
     -- das ist wohl die Mühe nicht wert.
-    hY = runISEwithAlgebraic t $ do
+    hY = execISEwithAlgebraic t $ do
         -- h = f(t - lambda X)
         let h = fmap I.fromBase f `compose` (Poly.fromBase adjointedRoot - fromInteger lambda * iX)
         d <- idealNormedGCD (fmap I.fromBase g) h
         -- Im Skript ist bewiesen, dass d von der Form X-y ist, daher erhalten
         -- wir y (als in t polynomiellen Ausdruck) als die Negation des ersten
         -- Koeffizienten von d.
-        liftM negate . canonISE . head . unsafeCoeffs $ d
+        liftM negate . canonRep . head . unsafeCoeffs $ d
 
     -- Der Zeuge, dass x in t rational ist, ist einfacher:
     hX = iX - fromInteger lambda * hY
