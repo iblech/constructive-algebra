@@ -26,12 +26,16 @@ import Control.Arrow
 import Data.Ratio
 import Euclidean
 import Debug.Trace
+import Testing
 
 -- früher: newtype (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => Alg m =
 -- dann Codomain m ~ Complex weggelassen
 -- FIXME
 newtype (RingMorphism m, Field (Domain m)) => Alg m =
     MkAlg { unAlg :: IC m }
+
+fromBase :: (RingMorphism m, Field (Domain m)) => Domain m -> Alg m
+fromBase = MkAlg . IC.fromBase
 
 deriving instance (Ring (IC m)) => Ring (Alg m)
 deriving instance (HasRationalEmbedding (IC m)) => HasRationalEmbedding (Alg m)
@@ -143,11 +147,13 @@ isRational z = listToMaybe $ do
     guard $ fromRational cand == z
     return cand
     where
-    as    = dropWhile (== 0) . canonCoeffs' . polynomial . unAlg $ z
-    (r,s) = (numerator &&& denominator) $ unF $ head as
+    f     = MkPoly . map unF . dropWhile (== 0) . canonCoeffs' . polynomial . unAlg $ z
+    as    = map unsafeFromRational . canonCoeffs $ (1 / content f) .* f
+    (r,s) = (head as, last as)
     nonNegativeCandidates =
         [ p % q
         | p <- positiveDivisors r, q <- positiveDivisors s
+        , areCoprime p q
         ]
 
 -- | Entscheidet, ob eine gegebene algebraische Zahl sogar komplexrational ist.

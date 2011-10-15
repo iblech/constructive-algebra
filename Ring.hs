@@ -11,12 +11,16 @@ module Ring
     , HasFloatingApprox(..)
       -- * Allgemeine Funktionen für Ringe
     , sum, product, (^)
+      -- * QuickCheck-Eigenschaften
+    , props_ringAxioms
     ) where
 
+import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger, sum, product)
 import qualified Prelude as P
-import Prelude (Maybe, (&&), (==), (/=), abs, otherwise, ($), (.), seq)
 import Data.Ratio
 import qualified Data.Complex as C
+import Proxy
+import Testing
 
 -- | Klasse für Typen, die Ringe repräsentieren.
 -- Dabei meinen wir stets kommutative Ringe mit Eins.
@@ -39,7 +43,7 @@ class Ring a where
     -- | /fromInteger z/ soll das Bild von /z/ unter dem eindeutigen
     -- Ringhomomorphismus vom Ring der ganzen Zahlen in /a/, also
     -- /z 1/, sein.
-    fromInteger :: P.Integer -> a
+    fromInteger :: Integer -> a
 
     infixl 6 +
     infixl 7 *
@@ -61,8 +65,8 @@ class Ring a where
     -- Die zu erfüllende Spezifikation ist also:
     --
     -- > couldBeNonZero x == False  ==>  x == zero.
-    couldBeNonZero :: a -> P.Bool
-    couldBeNonZero = P.const P.True
+    couldBeNonZero :: a -> Bool
+    couldBeNonZero = const True
 
 -- | Subtraktion, erfüllt folgende Spezifikation:
 --
@@ -70,6 +74,35 @@ class Ring a where
 (-) :: (Ring a) => a -> a -> a
 x - y = x + negate y
 infixl 6 -
+
+newtype RejectZero a = MkRejectZero a
+    deriving (Show,Eq)
+
+instance (Ring a, Eq a, Arbitrary a) => Arbitrary (RejectZero a) where
+    arbitrary = do
+        x <- arbitrary
+        return $ if x == zero
+            then MkRejectZero unit
+            else MkRejectZero x
+    shrink (MkRejectZero x) = map MkRejectZero . shrink $ x
+
+props_ringAxioms :: (Ring a, Eq a, Arbitrary a, Show a) => Proxy a -> [Property]
+props_ringAxioms a =
+    props_commutativeGroup  (+) (zero `asTypeOfProxy` a) negate ++
+    -- XXX später props_commutativeMonoid (*) (zero `asTypeOfProxy` fmap MkRejectZero a) ++
+    [ property $ \x y z -> x * (y + z) == x * y + x * (z `asTypeOfProxy` a) ]
+
+props_commutativeMonoid :: (Eq a, Show a, Arbitrary a) => (a -> a -> a) -> a -> [Property]
+props_commutativeMonoid (+) zero =
+    [ property $ \x y z -> x + (y + z)    == (x + y) + z
+    , property $ \x     -> x + zero       == x
+    , property $ \x y   -> x + y          == y + x
+    ]
+
+props_commutativeGroup :: (Eq a, Show a, Arbitrary a) => (a -> a -> a) -> a -> (a -> a) -> [Property]
+props_commutativeGroup (+) zero negate =
+    props_commutativeMonoid (+) zero ++ [ property $ \x -> x + (negate x) == zero ]
+
 
 -- | Klasse für Typen, die Integritätsbereiche repräsentieren, also
 -- für alle /x/ folgende Bedingung erfüllen: /Entweder/ ist /x/ null,
@@ -85,7 +118,7 @@ infixl 6 -
 -- möchte, nicht haben: Denn da in einem Integritätsbereich ein Element genau dann
 -- regulär ist, wenn es nicht null ist, wird die geforderte Entscheidungsfähigkeit
 -- schon durch '(==)' von 'Eq' geliefert.
-class (Ring a, P.Eq a) => IntegralDomain a
+class (Ring a, Eq a) => IntegralDomain a
 
 -- | Klasse für geordnete Ringe, also Ringe mit einer totalen Relation
 -- /(<=)/ (reflexiv, transitiv, antisymmetrisch, je zwei Elemente
@@ -93,7 +126,7 @@ class (Ring a, P.Eq a) => IntegralDomain a
 --
 -- > a <= b          ==>  a + c <= b + c
 -- > 0 <= a, 0 <= b  ==>  0 <= ab.
-class (Ring a, P.Ord a) => OrderedRing a
+class (Ring a, Ord a) => OrderedRing a
 
 -- | Klasse für Ringe, in denen entscheidbar ist, ob zwei gegebene Elemente
 -- /x/ und /y/ zueinander assoziiert sind, ob es also ein invertierbares
@@ -155,7 +188,7 @@ class HasFloatingApprox a where
     -- Diese Methode ist nur für Debuggingzwecke gedacht; die Wahl der
     -- Genauigkeit bleibt den Instanzen überlassen. Auch muss 'unsafeApprox'
     -- nicht referentiell-transparent sein.
-    unsafeApprox :: a -> C.Complex P.Double
+    unsafeApprox :: a -> C.Complex Double
 
 -- | Summiert eine endliche Liste von Ringelementen, mit der Konvention
 -- /sum [] = zero/.
@@ -175,20 +208,20 @@ product = product' unit
 
 -- | Potenziert ein gegebenes Ringelement mittels binärer Exponentiation
 -- (square and multiply).
-(^) :: (Ring a) => a -> P.Integer -> a
+(^) :: (Ring a) => a -> Integer -> a
 _ ^ 0           = unit
-x ^ n | n P.> 0 = f x (n-1) x
+x ^ n | n > 0 = f x (n-1) x
     where f _ 0 y = y
           f x n y = g x n  where
-                    g x n | P.even n    = g (x*x) (n `P.quot` 2)
-                          | P.otherwise = f x (n-1) (x*y)
-_ ^ _           = P.error "Ring.^: negative exponent"
+                    g x n | even n    = g (x*x) (n `quot` 2)
+                          | otherwise = f x (n-1) (x*y)
+_ ^ _           = error "Ring.^: negative exponent"
 infixr 8 ^
 -- Quelle: Das Haskell-Prelude.
 
 -- Die größenbeschränkten Ganzzahlen bilden einen bestimmten Faktorring
 -- des echten Rings der ganzen Zahlen.
-instance Ring P.Int where
+instance Ring Int where
     (+)    = (P.+)
     (*)    = (P.*)
     zero   = 0
@@ -197,10 +230,10 @@ instance Ring P.Int where
     fromInteger = P.fromInteger
     couldBeNonZero = (/= 0)
 instance HasFloatingApprox P.Int where
-    unsafeApprox = P.fromIntegral
+    unsafeApprox = fromIntegral
 
 -- Der richtige Ring aller ganzen Zahlen, ohne Größenbeschränkung.
-instance Ring P.Integer where
+instance Ring Integer where
     (+)    = (P.+)
     (*)    = (P.*)
     zero   = 0
@@ -208,17 +241,17 @@ instance Ring P.Integer where
     negate = P.negate
     fromInteger = P.fromInteger
     couldBeNonZero = (/= 0)
-instance IntegralDomain P.Integer
-instance HasTestableAssociatedness P.Integer where
+instance IntegralDomain Integer
+instance HasTestableAssociatedness Integer where
     areAssociated x y
-        | abs x == abs y = P.Just (P.signum x * P.signum y)
-        | otherwise      = P.Nothing
-instance HasFloatingApprox P.Integer where
-    unsafeApprox = P.fromIntegral
+        | abs x == abs y = Just (signum x * signum y)
+        | otherwise      = Nothing
+instance HasFloatingApprox Integer where
+    unsafeApprox = fromIntegral
 
 -- Quotientenkörper.
 -- Die Integral-Beschränkung stammt von
-instance (IntegralDomain a, P.Integral a) => Ring (Ratio a) where
+instance (IntegralDomain a, Integral a) => Ring (Ratio a) where
     (+)    = (P.+)
     (*)    = (P.*)
     zero   = 0
@@ -226,18 +259,18 @@ instance (IntegralDomain a, P.Integral a) => Ring (Ratio a) where
     negate = P.negate
     fromInteger = P.fromInteger
     couldBeNonZero = (/= 0)
-instance (IntegralDomain a, P.Integral a) => IntegralDomain (Ratio a)
-instance (IntegralDomain a, P.Integral a) => HasTestableAssociatedness (Ratio a) where
+instance (IntegralDomain a, Integral a) => IntegralDomain (Ratio a)
+instance (IntegralDomain a, Integral a) => HasTestableAssociatedness (Ratio a) where
     areAssociated x y
-        | x == zero && y == zero = P.Just 1
-        | x /= zero && y /= zero = P.Just (y * P.recip x)
-        | otherwise              = P.Nothing
-instance (IntegralDomain a, P.Integral a) => HasRationalEmbedding (Ratio a) where
+        | x == zero && y == zero = Just 1
+        | x /= zero && y /= zero = Just (y * P.recip x)
+        | otherwise              = Nothing
+instance (IntegralDomain a, Integral a) => HasRationalEmbedding (Ratio a) where
     fromRational z =
         let (p,q) = (numerator z, denominator z)
         in  fromInteger p * P.recip (fromInteger q)
-instance (IntegralDomain a, P.Integral a, HasFloatingApprox a) => HasFloatingApprox (Ratio a) where
+instance (IntegralDomain a, Integral a, HasFloatingApprox a) => HasFloatingApprox (Ratio a) where
     unsafeApprox x =
         let (p,q) = (numerator x, denominator x)
         in  unsafeApprox p P./ unsafeApprox q
-instance OrderedRing (Ratio P.Integer)
+instance OrderedRing (Ratio Integer)

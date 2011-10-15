@@ -3,8 +3,8 @@
 -- zur Verfügung.
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
 module Euclidean
-    ( EuclideanRing(..)
-    , gcd, gcd'
+    ( EuclideanRing(..), ER(..)
+    , gcd, gcd', areCoprime
     , euclidChain
     , props_Euclidean
     ) where
@@ -16,6 +16,7 @@ import Field
 import Nat
 import Proxy
 import Testing
+import Data.Maybe
 
 -- | Typklasse für euklidische Ringe, also Integritätsbereiche /R/ zusammen mit
 -- einer Normabbildung von /R \ {0}/ in die natürlichen Zahlen mit null, sodass
@@ -121,6 +122,13 @@ props_gcdInteger =
           in flip all [1..min a b] $ \d' ->
           not (a `mod` d' == 0 && b `mod` d' == 0) || d `mod` d' == 0
     ]
+
+-- | Testet, ob zwei übergebene Ringelemente zueinander teilerfremd sind.
+areCoprime :: (EuclideanRing a, HasTestableAssociatedness a) => a -> a -> Bool
+areCoprime x y = isJust $ areAssociated unit d
+    where
+    d         = u*x + v*y
+    (u,v,_,_) = gcd x y
 
 -- | Eine Folge /(S_0,...,S_n)/ von Polynomen heißt genau dann /Sturmkette
 -- bezüglich des Intervalls [a,b]/, wenn für alle /x aus [a,b]/ gilt:

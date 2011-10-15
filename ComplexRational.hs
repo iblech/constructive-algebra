@@ -15,6 +15,7 @@ import Field
 import Testing
 import Control.Monad
 import Data.Maybe
+import Proxy
 
 -- | Typ für komplexrationale Zahlen in kartesischer Darstellung.
 -- Der Konstruktor ist strikt in seinen beiden Argumenten.
@@ -117,7 +118,8 @@ props_Approximation f x = (:[]) $ forAll positive $ \n ->
 
 props_ComplexRational :: [Property]
 props_ComplexRational = concat
-    [ props_magnitudeSq
+    [ props_ringAxioms (undefined :: Proxy ComplexRational)
+    , props_magnitudeSq
     , props_Approximation goldenRatioSeq ((1 P.+ sqrt 5) P./ 2)
     , props_Approximation sqrt2Seq       (sqrt 2)
     ]

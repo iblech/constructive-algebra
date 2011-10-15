@@ -9,20 +9,23 @@ module Polynomial
     , normedQuotRem
     , (.*), iX
     , normalize, normalize', leadingCoeff
-    , derivative, compose
+    , derivative, content, compose
     , squarefreePart
     , couldBeNotX
     , normedPolyProp
+    , simpleNonconstantRationalPoly
     ) where
 
 import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, recip, fromInteger, fromRational, quotRem, sum)
 import qualified Prelude as P
-import Data.List (intersperse, genericLength)
+import Data.List (intersperse, genericLength, foldl1')
 import Ring
 import Field
 import Euclidean
 import Testing
 import Control.Monad
+import Data.Ratio
+import NumericHelper
 
 -- | Typ der Polynome über 'a', repräsentiert durch die zugehörigen Folgen der
 -- Koeffizienten, von niedrigster zur höchsten Potenz geordnet. Die Darstellung
@@ -214,6 +217,16 @@ derivative (MkPoly xs)
     | null xs   = MkPoly []
     | otherwise = simplify . MkPoly $ zipWith (*) (tail xs) $ map fromInteger [1..]
 
+-- | Berechnet den Inhalt eines nicht-verschwindenden Polynoms über den
+-- rationalen Zahlen.
+content :: Poly Rational -> Rational
+content f
+    | abs a == 1 = fromInteger . abs $ foldl1' P.gcd $ map unsafeFromRational as 
+    | otherwise  = content (abs a .* f) / abs a
+    where
+    as = canonCoeffs f
+    a  = fromInteger . foldl1' P.lcm $ map denominator as
+
 -- | Setzt zwei Polynome ineinander ein. Erfüllt folgende Spezifikation:
 --
 -- > eval x (compose f g) = eval (eval x g) f
@@ -256,3 +269,10 @@ zipWithDefault (#) def = go
 -- normiert sind, erfüllt ist. Nützlich zur Formulierung von Tests.
 normedPolyProp :: (Ring a, Eq a) => NormedPoly a -> Bool
 normedPolyProp (MkNormedPoly (MkPoly as)) = last as == unit
+
+simpleNonconstantRationalPoly :: Gen (Poly Rational)
+simpleNonconstantRationalPoly = do
+    n  <- elements [1,2,3]
+    as <- replicateM n simpleRational
+    a  <- simpleNonzeroRational
+    return $ MkPoly $ as ++ [a]

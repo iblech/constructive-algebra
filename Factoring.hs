@@ -22,15 +22,6 @@ import Debug.Trace
 import Data.Ratio
 import Testing
 
--- | Berechnet den Inhalt eines nicht-verschwindenden Polynoms.
-content :: Poly Rational -> Rational
-content f
-    | abs a == 1 = fromInteger . abs $ foldl1' P.gcd $ map numerator as 
-    | otherwise  = content (abs a .* f) / abs a
-    where
-    as = canonCoeffs f
-    a  = fromInteger . foldl1' P.lcm $ map denominator as
-
 -- | Entscheidet zu einem gegebenen Polynom (welches mindestens Grad 1 haben,
 -- sonst aber keine Zusatzvoraussetzungen erfüllen muss), ob es irreduzibel
 -- über den rationalen Zahlen ist, und extrahiert im reduziblen Fall
@@ -75,10 +66,9 @@ isIrreducible' f
     -- der Nullstellen betrachten.
     | otherwise
     = listToMaybe $ do
-        let contentInv = 1 / content f
-        trace (show contentInv) $do
-        -- alle Auswahlen von Nullstellen;
-        -- wir wollen kleinere Auswahlen zuerst überprüfen...
+        let contentInv = 1 / Poly.content f
+        -- alle Auswahlen von Nullstellen; wobei wir kleine Auswahlen
+        -- zuerst überprüfen wollen.
 	xs <- sortBy (\xs ys -> length xs `compare` length ys) $ subsequences zeros
         -- ...und triviale bzw. unnötige gar nicht.
 	guard $ not $ null xs
@@ -163,6 +153,7 @@ minimalPolynomial z = head $ filter (\p -> zero == A.eval z p) factors
     (_,_,s,_) = gcd f (derivative f)
     factors   = fmap normalize $ irreducibleFactors $ fmap unF s
 
--- XXX: besserer name!
+-- | Jedes Element vom Typ /Alg QinC/ führt ja eine seine Algebraizität bezeugende
+-- Polynomgleichung mit.
 simplify' :: Alg QinC -> Alg QinC
 simplify' z = MkAlg $ MkIC (number . unAlg $ z) (mkNormedPoly $ fmap F $ minimalPolynomial z)

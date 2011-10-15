@@ -118,6 +118,16 @@ props_squareRoot = (:[]) $ forAll arbitrary $ \n -> n >= 0 ==>
     let s = squareRoot n
     in  s >= 0 && s*s <= n && (s+1)*(s+1) > n
 
+-- | Ist eine rationale Zahl /x/ sogar eine ganze Zahl, so liefert
+-- /unsafeFromRational x/ diese ganze Zahl. Sonst wirft sie eine
+-- Laufzeitausnahme.
+unsafeFromRational :: Rational -> Integer
+unsafeFromRational x
+    | r == 0    = q
+    | otherwise = error $ "unsafeFromRational: " ++ show x
+    where
+    (q,r) = numerator x `quotRem` denominator x
+
 prop_NumericHelper :: [Property]
 prop_NumericHelper = concat
     [ props_roundDownToRecipN
