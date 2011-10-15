@@ -2,7 +2,8 @@
 --
 -- Zur Darstellung der zugrundeliegenden Felder nutzen wir "Data.Array",
 -- zur statischen Typisierung der Zeilen- und Spaltenzahl "TypeLevelNat".
-{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, MultiParamTypeClasses, TupleSections, TypeSynonymInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, MultiParamTypeClasses,
+TupleSections, TypeSynonymInstances, FlexibleInstances #-}
 module Matrix
     ( Nat
     , Matrix(..), SqMatrix
@@ -69,8 +70,8 @@ fromArray arr k
 
 -- | Ummantelt ein gegebenes quadratisches Feld in eine quadratische Matrix.
 -- Wirft eine Laufzeitausnahme, falls das gegebene Feld nicht quadratisch ist.
-fromArray' :: Array (Nat,Nat) a -> (forall n. (ReifyNat n) => SqMatrix n a -> r) -> r
-fromArray' arr k
+fromArray' :: (forall n. (ReifyNat n) => SqMatrix n a -> r) -> Array (Nat,Nat) a -> r
+fromArray' k arr
     | n == m    = reflectNat n $ \n' -> k (MkMatrix arr `asTypeOf` dummy n')
     | otherwise = error "fromArray' eines nicht-quadratischen Felds!"
     where
@@ -82,10 +83,10 @@ fromArray' arr k
 -- geworfen.
 withNontrivialRows
     :: (ReifyNat n, ReifyNat m)
-    => Matrix n m a
-    -> (forall k. (ReifyNat k) => Matrix (S k) m a -> r)
+    => (forall k. (ReifyNat k) => Matrix (S k) m a -> r)
+    -> Matrix n m a
     -> r
-withNontrivialRows mtx@(MkMatrix arr) k
+withNontrivialRows k mtx@(MkMatrix arr)
     | n == 0    = error "withNontrivialRows' einer Matrix ohne Zeilen!"
     | otherwise = reflectPositiveNat n $ \n' -> k (MkMatrix arr `asTypeOf` dummy n' (numCols' mtx))
     where
@@ -97,30 +98,31 @@ withNontrivialRows mtx@(MkMatrix arr) k
 -- geworfen.
 withNontrivialCols
     :: (ReifyNat n, ReifyNat m)
-    => Matrix n m a
-    -> (forall k. (ReifyNat k) => Matrix n (S k) a -> r)
+    => (forall k. (ReifyNat k) => Matrix n (S k) a -> r)
+    -> Matrix n m a
     -> r
-withNontrivialCols mtx k = withNontrivialRows (transpose mtx) $ k . transpose
+withNontrivialCols k mtx = withNontrivialRows (k . transpose) (transpose mtx)
 
 -- | Bringt die Information darüber, dass die gegebene Matrix mindestens eine
 -- Zeile und eine Spalte besitzt, aufs Typniveau; ist dem nicht so, wird eine
 -- Laufzeitausnahme geworfen.
 withNontrivialRowsCols
     :: (ReifyNat n, ReifyNat m)
-    => Matrix n m a
-    -> (forall k l. (ReifyNat k, ReifyNat l) => Matrix (S k) (S l) a -> r)
+    => (forall k l. (ReifyNat k, ReifyNat l) => Matrix (S k) (S l) a -> r)
+    -> Matrix n m a
     -> r
-withNontrivialRowsCols mtx k =
-    withNontrivialRows mtx $ \mtx' -> withNontrivialCols mtx' k
+withNontrivialRowsCols k = withNontrivialRows (withNontrivialCols k)
+-- Leider kann man das nicht punktfrei als withNontrivialRows .
+-- withNontrivialCols schreiben: GHC kann die Typen nicht erschließen.
 
 -- | Bringt die Information darüber, dass die gegebene Matrix quadratisch ist,
 -- aufs Typniveau; ist dem nicht so, wird eine Laufzeitausnahme geworfen.
 withSquare
     :: (ReifyNat n, ReifyNat m)
-    => Matrix n m a
-    -> (forall k. (ReifyNat k) => SqMatrix k a -> r)
+    => (forall k. (ReifyNat k) => SqMatrix k a -> r)
+    -> Matrix n m a
     -> r
-withSquare (MkMatrix arr) k = fromArray' arr k
+withSquare k (MkMatrix arr) = fromArray' k arr
 
 -- | Liefert die Anzahl Zeilen und Spalten des zugrundeliegenden Felds.
 -- Wird nur intern in diesem Modul benötigt.
@@ -181,7 +183,7 @@ naiveDeterminant m
     | otherwise      = sum $ map f [0..numRows m - 1]
     where
     f i = (negate unit)^fromIntegral i * (m !! (0,i)) *
-        withNontrivialRowsCols m (flip withSquare naiveDeterminant . deleteColumn i . deleteRow 0)
+        withNontrivialRowsCols (withSquare naiveDeterminant . deleteColumn i . deleteRow 0) m
 
 -- Ringstruktur der quadratischen (n x n)-Matrizen
 instance (ReifyNat n, Ring a) => Ring (SqMatrix n a) where

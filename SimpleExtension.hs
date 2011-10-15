@@ -38,7 +38,7 @@ class (Ring (BaseRing p)) => ReifyPoly p where
 class (ReifyPoly p) => ReifyIrreduciblePoly p
 
 -- | Typ der Elemente der einfachen Erweiterung (simple extension) /R[X]\/(p)/.
-newtype (ReifyPoly p) => SE p = MkSE (Poly (BaseRing p))
+newtype SE p = MkSE (Poly (BaseRing p))
 
 deriving instance (ReifyPoly p) => Ring (SE p)
 

@@ -225,7 +225,7 @@ ex F = iX^3 - fromInteger 2
 -- primitiven Elements /t/ zu gegebenen Zahlen /x/ und /y/ durch eine Rechnung
 -- in /Q(t)/ ein nichttriviales Polynom /h/ mit /h(t) = x/ zu finden.
 execISEwithAlgebraic :: Alg QinC -> (forall s. Nondet (ISE Rational s) a) -> a
-execISEwithAlgebraic z = execISE f phi
+execISEwithAlgebraic z m = execISE f phi m
     where
     f     = unNormedPoly . fmap unF . polynomial . unAlg $ z
     phi g = zero == A.eval z g

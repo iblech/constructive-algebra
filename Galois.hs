@@ -129,7 +129,7 @@ primitiveElement x y = (lambda, t, hX, hY)
     exceptions = do
         x' <- roots f
         y' <- roots g
-        r  <- maybeToList $ unsafeRunR $ invert (y - y')
+        r  <- maybeToList $ recip (y - y')
         maybeToList $ isApproxInteger $ (x' - x) * r
 
     -- lambda soll die erste Zahl in unser Aufzählung aller ganzen Zahlen sein,

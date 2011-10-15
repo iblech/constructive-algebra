@@ -6,7 +6,8 @@ module Complex
     , sqrt2, goldenRatio
     , fromBase
     , normUpperBoundR, magnitudeZeroTestR, traceEvals
-    , recip') where
+    , recip', signum')
+    where
 
 import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real, catch)
 import qualified Prelude as P
@@ -35,31 +36,39 @@ type Complex = AST ComplexRational
 -- | Der Typ der reellen Zahlen.
 type Real    = AST Rational
 
--- | Elemente in /AST ex/ beschreiben Rechnungen, die man mit Werten aus /ex/,
--- den Ringoperationen (Addition und Multiplikation -- Negation kann man als
--- Multiplikation mit /-unit/ gewinnen) und zusätzlichen nur durch
--- Approximationsprozeduren gegebenen ideellen Elementen führen kann.
--- Gleichheit solcher Rechnungen ist natürlich nicht entscheidbar.
+-- | Elemente in /AST ex/ beschreiben Rechnungen (abstract syntax trees), die
+-- man mit Werten aus /ex/, den Ringoperationen (Addition und Multiplikation --
+-- Negation kann man als Multiplikation mit /-unit/ gewinnen) und zusätzlichen nur
+-- durch Approximationsprozeduren gegebenen ideellen Elementen führen kann. Die
+-- Darstellung ist natürlich nicht eindeutig, und Gleichheit nicht entscheidbar.
 --
 -- Beispielsweise ist /AST ComplexRational/ der Typ der komplexen Zahlen,
--- /AST Rational/ der der reellen Zahlen.
+-- /AST Rational/ der der reellen Zahlen -- zumindest wenn man äquivalente
+-- Beschreibungen miteinander identifiziert.
 --
 -- /AST ex/ kann man sich auch als die freie Ringerweiterung von /ex/ durch
 -- Approximationsprozeduren vorstellen, und man könnte auch kürzer /AST ex/
 -- durch
 --
--- > data AST ex = Exact ex | Ext String (Approx ex)
+-- > data AST' ex = Exact ex | Ext String (Approx ex)
 --
 -- definieren, denn da Prozeduren vom Typ /Approx ex/ beliebige Rechnungen
--- durchführen dürfen, können diese die in dieser Definition fehlenden
--- Konstruktoren emulieren.
+-- durchführen dürfen, können diese die in dieser Alternativdefinition fehlenden
+-- Konstruktoren emulieren. Auch möglich wäre
 --
--- Die hier gegebene Definition hat den Vorteil, dass man einige rudimentäre
--- Optimierungen vornehmen kann. Möchte man beispielsweise /x_1 + ... + x_n/
--- auf Genauigkeit /1\/N/ auswerten, benötigt man bei naiver Klammerung, /x_1 +
--- (x_2 + (x_3 + ...))/, eine Approximation von /x_n/ mit Genauigkeit
--- /1\/(2^n N)/. Bei balancierter Auswertung dagegen benötigt man von jedem
--- Summanden nur eine Approximation mit Genauigkeit /1\/(n N)/.
+-- > data AST'' ex = Ext String (Approx ex).
+--
+-- Die hier gegebene Definition hat zwei Vorteile. Zum einen können wir so
+-- einige rudimentäre Optimierungen vornehmen: Möchte man beispielsweise
+-- /x_1 + ... + x_n/ auf Genauigkeit /1\/N/ auswerten, benötigt man bei naiver
+-- Klammerung, /x_1 + (x_2 + (x_3 + ...))/, eine Approximation von /x_n/ mit
+-- Genauigkeit /1\/(2^n N)/. Bei balancierter Auswertung dagegen benötigt man von
+-- jedem Summanden nur eine Approximation mit Genauigkeit /1\/(n N)/.
+--
+-- Zum anderen ist die Definition in der Praxis effizienter: Denn bei den
+-- beiden Alternativdefinitionen häufen sich schon bei kurzen Rechnungen sehr
+-- viele Approx-Objekte, welche Bezüge auf ihre Definitionsumgebung enthalten
+-- und daher automatische Speicherbereinigung verhindern.
 --
 -- /Warnung/: /AST ex/ ist natürlich funktoriell in /ex/. Man kann jedoch
 -- von einer allgemeinen Funktion /f/ nicht erwarten, dass
@@ -67,7 +76,7 @@ type Real    = AST Rational
 -- > approx n (fmap f ast)
 --
 -- auch eine /1\/n/-Approximation an /liftM f (approx n ast)/ liefert.
--- Damit das garantiert ist, muss /f/ Lipschitz mit Konstante /1/ sein,
+-- Damit das garantiert ist, muss /f/ lipschitzstetig mit Konstante /1/ sein,
 -- wie beispielsweise /f = negate/ oder /f = conjugate/.
 data AST ex
     = Exact ex                    -- ^ Einbettung exakter Werte
@@ -85,14 +94,14 @@ data AST ex
 -- Kommunikation (beispielsweise Nutzereingaben oder Zufallszahlen) erlauben
 -- wollen.
 --
--- Wahrscheinlich sollten wir aber Operationen, die den Kontrollfluss
--- beeinflussen (wie beispielsweise 'forkIO'), verbieten.
+-- Operationen, die den Kontrollfluss beeinflussen (wie beispielsweise
+-- 'forkIO'), verbieten wir. (Denn was würde so ein Algorithmus bedeuten?)
 newtype R a = R { runR :: IO a }
     deriving (Functor,Monad)
 
 -- | Typ der Approximationsalgorithmen mit Approximationen aus /ex/.
 -- Dabei fordern wir folgende Bedingung (die sich aber leider in Haskell
--- nicht auf Typebene festschreiben ließe):
+-- nicht auf Typebene festschreiben lässt):
 --
 -- Es muss eine bestimmte Zahl /z/ geben, sodass der Algorithmus, mit einer
 -- positiven natürlichen Zahl /n/ aufgerufen, eine Näherung an /z/ produziert,
@@ -107,25 +116,47 @@ newtype Approx ex = MkApprox { unApprox :: Nat -> R ex }
 
 -- | Erzeugt einen interaktiven Approximationsalgorithmus, welcher Näherungen
 -- dadurch produziert, indem er den Nutzer auf der Standardkonsole fragt.
-newInteractiveApprox :: (Read ex) => String -> IO (Approx ex)
-newInteractiveApprox name = do
-    val <- newIORef (0, undefined)
+newInteractiveApprox
+    :: (Read ex)
+    => ([(Nat, ex)] -> Bool)
+               -- ^ Funktion, die übergebene Genauigkeits/Wertepaare
+               -- auf Konsistenz prüft, also prüft, ob diese Approximationen
+               -- einer ideellen Zahl sein könnten
+    -> String  -- ^ Name der Zahl (für den Nutzer)
+    -> IO (Approx ex)
+newInteractiveApprox areApproxsConsistent name = do
+    val <- newIORef []
     return . MkApprox $ \n -> R $ do
-        (n0,q0) <- readIORef val
+        as@(~((n0,q0):_)) <- readIORef val
         -- Genügt die Genauigkeit des gemerkten Werts?
-        if n0 >= n then return q0 else do
+        if not (null as) && n0 >= n then return q0 else do
+        -- Nein; den Benutzer fragen.
         let prompt = do
             putStr $ "Naeherung von " ++ name ++ " auf < 1/" ++ show n ++ ": "
             q <- readLn
-            writeIORef val (n,q)
-            return q
+            -- Konsistenzcheck
+            let as' = (n,q) : as
+            if areApproxsConsistent as'
+                then writeIORef val as' >> return q
+                else fail "Angegebene Approximation nicht konsistent mit vorherigen Werten!"
         let loop = do
             catch prompt $ \e -> do
                 putStrLn $ "* Fehler: " ++ show (e :: IOException)
                 loop
-        -- Wenn nein, so lange den Nutzer fragen, bis er etwas verständliches
-        -- eingegeben hat.
         loop
+
+-- | Erzeugt wie 'newInteractiveApprox\'' einen interaktiven
+-- Approximationsalgorithmus, wobei als Konsistenzprüfung
+--
+-- > |x_n - x_m| <= 1/n + 1/m
+--
+-- verwendet wird. Diese ist noch zu schwach, aber die Methoden der
+-- 'NormedRing'-Klasse erlauben keine Prüfung auf /</.
+newInteractiveApprox' :: (Read ex, NormedRing ex) => String -> IO (Approx ex)
+newInteractiveApprox' = newInteractiveApprox $ \as -> and $ do
+    (n,q)   <- as
+    (n',q') <- as
+    return $ norm (q - q') (1/fromIntegral n + 1/fromIntegral n')
 
 -- | /unsafeRunR m/ lässt die nicht-deterministische Operation /m/ laufen
 -- und gibt ihr Ergebnis zurück.
@@ -174,12 +205,16 @@ instance (HasConjugation ex, Eq ex, Eq (RealSubring ex)) => HasConjugation (AST 
     conjugate (Exact q)   = Exact (conjugate q)
     conjugate (Add   zs)  = Add $ map conjugate zs
     conjugate (Mult  z w) = Mult (conjugate z) (conjugate w)
-    conjugate (Ext   n f) = Ext n (fmap conjugate f)
+    conjugate (Ext   n f) = Ext ("conjugate(" ++ n ++ ")") (fmap conjugate f)
     imagUnit = Exact imagUnit
     realPart (Exact q)   = Exact (realPart q)
     realPart (Add   zs)  = Add $ map realPart zs
     realPart (Mult  z w) = realPart z * realPart w - imagPart z * imagPart w
-    realPart (Ext   n f) = Ext n (fmap realPart f)
+    realPart (Ext   n f) = Ext ("realPart(" ++ n ++ ")") (fmap realPart f)
+    imagPart (Exact q)   = Exact (imagPart q)
+    imagPart (Add   zs)  = Add $ map imagPart zs
+    imagPart (Mult  z w) = realPart z * imagPart w + imagPart z * realPart w
+    imagPart (Ext   n f) = Ext ("imagPart(" ++ n ++ ")") (fmap imagPart f)
 
 instance (HasRationalEmbedding ex, Eq ex) => HasRationalEmbedding (AST ex) where
     fromRational = Exact . fromRational
@@ -201,7 +236,7 @@ instance RingMorphism QinR where
 
 -- | /approx n z/ bestimmt eine Näherung von /z/, die vom wahren Wert im
 -- Betrag um weniger (<) als /1\/n/ abweicht. Im Allgemeinen werden wiederholte
--- Aufrufe andere Näherungen zurückgeben.
+-- Auswertungen andere Näherungen berechnen.
 approx :: (NormedRing ex) => Nat -> AST ex -> R ex
 
 -- Einfachster Fall:
@@ -248,10 +283,10 @@ approx n (Mult z w) = do
 
 -- Auswertung einer Zahl, die durch einen Approximationsalgorithmus gegeben ist.
 -- Das ist an dieser Stelle einfach, denn der Approximationsalgorithmus steht
--- der Pflicht, eine geeignete Näherung zu konstruieren.
+-- in der Pflicht, eine geeignete Näherung zu konstruieren.
 approx n (Ext _ (MkApprox f)) = f n
 
--- | Bestimmt eine obere Schranke (im Sinn von '<=') für den Betrag der
+-- | Bestimmt eine obere Schranke (im Sinn von '<') für den Betrag der
 -- gegebenen Zahl.
 --
 -- Mehrmalige Aufrufe dieser Funktion können verschiedene obere Schranken
@@ -260,7 +295,7 @@ normUpperBoundR :: (NormedRing ex) => AST ex -> R Rational
 normUpperBoundR (Exact q) = return $ normUpperBound q
 normUpperBoundR z         = liftM ((+1) . normUpperBound) $ approx 1 z
 -- Sei z_1 eine 1/1-Näherung von z.
--- Dann gilt: |z| <= |z_1| + |z - z_1| <= |z_1| + 1.
+-- Dann gilt: |z| <= |z_1| + |z - z_1| < |z_1| + 1.
 
 -- | Vereinfacht einen gegebenen Syntaxbaum unter der Annahme, dass er aus
 -- einem bereits vereinfachten Baum durch eine einzige Operation in der
@@ -301,18 +336,23 @@ simplify (Mult z (Exact q)) = simplify $ Mult (Exact q) z
 -- Sonst.
 simplify z = z
 
--- | Sei /z/ eine Zahl. Dann ist nicht entscheidbar, ob /|z| = 0/ oder
--- ob nicht /|z| = 0/. Für festes /n >= 1/ gilt aber stets:
---
--- > |z| > 0  oder  |z| < 1/n,
---
--- wobei das /oder/ natürlich kein /entweder oder/ ist. Gibt 'magnitudeZeroTestR'
--- /False/ zurück, so liegt der erste Fall vor, andernfalls der zweite.
-magnitudeZeroTestR :: Nat -> Complex -> R Bool
-magnitudeZeroTestR n (Exact q) = return $ q == zero
-magnitudeZeroTestR n z = do
-    q <- approx (2 * n) z
-    return $ magnitudeSq q <= 1 / (2*fromInteger n)^2
+-- XXX: Eigentlich müssten wir einen NormedRing-Kontext fordern!
+class (Ring a) => HasMagnitudeZeroTest a where
+    -- | Sei /z/ eine Zahl. Dann ist nicht entscheidbar, ob /|z| = 0/ oder
+    -- ob nicht /|z| = 0/. Für festes /n >= 1/ gilt aber stets:
+    --
+    -- > |z| > 0  oder  |z| < 1/n,
+    --
+    -- wobei das /oder/ natürlich kein /entweder oder/ ist. Gibt
+    -- 'magnitudeZeroTestR' /False/ zurück, so liegt der erste Fall vor,
+    -- andernfalls der zweite.
+    magnitudeZeroTestR :: Nat -> a -> R Bool
+
+instance (NormedRing a, Eq a) => HasMagnitudeZeroTest (AST a) where
+    magnitudeZeroTestR n (Exact q) = return $ q == zero
+    magnitudeZeroTestR n z = do
+        q <- approx (2 * n) z
+        return $ norm q (1 / (2*fromInteger n))
 -- Korrektheitsbeweis:
 -- Gelte |z_(2n)| <= 1/(2n). Dann |z| <= |z_(2n)| + |z - z_(2n)| < 1/n.
 -- Gelte |z_(2n)| >= 1/(2n). Dann |z| >= |z_(2n)| - |z_(2n) - z| > 0.
@@ -361,6 +401,22 @@ recip' z = Ext "recip'" $ MkApprox $ \n -> do
 -- Beweis:
 -- |1/z_n' - 1/z| = |z - z_n'| / (|z_n'| |z|) <
 -- n' = Aufr(n/2 n0^2) >= n0? 
+
+-- | Bestimmt das Vorzeichen einer von null entfernten reellen Zahl.
+-- Die Auswertung von /signum' zero/ terminiert nicht.
+signum' :: Real -> Ordering
+signum' x = unsafeRunR . liftM (`compare` zero) $ go 1
+    where
+    go i = do
+        appr <- approx i x
+        if abs appr >= 1/fromInteger i
+            then return appr
+            else go (i + 1)
+-- Beweis:
+-- Zunächst ist klar, dass ein Index i wie gesucht existiert (etwa
+-- i <- apartnessBound x). Es gilt dann also |x - x_i| < 1/i.
+-- Sollte nun x_i positiv sein, so ist x_i also >= 1/i und damit x > 0.
+-- Sollte x_i negativ sein, gilt x_i <= -1/i und daher x < 0.
 
 sqrt2 :: Complex
 sqrt2 = Ext "sqrt2" $ MkApprox $ return . sqrt2Seq

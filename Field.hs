@@ -1,3 +1,5 @@
+-- | Dieses Modul stellt die zentrale Typklasse 'Field' für Körper
+-- zur Verfügung.
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
 module Field where
 
@@ -8,7 +10,8 @@ import Testing
 
 import Data.Ratio
 
--- | Klasse für Typen, die Körper gemäß folgender Definition repräsentieren:
+-- | Klasse für Typen, die Körper repräsentieren. Ein Körper ist für uns ein
+-- (kommutativer) Ring, der folgendes Zusatzaxiom erfüllt:
 --
 -- Für jedes Ringelement /x/ gilt /entweder/, dass /x = 0/, /oder/ /x/ ist
 -- invertierbar.
@@ -20,7 +23,7 @@ class (IntegralDomain a) => Field a where
     recip :: a -> Maybe a
 
 -- | Dummytyp um überlappende Instanzdeklarationen vermeiden zu können.
-newtype (Field a) => F a = F { unF :: a }
+newtype F a = F { unF :: a }
     deriving (Eq,Ord,Ring,IntegralDomain,Field,P.Num,P.Fractional,HasTestableAssociatedness,HasRationalEmbedding,HasFloatingApprox,Arbitrary)
 instance (Show a, Field a) => Show (F a) where
     show        = P.show . unF

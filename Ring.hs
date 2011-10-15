@@ -1,12 +1,12 @@
--- | Dieses Modul stellt die zentrale Typklasse "Ring" für kommutative Ringe
+-- | Dieses Modul stellt die zentrale Typklasse 'Ring' für kommutative Ringe
 -- mit Eins und einige spezialisierte Klassen zur Verfügung.
 {-# LANGUAGE FlexibleInstances, TypeFamilies, FlexibleContexts #-}
 module Ring
     ( -- * Typklassen für Ringe und Ringe mit bestimmten Eigenschaften
       Ring(..), (-), IntegralDomain, OrderedRing
     , HasTestableAssociatedness(..), HasRationalEmbedding(..)
-      -- * Unterstützung von Ringen mit einer "komplexen Konjugation"
-    , HasConjugation(..), absSq, imagPart
+      -- * Ringe mit einer "komplexen Konjugation"
+    , HasConjugation(..), absSq
       -- * Näherungen für Debugging-Zwecke
     , HasFloatingApprox(..)
       -- * Allgemeine Funktionen für Ringe
@@ -135,14 +135,18 @@ class (Ring a, Ring (RealSubring a)) => HasConjugation a where
     -- Daraus wird dann auch 'absSq' und 'imagPart' definiert.
     realPart  :: a -> RealSubring a
 
+    -- | Bestimmt den Imaginärteil einer Zahl.
+    --
+    -- Ist vordefiniert über 'realPart'; wenn das zu einer
+    -- nicht-terminierenden Rekursion führt, muss die Instanz eine geeignete
+    -- andere Definition gebeen.
+    imagPart  :: (HasConjugation a) => a -> RealSubring a
+    imagPart = negate . realPart . (imagUnit *)
+
 -- | Berechnet das Betragsquadrat einer Zahl /z/, also
 -- das Produkt von /z/ mit seinem komplex Konjugierten.
 absSq :: (HasConjugation a) => a -> RealSubring a
 absSq z = realPart $ z * conjugate z
-
--- | Bestimmt den Imaginärteil einer Zahl.
-imagPart :: (HasConjugation a) => a -> RealSubring a
-imagPart = negate . realPart . (imagUnit *)
 
 -- | Klasse für Ringe, die für Debuggingzwecke eine Approximation durch
 -- komplexe Fließkommazahlen zulassen.

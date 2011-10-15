@@ -63,11 +63,11 @@ diagonalForm mtx
     | numRows mtx == 0 || numCols mtx == 0
     = []
     | not (null badCols)
-    = withNontrivialRows mtx $ diagonalForm . makeZeroInFirstRow (head badCols)
+    = withNontrivialRows (diagonalForm . makeZeroInFirstRow (head badCols)) mtx
     | not (null badRows)
-    = withNontrivialCols mtx $ diagonalForm . makeZeroInFirstCol (head badRows)
+    = withNontrivialCols (diagonalForm . makeZeroInFirstCol (head badRows)) mtx
     | otherwise
-    = mtx !! (0,0) : withNontrivialRowsCols mtx (diagonalForm . deleteRow 0 . deleteColumn 0)
+    = mtx !! (0,0) : withNontrivialRowsCols (diagonalForm . deleteRow 0 . deleteColumn 0) mtx
     where
     badCols = [j | j <- [1..numCols mtx - 1], mtx !! (0,j) /= zero]
     badRows = [i | i <- [1..numRows mtx - 1], mtx !! (i,0) /= zero]
@@ -165,10 +165,10 @@ determinant mtx
     | numRows mtx == 0 = unit
     | null badCols     = (mtx !! (0,0)) * restDet
     | otherwise        =
-        withNontrivialRowsCols mtx (flip withSquare determinant . makeZeroInFirstRow (head badCols))
+        withNontrivialRowsCols (withSquare determinant . makeZeroInFirstRow (head badCols)) mtx
     where
     badCols = [j | j <- [1..numCols mtx - 1], mtx !! (0,j) /= zero]
-    restDet = withNontrivialRowsCols mtx (flip withSquare determinant . deleteRow 0 . deleteColumn 0)
+    restDet = withNontrivialRowsCols (withSquare determinant . deleteRow 0 . deleteColumn 0) mtx
 
 -- | Berechnet das charakteristische Polynom (normiert) einer gegebenen Matrix.
 -- Die Körper-Voraussetzung an den Ring stellen wir, um die effizienten

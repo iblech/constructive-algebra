@@ -114,9 +114,9 @@ canonCoeffs :: (Ring a, Eq a) => Poly a -> [a]
 canonCoeffs = reverse . dropWhile (== zero) . reverse . unsafeCoeffs
 
 -- | Liefert für normierte Polynome die Liste der Koeffizienten in
--- kanonisierter Form, also ohne abschließende Nuller. Ander als 'canonCoeffs'
--- benötigt man hier nicht die Diskretheitsvoraussetzung an den Ring, weil
--- man vereinbart hat, dass Polynome in 'NormedPoly' sogar \"echt\",
+-- kanonisierter Form, also ohne abschließende Nuller. Anders als 'canonCoeffs'
+-- benötigen wir hier nicht die Diskretheitsvoraussetzung an den Ring, weil
+-- wir vereinbart haben, dass Polynome in 'NormedPoly' sogar \"echt\",
 -- also ohne abschließende Nuller, normiert sind.
 canonCoeffs' :: (Ring a) => NormedPoly a -> [a]
 canonCoeffs' = unsafeCoeffs . unNormedPoly

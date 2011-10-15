@@ -1,5 +1,13 @@
+-- | Diese Modul stellt Ringe algebraischer Zahlen zur Verfügung, also
+-- Ganzheitsringe über Körpern: Zu einem 'RingMorphism' /m/ ist 'Alg' m
+-- der Typ derjenigen Elemente von 'Codomain' /m/, welcher über 'Domain' m
+-- algebraisch sind. Dabei muss der Ring 'Domain' m ein Körper sein.
+--
+-- Das Hauptbeispiel bilden die algebraischen Elemente der komplexen Zahlen,
+-- 'Alg' 'QinC', und der reellen Zahlen, 'Alg' 'QinR'.
 {-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, FlexibleContexts,
-StandaloneDeriving, UndecidableInstances, FlexibleInstances, PatternGuards #-}
+StandaloneDeriving, UndecidableInstances, FlexibleInstances, PatternGuards,
+DatatypeContexts #-}
 module Algebraic where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger)
@@ -18,7 +26,6 @@ import Control.Arrow
 import Data.Ratio
 import Euclidean
 import Debug.Trace
-import Control.Exception
 
 -- früher: newtype (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => Alg m =
 -- dann Codomain m ~ Complex weggelassen
@@ -35,38 +42,23 @@ instance HasConjugation (Alg QinC) where
     conjugate (MkAlg z) = MkAlg (conjugate z)
     realPart  (MkAlg z) = MkAlg (realPart  z)
     imagUnit            = MkAlg imagUnit
---deriving instance HasConjugation (Alg QinC)
 
-instance Field (Alg QinC) where
-    recip = unsafeRunR . invert
+fromRealAlg :: Alg QinR -> Alg QinC
+fromRealAlg (MkAlg (MkIC z p)) = MkAlg $ MkIC (fmap fromRational z) p
 
 instance IntegralDomain (Alg QinC)
-
--- XXX: effizienz/uneleganz abwiegen
-instance Eq (Alg QinC) where
-    x == y
-        | eval0 (unNormedPoly (polynomial (unAlg z))) /= zero
-        = False
-        | otherwise
-        = unsafeRunR . liftM isNothing $ invert z
-        where z = x - y
-
-instance Field (Alg QinR) where
-    recip = unsafeRunR . invert'
-
 instance IntegralDomain (Alg QinR)
 
-instance Eq (Alg QinR) where
-    x == y = unsafeRunR . liftM isNothing $ invert' (x - y)
+instance Field (Alg QinC) where recip = maybeInvert
+instance Field (Alg QinR) where recip = maybeInvertReal
+
+instance Eq (Alg QinC)    where x == y = isNothing $ maybeInvert (x - y)
+instance Eq (Alg QinR)    where x == y = isNothing $ maybeInvertReal (x - y)
 
 instance Ord (Alg QinR) where
-    compare x y = undefined
-    {-
+    compare x y
         | x == y    = EQ
-        | otherwise = case signum' . number . unAlg $ x - y of
-            N -> LT
-            P -> GT
-            -}
+        | otherwise = signum' . number . unAlg $ x - y
 
 goldenRatio :: Alg QinC
 goldenRatio = MkAlg $ IC.goldenRatio
@@ -74,30 +66,54 @@ goldenRatio = MkAlg $ IC.goldenRatio
 sqrt2 :: Alg QinC
 sqrt2 = MkAlg $ IC.sqrt2
 
-invert :: Alg QinC -> R (Maybe (Alg QinC))
-invert (MkAlg z) = do
-    -- Optimierung
-    --trace ("invert: " ++ show (unsafeApprox z)) $ do
+-- Entscheidet, ob die gegebene algebraische Zahl invertierbar ist, und
+-- wenn ja, bestimmt ihr Inverses.
+maybeInvert :: Alg QinC -> Maybe (Alg QinC)
+-- Die Verwendung von unsafeRunR ist hier offensichtlich sicher.
+maybeInvert (MkAlg z) = unsafeRunR $ do
+    -- Die Auswertung der mit z mitgelieferten Ganzheitsgleichung ist
+    -- üblicherweise sehr teuer. Daher eine einfache Optimierung, um
+    -- im Fall, dass die Nullverschiedenheit von z schon durch 1/1-, 1/10-
+    -- oder 1/100-Näherungen entdeckt werden kann.
     foundApartness <- go [1,10,100]
     if foundApartness then return $ Just zInv else do
-    if null bounds then return Nothing else do
     zeroTest <- magnitudeZeroTestR (roundDownToRecipN $ unF (minimum bounds)) (number z)
     if zeroTest
         then return Nothing
         else return $ Just zInv
     where
-    -- XXX: okay, dass coeffs Nuller liefert?
     as     = canonCoeffs' (polynomial z)
     bs     = dropWhile (== 0) as
     k      = length bs
-    p'     = normalize' . MkPoly . reverse $ bs
-    bounds = 1 : zipWith f (tail bs) [1..]
+    -- Der Beweis im Skript verlangt, dass wir eine Schranke epsilon suchen,
+    -- die echt kleiner als (|b_0| / (k |b_j|))^(1/j) für alle j = 1, ..., k
+    -- ist. Wenn man sich den Beweis genauer anschaut, sieht man, dass es
+    -- genügt, wenn epsilon kleiner oder gleich diesen Wurzeln ist.
+    --
+    -- Die eigentliche Berechnung der j-ten Wurzeln umgehen wir wie folgt:
+    -- Für Zahlen r zwischen 0 und 1 liegt die j-te Wurzel von r stets oberhalb
+    -- von r. Daher ist die Forderung "epsilon <= r" in solchen Fällen sogar
+    -- stärker als "epsilon <= r^(1/j)".
+    --
+    -- Für Zahlen r >= 1 stimmt das nicht. Dann ist aber r^(1/j) >= 1;
+    -- nehmen wir daher 1 stets in die Liste der Schranken auf, machen wir auch
+    -- dann keinen Fehler.
+    --
+    -- Als Preis dafür, dass wir hier keine j-ten Wurzeln berechnen, wird
+    -- unser epsilon (= minimum bounds) kleiner als nötig, weswegen es dann
+    -- magnitudeZeroTestR schwieriger hat.
+    bounds = 1 : map f (tail bs)
 	where
-	f b j
-	    | b == 0    = 1  --FIXME
-	    | otherwise
-	    = abs (head bs) / (fromIntegral k * abs b)
+	f b
+	    | b == 0    = 1  -- sinngemäß unendlich
+	    | otherwise = abs (head bs) / (fromIntegral k * abs b)
+
+    -- Das Inverse von z als algebraische Zahl.
+    -- Wird nur verwendet, wenn die Invertierbarkeit auch wirklich nachgewiesen
+    -- ist.
     zInv   = MkAlg $ MkIC (recip' . number $ z) p'
+    p'     = normalize' . MkPoly . reverse $ bs
+
     go []     = return False
     go (n:ns) = do
         q <- approx n (number z)
@@ -105,23 +121,28 @@ invert (MkAlg z) = do
             then return True
             else go ns
 
-invert' :: Alg QinR -> R (Maybe (Alg QinR))
-invert' (MkAlg (MkIC z p)) = liftM (fmap f) (invert (MkAlg (MkIC (fmap fromRational z) p)))
+-- Wie maybeInvert.
+maybeInvertReal :: Alg QinR -> Maybe (Alg QinR)
+maybeInvertReal = fmap f . maybeInvert . fromRealAlg
     where
+    -- Semantisch nicht zu unterscheiden wäre f = realPart.
+    -- Dieses hier ist effizienter: Da wir wissen, dass z eine reelle
+    -- Zahl sein wird, können wir als Ganzheitsgleichung einfach p
+    -- nehmen. (realPart würde dagegen eine Gleichung für (z + i z) / 2
+    -- berechnen; deren Grad kann doppelt so groß sein, wie der von p!)
     f :: Alg QinC -> Alg QinR
-    f (MkAlg (MkIC z' p')) = MkAlg (MkIC (realPart z') p')
+    f (MkAlg (MkIC z p)) = MkAlg $ MkIC (realPart z) p
 
-tr q = trace ("ANTW.: " ++ show q) $ q
--- FIXME: auch isComplexRational implementieren
--- FIXME: UNBEDINGT Korrektheit mit Skript überprüfen!
-isRational :: Alg QinC -> Maybe Rational
---isRational z = tr $ trace ("PRÜFE AUF RAT.: " ++ show (unsafeApprox z, polynomial . unAlg $ z)) $ listToMaybe $ do
+-- | Entscheidet, ob eine gegebene algebraische Zahl sogar rational ist.
+isRational
+    :: Alg QinC        -- ^ /z/
+    -> Maybe Rational  -- ^ /Just q/, falls /z = q/ für ein rationales /q/,
+                       -- sonst /Nothing/
 isRational z = listToMaybe $ do
     cand <- [zero] ++ nonNegativeCandidates ++ map negate nonNegativeCandidates
     guard $ fromRational cand == z
     return cand
     where
-    -- XXX: okay, dass coeffs Nuller liefert?
     as    = dropWhile (== 0) . canonCoeffs' . polynomial . unAlg $ z
     (r,s) = (numerator &&& denominator) $ unF $ head as
     nonNegativeCandidates =
@@ -129,7 +150,23 @@ isRational z = listToMaybe $ do
         | p <- positiveDivisors r, q <- positiveDivisors s
         ]
 
-isInteger :: Alg QinC -> Maybe Integer
+-- | Entscheidet, ob eine gegebene algebraische Zahl sogar komplexrational ist.
+isComplexRational
+    :: Alg QinC               -- ^ /z/
+    -> Maybe ComplexRational  -- ^ /Just u/, falls /z = u/ für ein
+                              -- komplexrationales /u/, sonst /Nothing/
+isComplexRational z = do
+    x <- isRational . fromRealAlg . realPart $ z
+    y <- isRational . fromRealAlg . imagPart $ z
+    return $ x :+: y
+
+-- | Entscheidet, ob eine gegebene algebraische Zahl sogar eine ganze Zahl ist.
+-- Folgende Spezifikation wird für alle ganzen Zahlen /n/ erfüllt:
+--
+-- > isInteger z == Just n  <==>  z = n.
+isInteger
+    :: Alg QinC       -- ^ /z/
+    -> Maybe Integer  -- ^ /Just n/, falls /z = n/ für ein ganzzahliges /n/, sonst Nothing
 isInteger z
     | Nothing <- isApproxInteger z = Nothing
     | otherwise                    = do
@@ -137,32 +174,37 @@ isInteger z
         let (n,m) = numerator r `quotRem` denominator r
         if m == 0 then return n else Nothing
 
--- ist z = a mit a ganzzahlig, dann ist isApproxInteger z = a.
--- liefert sonst näheste ganze Zahl, oder Nothing, falls klar ist, dass z nicht
--- ganzzahlig sein kann.
+-- | Entscheidet, ob die übergebene algebraische Zahl ganzzahlig sein kann,
+-- und wenn ja, bestimmt die (dann eindeutig bestimmte) näheste ganze Zahl an
+-- /z/.
+--
+-- Falls man mit irrtümlicherweise als ganzzahlig gemeldeten algebraischen
+-- Zahlen leben kann (etwa, weil man später selbst eine entsprechende Prüfung
+-- durchführt), so ist 'isApproxInteger' effizienter als 'isInteger'.
+--
+-- Folgende Spezifikation wird für alle ganzen Zahlen /n/ erfüllt:
+--
+-- > isApproxInteger z == Just n  <==  z = n.
 isApproxInteger :: Alg QinC -> Maybe Integer
-isApproxInteger z = unsafeRunR $ do
-    R $ putStrLn "* isApproxInteger betreten."
-    R . putStrLn $ "  AST: " ++ show (number (unAlg z))
-    R . putStrLn $ "  Apr: " ++ show (unsafeApprox z)
-    --zz <- R $ evaluate (unsafeApprox z)
-    --R $ putStrLn $ "isApproxInteger: " ++ show zz
-    z0@(q :+: _) <- approx 100 (number . unAlg $ z)
-    R . putStrLn $ "  z0:  " ++ show z0
-    let (a,b) = (floor q, ceiling q)
-    --_ <- R $ evaluate a
-    --_ <- R $ evaluate b
-    --R $ putStrLn $ "isApproxInteger! " ++ show zz ++ ": " ++ show (magnitudeSq (z0 - fromInteger a) <= 1/100^2 || magnitudeSq (z0 - fromInteger b) <= 1/100^2)
-    let res = if magnitudeSq (z0 - fromInteger a) <= 1/100^2 then Just a else if magnitudeSq (z0 - fromInteger b) <= 1/100^2 then Just b else Nothing
-    R . putStrLn $ "  Erg: " ++ show res
-    return res
+isApproxInteger z =
+    let z0@(q :+: _) = unsafeRunR $ approx 100 (number . unAlg $ z)
+        (a,b) = (floor q, ceiling q)
+    in  if magnitudeSq (z0 - fromInteger a) <= 1/100^2 then Just a else
+        if magnitudeSq (z0 - fromInteger b) <= 1/100^2 then Just b else Nothing
+-- XXX: Korrekt?
 
+-- | Entscheidet, ob ein übergebenes Polynom mit algebraischen Koeffizienten
+-- sogar ausschließlich rationale Koeffizienten besitzt.
 isRationalPoly :: Poly (Alg QinC) -> Maybe (Poly Rational)
 isRationalPoly = isGoodPoly isRational
 
+-- | Entscheidet, ob ein übergebenes Polynom mit algebraischen Koeffizienten
+-- sogar ausschließlich ganzzahlige Koeffizienten besitzt.
 isIntegerPoly :: Poly (Alg QinC) -> Maybe (Poly Integer)
 isIntegerPoly = isGoodPoly isInteger
 
+-- | Entscheidet approximativ, ob ein übergebenes Polynom mit algebraischen
+-- Koeffizienten sogar ausschließlich ganzzahlige Koeffizienten besitzt.
 isApproxIntegerPoly :: Poly (Alg QinC) -> Maybe (Poly Integer)
 isApproxIntegerPoly = isGoodPoly isApproxInteger
 
@@ -173,6 +215,12 @@ isGoodPoly isGood p
     where
     as = map isGood $ unsafeCoeffs p
 
+-- | Wertet ein Polynom mit rationalen Koeffizienten in einer algebraischen
+-- Zahl aus. Erfüllt die Spezifikation
+--
+-- > eval x f = Poly.eval x (fmap fromBase f),
+--
+-- ist aber wesentlich effizienter. (Siehe 'IC.eval' in "IntegralClosure".)
 eval 
     :: Alg QinC
     -> Poly Rational

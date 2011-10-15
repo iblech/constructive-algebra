@@ -1,11 +1,11 @@
 -- | Dieses Modul stellt Ganzheitsringe zur Verfügung:
 -- Zu einem 'RingMorphism' /m/ ist 'IC' /m/ der Ring derjenigen Elemente
--- von 'Codomain' /m/, welche über 'Domain'  /m/ ganz sind, also eine
+-- von 'Codomain' /m/, welche über 'Domain' /m/ ganz sind, also eine
 -- normierte Polynomgleichung mit Koeffizienten aus 'Domain' /m/ erfüllen.
-{-# LANGUAGE FlexibleContexts, UndecidableInstances, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts, UndecidableInstances, FlexibleInstances, TypeFamilies, GADTs #-}
 module IntegralClosure
     ( -- * Typen
-      IC(..)
+      IC(..), number, polynomial
       -- * Funktionen
     , IntegralClosure.fromBase
     , IntegralClosure.eval
@@ -48,12 +48,20 @@ import Data.Array
 -- (Eine mögliche Alternativdefinition wäre, den Typ von 'polynomial'
 -- monadisch zu wählen, damit in der Bestimmung der zugehörigen
 -- Ganzheitsgleichung beliebige Nebeneffekte möglich sind.)
-data (RingMorphism m) => IC m = MkIC
-    { number     :: Codomain m
-        -- ^ Element des Zielrings
-    , polynomial :: NormedPoly (Domain m)
-        -- ^ eine die Zugehörigkeit zum Ganzheitsring bezeugende Ganzheitsgleichung
-    }
+data IC m where
+    MkIC
+        :: (RingMorphism m)
+        => Codomain m  -- Element des Zielrings
+        -> NormedPoly (Domain m)
+                       -- eine die Zugehörigkeit zum Ganzheitsring bezeugende
+                       -- Ganzheitsgleichung
+        -> IC m
+
+number :: (RingMorphism m) => IC m -> Codomain m
+number (MkIC z _) = z
+
+polynomial :: (RingMorphism m) => IC m -> NormedPoly (Domain m)
+polynomial (MkIC _ f) = f
 
 -- | Liftet Elemente /x/ des Quellrings in den Ganzheitsring,
 -- mit der trivialen Ganzheitsgleichung /X - x/ als Zeuge der Ganzheit.
@@ -111,7 +119,7 @@ instance (RingMorphism m, HasFloatingApprox (Codomain m)) => HasFloatingApprox (
 -- Polynom; dieses berechnen wir.
 sumAnnihilator :: (Ring a, HasAnnihilatingPolynomials a) => NormedPoly a -> NormedPoly a -> NormedPoly a
 sumAnnihilator f g =
-    flip fromArray' annihilatingPolynomial $
+    fromArray' annihilatingPolynomial $
         listArray ((0,0), (length inds - 1, length inds - 1)) elts
     where
     elts = [arr ij kl | ij <- inds, kl <- inds ]
@@ -145,7 +153,7 @@ props_sumAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), g
 -- besitzt. Das Vorgehen ist das gleiche wie bei 'sumAnnihilator'.
 prodAnnihilator :: (Ring a, HasAnnihilatingPolynomials a) => NormedPoly a -> NormedPoly a -> NormedPoly a
 prodAnnihilator f g =
-    flip fromArray' annihilatingPolynomial $
+    fromArray' annihilatingPolynomial $
         listArray ((0,0), (length inds - 1, length inds - 1)) elts
     where
     elts = [arr ij kl | ij <- inds, kl <- inds ]
@@ -175,14 +183,16 @@ props_prodAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), 
 -- und eines Polynoms /p/ (welches nicht normiert sein muss) eine
 -- Ganzheitsgleichung für das Element /p(x)/.
 --
--- Dies könnte man natürlich einfach durch Einsetzen von /x/ in /p/ und
--- 'sumAnnihilator' sowie 'prodAnnihilator' nutzen, aber die Funktion hier ist
--- wesentlich effizienter: Sie nutzt die /R/-Algebra /R[x]/ mit dem bekannten
--- Erzeugendensystem /x^i/, wobei /i/ von /0/ (einschließlich) bis zum
--- Grad von /f/ läuft (ausschließlich) -- unabhängig vom Grad von /p/!
+-- Dies könnte man natürlich einfach durch geeignetes Einsetzen von /x/ in /p/ und
+-- 'sumAnnihilator' sowie 'prodAnnihilator' erreichen, aber die Funktion hier ist
+-- wesentlich effizienter: Sie nutzt die /R/-Algebra /R[x]/, die unabhängig von
+-- dem Grad von /p/ das bekannte Erzeugendensystem /x^i/, wobei /i/ von /0/
+-- (einschließlich) bis zum Grad von /f/ läuft (ausschließlich, besitzt.
+--
+-- Somit ist der Grad des ermittelten Polynoms dann höchstens (/<=/) der von /f/.
 evalAnnihilator :: (Ring a, Eq a, HasAnnihilatingPolynomials a) => Poly a -> NormedPoly a -> NormedPoly a
 evalAnnihilator p f =
-    flip fromArray' annihilatingPolynomial $ listArray ((0,0), (n-1, n-1)) elts
+    fromArray' annihilatingPolynomial $ listArray ((0,0), (n-1, n-1)) elts
     where
     elts  = concatMap row [0..fromIntegral (n-1)]
     n     = pred . length . canonCoeffs' $ f
