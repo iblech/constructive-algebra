@@ -3,10 +3,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
 module Field where
 
-import Prelude (Show, Eq, Ord, (.), map, Maybe(..), otherwise, error, (==))
+import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger, sum, product)
 import qualified Prelude as P
 import Ring
 import Testing
+import Proxy
 
 import Data.Ratio
 
@@ -26,9 +27,9 @@ class (IntegralDomain a) => Field a where
 newtype F a = F { unF :: a }
     deriving (Eq,Ord,Ring,IntegralDomain,Field,P.Num,P.Fractional,HasTestableAssociatedness,HasRationalEmbedding,HasFloatingApprox,Arbitrary)
 instance (Show a, Field a) => Show (F a) where
-    show        = P.show . unF
-    showsPrec i = P.showsPrec i . unF
-    showList    = P.showList . map unF
+    show        = show . unF
+    showsPrec i = showsPrec i . unF
+    showList    = showList . map unF
 
 -- | Syntaktischer Zucker, um bequemer Divisionen formulieren zu können.
 -- Ist der Divisor null, wird eine Laufzeitausnahme geworfen.
@@ -40,3 +41,12 @@ infixl 7 /
 
 instance (IntegralDomain a, P.Integral a) => Field (Ratio a) where
     recip z = if z == zero then Nothing else Just (P.recip z)
+
+props_fieldAxioms :: (Field a, Eq a, Arbitrary a, Show a) => Proxy a -> [Property]
+props_fieldAxioms a =
+    props_ringAxioms a ++
+    [ forAll arbitrary $ \x ->
+        case recip (x `asTypeOfProxy` a) of
+            Just y  -> x /= zero && x * y == unit
+            Nothing -> x == zero
+    ]

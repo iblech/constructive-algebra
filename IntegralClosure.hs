@@ -74,12 +74,7 @@ fromBase x = r
 
 instance (RingMorphism m, HasAnnihilatingPolynomials (Domain m)) => Ring (IC m) where
     MkIC x p + MkIC x' p' = MkIC (x + x') (sumAnnihilator p p')
-    MkIC x p * MkIC x' p'
-        {-
-        | couldBeNotX (unNormedPoly p)  == False = zero
-        | couldBeNotX (unNormedPoly p') == False = zero
-        -}
-        | otherwise                              = MkIC (x * x') (prodAnnihilator p p')
+    MkIC x p * MkIC x' p' = MkIC (x * x') (prodAnnihilator p p')
 
     negate (MkIC x p) = MkIC (negate x) (MkNormedPoly (MkPoly as))
 	where

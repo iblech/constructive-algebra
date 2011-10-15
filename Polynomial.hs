@@ -26,6 +26,7 @@ import Testing
 import Control.Monad
 import Data.Ratio
 import NumericHelper
+import Proxy
 
 -- | Typ der Polynome über 'a', repräsentiert durch die zugehörigen Folgen der
 -- Koeffizienten, von niedrigster zur höchsten Potenz geordnet. Die Darstellung
@@ -276,3 +277,6 @@ simpleNonconstantRationalPoly = do
     as <- replicateM n simpleRational
     a  <- simpleNonzeroRational
     return $ MkPoly $ as ++ [a]
+
+props_Polynomial :: [Property]
+props_Polynomial = props_ringAxioms (undefined :: Proxy (Poly Rational))

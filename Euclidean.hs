@@ -28,7 +28,7 @@ import Data.Maybe
 -- ist und die Norm von /r/ echt kleiner als die von /y/ ist.
 class (IntegralDomain a) => EuclideanRing a where
     -- | Die Normabbildung. Muss auf dem Nullelement nicht definiert sein.
-    degree  :: a -> Nat
+    degree :: a -> Nat
 
     -- | Division mit Rest.
     quotRem
@@ -170,7 +170,9 @@ euclidChain' a b
     | b == zero = [a]
     | otherwise = a : euclidChain' b (negate . snd $ a `quotRem` b)
 
-props_Euclidean =
-    props_gcd (undefined :: Proxy Integer) ++
-    props_gcd (undefined :: Proxy (F Rational)) ++
-    props_gcdInteger
+props_Euclidean :: [Property]
+props_Euclidean = concat
+    [ props_gcd (undefined :: Proxy Integer)
+    , props_gcd (undefined :: Proxy (F Rational))
+    , props_gcdInteger
+    ]

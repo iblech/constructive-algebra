@@ -62,9 +62,9 @@ allIntegers = 0 : go 1 where go n = n : (-n) : go (n + 1)
 galoisGroup :: Poly Rational -> ([Alg QinC], [[Int]])
 galoisGroup f = trace debugMsg $ (xs, sigmas)
     where
-    -- Die Nullstellen von f. Hier schon mit simplify' die entsprechenden
+    -- Die Nullstellen von f. Hier schon mit simplifyAlg die entsprechenden
     -- Minimalpolynome zu finden, bringt einiges an Effizienz.
-    xs         = map simplify' $ roots f
+    xs         = map simplifyAlg $ roots f
 
     -- t ist ein primitives Element der Nullstellen, wobei die Darstellungen
     --   zipWith (*) (map fromInteger res') xs == t
@@ -161,7 +161,7 @@ primitiveElement x y = (lambda, t, hX, hY)
 -- mit /eval t (hs!!i) == x_i/.
 --
 -- Es wird garantiert, dass auf das zurückgegebene primitive Element schon
--- 'Factoring.simplify'' aufgerufen wurde.
+-- 'Factoring.simplifyAlg' aufgerufen wurde.
 --
 -- Der Name /pseudoResolvent/ erklärt sich dadurch, als dass im Spezifall, dass
 -- die /x_i/ die Nullstellen eines separablen Polynoms sind, zumindest die Zahlen
@@ -171,13 +171,13 @@ pseudoResolvent
     :: [Alg QinC]                              -- ^ /x_1, ..., x_n/
     -> ([Integer], Alg QinC, [Poly Rational])  -- ^ /(lambdas,t,hs)/
 pseudoResolvent []       = ([],  zero,        [])
-pseudoResolvent [x]      = ([1], simplify' x, [iX])
+pseudoResolvent [x]      = ([1], simplifyAlg x, [iX])
 pseudoResolvent (x:y:zs) =
     -- Wir berechnen ein primitives Element u der ersten beiden Zahlen x und y,
     -- und bestimmen dann rekursiv ein primitives Element zu u und den
     -- restlichen Zahlen zs.
     let (lambda, u, hX, hY) = primitiveElement x y
-        u'                  = simplify' u
+        u'                  = simplifyAlg u
         -- u = x + lambda y
         (as, t, hU:hs)      = pseudoResolvent (u':zs)
         -- Es gilt:

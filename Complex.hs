@@ -110,14 +110,14 @@ newtype R a = R { runR :: IO a }
 -- unterworfen. Insbesondere darf er beliebige nicht-deterministische Prozesse
 -- anstoßen, und kann bei der wiederholten Fragen nach einer /1\/n/-Näherung
 -- jedes Mal ein anderes Resultat liefern.
-newtype Approx ex = MkApprox { unApprox :: Nat -> R ex }
+newtype Approx ex = MkApprox { unApprox :: PositiveNat -> R ex }
     deriving (Functor)
 
 -- | Erzeugt einen interaktiven Approximationsalgorithmus, welcher Näherungen
 -- dadurch produziert, indem er den Nutzer auf der Standardkonsole fragt.
 newInteractiveApprox
     :: (Read ex)
-    => ([(Nat, ex)] -> Bool)
+    => ([(PositiveNat, ex)] -> Bool)
                -- ^ Funktion, die übergebene Genauigkeits/Wertepaare
                -- auf Konsistenz prüft, also prüft, ob diese Approximationen
                -- einer ideellen Zahl sein könnten
@@ -236,7 +236,7 @@ instance RingMorphism QinR where
 -- | /approx n z/ bestimmt eine Näherung von /z/, die vom wahren Wert im
 -- Betrag um weniger (<) als /1\/n/ abweicht. Im Allgemeinen werden wiederholte
 -- Auswertungen andere Näherungen berechnen.
-approx :: (NormedRing ex) => Nat -> AST ex -> R ex
+approx :: (NormedRing ex) => PositiveNat -> AST ex -> R ex
 
 -- Einfachster Fall:
 approx _ (Exact q) = return q
@@ -345,7 +345,7 @@ class (Ring a) => HasMagnitudeZeroTest a where
     -- wobei das /oder/ natürlich kein /entweder oder/ ist. Gibt
     -- 'magnitudeZeroTestR' /False/ zurück, so liegt der erste Fall vor,
     -- andernfalls der zweite.
-    magnitudeZeroTestR :: Nat -> a -> R Bool
+    magnitudeZeroTestR :: PositiveNat -> a -> R Bool
 
 instance (NormedRing a, Eq a) => HasMagnitudeZeroTest (AST a) where
     magnitudeZeroTestR _ (Exact q) = return $ q == zero
@@ -363,7 +363,7 @@ instance (NormedRing a, Eq a) => HasMagnitudeZeroTest (AST a) where
 -- > |z_n| > 1/N für alle n >= N  und  |z| > 2/N,
 --
 -- wobei /z_n/ für jede mögliche /1\/n/-Näherung von /z/ steht.
-apartnessBound :: Complex -> R Nat
+apartnessBound :: Complex -> R PositiveNat
 apartnessBound z = go 1
     where
     go i = do

@@ -29,7 +29,7 @@ import TypeLevelNat
 import Ring
 import Testing
 
--- | Approximation an den Typ für natürliche Zahlen (beginnend bei null),
+-- | Approximation an den Typ für natürliche Zahlen (beginnend bei Null),
 -- abweichend vom restlichen Projekt einfach 'Int' statt 'Integer'.
 -- Wird zur Indizierung der Matrizen zugrundeliegenden "Data.Array"s benutzt.
 type Nat = Int
@@ -125,7 +125,9 @@ withSquare
 withSquare k (MkMatrix arr) = fromArray' k arr
 
 -- | Liefert die Anzahl Zeilen und Spalten des zugrundeliegenden Felds.
--- Wird nur intern in diesem Modul benötigt.
+-- Wird nur intern in diesem Modul benötigt. Benutzer dieses Moduls sollten
+-- die Funktionen 'numRows' und 'numCols' verwenden, die auch nur statische
+-- Typinformation benötigen und nichts das zugrundeliegende Feld betrachten.
 dim :: Array (Nat,Nat) a -> (Integer,Integer)
 dim = (succ *** succ) . (fromIntegral *** fromIntegral) . snd . bounds
 

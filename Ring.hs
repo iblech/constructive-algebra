@@ -143,6 +143,15 @@ class (Ring a) => HasTestableAssociatedness a where
     -- Zusammenhang bieten.
     areAssociated :: a -> a -> Maybe a
 
+props_areAssociated :: (HasTestableAssociatedness a, Eq a, Show a, Arbitrary a) => Proxy a -> [Property]
+props_areAssociated a =
+    [ property $ \x y ->
+        case areAssociated x y of
+            Nothing -> True  -- ungenau!
+            Just u  -> y == u * x
+                where _ = x `asTypeOfProxy` a
+    ]
+
 -- | Klasse für Ringe, die eine (dann eindeutige) Einbettung der rationalen
 -- Zahlen zulassen.
 class (Ring a) => HasRationalEmbedding a where
@@ -229,7 +238,7 @@ instance Ring Int where
     negate = P.negate
     fromInteger = P.fromInteger
     couldBeNonZero = (/= 0)
-instance HasFloatingApprox P.Int where
+instance HasFloatingApprox Int where
     unsafeApprox = fromIntegral
 
 -- Der richtige Ring aller ganzen Zahlen, ohne Größenbeschränkung.
@@ -274,3 +283,12 @@ instance (IntegralDomain a, Integral a, HasFloatingApprox a) => HasFloatingAppro
         let (p,q) = (numerator x, denominator x)
         in  unsafeApprox p P./ unsafeApprox q
 instance OrderedRing (Ratio Integer)
+
+props_Ring :: [Property]
+props_Ring = concat
+    [ props_ringAxioms (undefined :: Proxy Integer)
+    , props_ringAxioms (undefined :: Proxy Int)
+    , props_ringAxioms (undefined :: Proxy Rational)
+    , props_areAssociated (undefined :: Proxy Integer)
+    , props_areAssociated (undefined :: Proxy Rational)
+    ]

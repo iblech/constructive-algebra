@@ -118,7 +118,7 @@ props_Approximation f x = (:[]) $ forAll positive $ \n ->
 
 props_ComplexRational :: [Property]
 props_ComplexRational = concat
-    [ props_ringAxioms (undefined :: Proxy ComplexRational)
+    [ props_fieldAxioms (undefined :: Proxy ComplexRational)
     , props_magnitudeSq
     , props_Approximation goldenRatioSeq ((1 P.+ sqrt 5) P./ 2)
     , props_Approximation sqrt2Seq       (sqrt 2)

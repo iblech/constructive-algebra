@@ -21,6 +21,7 @@ import Field
 import Debug.Trace
 import Data.Ratio
 import Testing
+import AlgebraicTesting
 
 -- | Entscheidet zu einem gegebenen Polynom (welches mindestens Grad 1 haben,
 -- sonst aber keine Zusatzvoraussetzungen erfüllen muss), ob es irreduzibel
@@ -154,6 +155,17 @@ minimalPolynomial z = head $ filter (\p -> zero == A.eval z p) factors
     factors   = fmap normalize $ irreducibleFactors $ fmap unF s
 
 -- | Jedes Element vom Typ /Alg QinC/ führt ja eine seine Algebraizität bezeugende
--- Polynomgleichung mit.
-simplify' :: Alg QinC -> Alg QinC
-simplify' z = MkAlg $ MkIC (number . unAlg $ z) (mkNormedPoly $ fmap F $ minimalPolynomial z)
+-- Polynomgleichung mit. Diese Funktion ersetzt diese durch das Minimalpolynom,
+-- ist sonst aber semantisch nicht von der Identitätsfunktion zu unterscheiden.
+--
+-- Aus Effizienzgründen ist es manchmal ratsam, an einigen ausgewählten Stellen
+-- 'simplifyAlg' einzufügen.
+simplifyAlg :: Alg QinC -> Alg QinC
+simplifyAlg z = MkAlg $ MkIC (number . unAlg $ z) (mkNormedPoly $ fmap F $ minimalPolynomial z)
+
+props_simplifyAlg :: [Property]
+props_simplifyAlg =
+    [ forAll arbitrary $ \(Blind z) -> simplifyAlg z == z ]
+
+props_Factoring :: [Property]
+props_Factoring = props_isComposedPoly ++ props_irreducibleFactors ++ props_simplifyAlg

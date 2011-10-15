@@ -22,6 +22,7 @@ import Field
 import Euclidean
 import TypeLevelNat
 import Testing
+import Debug.Trace
 
 -- | Führt eine Transformation derart aus, dass das /(0,j)/-Element null wird;
 -- dazu wird der größte gemeinsame Teiler vom /(0,0)/- und /(0,j)/-Element
@@ -184,10 +185,17 @@ charPoly = mkNormedPoly . unER . determinant . fmap ER . lambdaMatrix
 -- über die Smithsche Normalform von /lambda 1 - A/. Das Minimalpolynom
 -- der eindeutigen /0x0/-Matrix ist das Einspolynom.
 minPoly :: (ReifyNat n, Field a) => SqMatrix n a -> NormedPoly a
-minPoly = normalize' . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix
+minPoly = normalize' . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix . warn
     where
+    -- Ausnahme für die 0x0-Matrix:
     last' xs = if null xs then unit else last xs
-    -- Ausnahme für die 0x0-Matrix
+    warn mtx
+        | numRows mtx >= 10 = flip trace mtx $ concat
+            [ "Warnung: Berechne Minimalpolynom einer "
+            , show (numRows mtx), "x", show (numRows mtx)
+            , "-Matrix!"
+            ]
+        | otherwise         = mtx
 
 -- | Liefert zu einer gegebenen Matrix /A/ die für die Bestimmung von
 -- annihilierenden Polynomen wichtige Matrix /lambda 1 - A/ (mit Einträgen
