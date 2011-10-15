@@ -81,9 +81,9 @@ infixl 6 -
 -- null oder regulär ist), daher fordern wir die Zugehörigkeit zur
 -- /Eq/-Typklasse.
 --
--- Methoden muss ein Typ, der zur 'IntegralDomain'-Klasse gehören möchte,
--- nicht: Denn da in einem Integritätsbereich ein Element genau dann regulär
--- ist, wenn es nicht null ist, wird die geforderte Entscheidungsfähigkeit
+-- Bestimmte Methoden muss ein Typ, der zur 'IntegralDomain'-Klasse gehören
+-- möchte, nicht haben: Denn da in einem Integritätsbereich ein Element genau dann
+-- regulär ist, wenn es nicht null ist, wird die geforderte Entscheidungsfähigkeit
 -- schon durch '(==)' von 'Eq' geliefert.
 class (Ring a, P.Eq a) => IntegralDomain a
 

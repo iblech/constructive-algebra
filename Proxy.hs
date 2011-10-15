@@ -1,5 +1,6 @@
--- | Stellt den Dummytyp 'Proxy' bereit. Wird in "RingMorphism" und
--- "TypeLevelNat" verwendet.
+-- | Stellt den Dummytyp 'Proxy' ohne Elemente bereit. Wird in "RingMorphism",
+-- "TypeLevelNat" und einigen anderen Stellen verwendet, um den Code besser
+-- lesbar zu gestalten.
 {-# LANGUAGE EmptyDataDecls #-}
 module Proxy where
 
@@ -20,3 +21,6 @@ toProxy = undefined
 
 unProxy :: Proxy s -> s
 unProxy = undefined
+
+asTypeOfProxy :: s -> Proxy s -> s
+asTypeOfProxy x _ = x

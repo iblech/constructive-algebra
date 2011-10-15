@@ -22,7 +22,7 @@ class (IntegralDomain a) => Field a where
     -- berechnet sein Inverses.
     recip :: a -> Maybe a
 
--- | Dummytyp um überlappende Instanzdeklarationen vermeiden zu können.
+-- | Dummytyp, um überlappende Instanzdeklarationen vermeiden zu können.
 newtype F a = F { unF :: a }
     deriving (Eq,Ord,Ring,IntegralDomain,Field,P.Num,P.Fractional,HasTestableAssociatedness,HasRationalEmbedding,HasFloatingApprox,Arbitrary)
 instance (Show a, Field a) => Show (F a) where

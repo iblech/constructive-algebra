@@ -31,6 +31,8 @@ makeZeroInFirstRow
     => Nat -> Matrix (S n) m a -> Matrix (S n) m a
 makeZeroInFirstRow j mtx@(MkMatrix arr) = MkMatrix (arr // updates) `asTypeOf` mtx
     where
+    -- Hier ist wichtig, dass wir gcd' statt gcd verwenden, sonst ist
+    -- Terminierung nicht gewährleistet!
     (u,v,s,t) = gcd' (arr ! (0,0)) (arr ! (0,j))
     updates   = do
 	i <- [0..n]
