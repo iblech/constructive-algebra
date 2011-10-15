@@ -1,8 +1,12 @@
+-- | Dieses Modul stellt die komplexen Zahlen (und nebenbei auch die reellen
+-- Zahlen) bereit.
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, DeriveFunctor, FlexibleContexts, UndecidableInstances, EmptyDataDecls, PatternGuards #-}
 module Complex
     ( R(..), unsafeRunR
     , AST(..)
-    , Complex, Real, Approx(..), QinC, QinR, approx
+    , Complex, Real, Approx(..)
+    , newInteractiveApprox, newInteractiveApprox'
+    , QinC, QinR, approx
     , sqrt2, goldenRatio
     , fromBase
     , normUpperBoundR, magnitudeZeroTestR, traceEvals
@@ -10,10 +14,8 @@ module Complex
     where
 
 import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real, catch)
-import qualified Prelude as P
 import Control.Monad (liftM, liftM2)
 import ComplexRational
-import qualified ComplexRational as ComplexRational
 import Ring
 import NormedRing
 import Field
@@ -23,11 +25,8 @@ import System.IO.Unsafe
 import System.IO
 import Control.Exception
 import Text.Printf
-import Debug.Trace
-import System.Time
 import Nat
 import Data.Maybe
-import Data.Ratio
 import Data.IORef
 
 -- | Der Typ der komplexen Zahlen.
@@ -322,7 +321,7 @@ simplify (Mult (Exact q) (Exact r)) = Exact (q*r)
 simplify (Mult (Exact q) (Mult (Exact r) z)) = Mult (Exact (q*r)) z
 
 -- Multiplikation mit 0 und 1 vereinfachen
-simplify (Mult (Exact q) z) | q == zero = zero
+simplify (Mult (Exact q) _) | q == zero = zero
 simplify (Mult (Exact q) z) | q == unit = z
 
 -- Multiplikation einer exakt gegebenen Zahl mit einer Summe
@@ -349,7 +348,7 @@ class (Ring a) => HasMagnitudeZeroTest a where
     magnitudeZeroTestR :: Nat -> a -> R Bool
 
 instance (NormedRing a, Eq a) => HasMagnitudeZeroTest (AST a) where
-    magnitudeZeroTestR n (Exact q) = return $ q == zero
+    magnitudeZeroTestR _ (Exact q) = return $ q == zero
     magnitudeZeroTestR n z = do
         q <- approx (2 * n) z
         return $ norm q (1 / (2*fromInteger n))
