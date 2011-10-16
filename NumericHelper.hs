@@ -64,6 +64,11 @@ props_ilogb = (:[]) $ forAll positive $ \b -> forAll positive $ \n ->
     let k = ilogb b n
     in  b^k <= n && b^(k+1) > n
 
+ilogbUp :: PositiveNat -> Nat -> Integer
+ilogbUp b n =
+    let l = ilogb b n
+    in  if b^l == n then l else l + 1
+
 -- | Bestimmt zu einer gegebenen ganzen Zahl /n ≠ 0/ ihre Primfaktorzerlegung
 -- (in positive Primzahlen). Die Vielfachheiten sind jeweils die zweiten
 -- Komponenten der Paare. Jeder Primfaktor kommt genau einmal in der

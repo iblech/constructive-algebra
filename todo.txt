@@ -16,3 +16,6 @@ Fortschaltung in euclidChain
 Newton überlegen
 
 transzendente zahl!
+
+Neuen go-Code in ZeroRational überprüfen
+QuickCheck für ilogbUp

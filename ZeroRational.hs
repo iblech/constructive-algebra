@@ -45,6 +45,7 @@ import System.IO.Unsafe
 import Data.IORef
 import qualified Data.Map as M
 import RingMorphism
+import NumericHelper
 
 -- Leider gibt es noch keine Typklassensynonyme, daher muss ein CPP-Makro als
 -- Ersatz herhalten. Dieses soll den Kontext für solche Unterkörper der komplexen
@@ -111,7 +112,7 @@ rootsOnSegment z0 z1 p = index zero unit (derivative f) f
     alpha = fromComplexRational z0 + iX * fromComplexRational (z1 - z0)
     p1    = realPart gamma
     p2    = imagPart gamma
-    f     = let (u,v,_,_) = gcd p1 p2 in u*p1 + v*p2
+    f     = let (u,v,_,_) = gcd p1 p2 in normalize $ u*p1 + v*p2
 
 -- | /windingNumber z z' p/ berechnet die algebraische Windungszahl des
 -- Wegs /γ/ mit /γ(t) = p(z + t (z' - z))/ um den Ursprung. Dazu berechnen wir
@@ -270,7 +271,7 @@ divide p c@(Cell2 z0 z1)
     where
     mid   = midpoint c
     midedgeZeros = filter ((== zero) . flip eval' p) [u2, u4, u6, u8]
-    
+
     -- Bezeichnung der neun relevanten Eckpunkte, dem Nummernblock auf der
     -- Tastatur folgend (u1: unten links, u2: unten mitte, ...).
     (u1,u2,u3,u4,u5,u6,u7,u8,u9) =
@@ -354,9 +355,9 @@ roots'
     => (Domain m -> b) -> Poly (Domain m) -> [Alg m]
 roots' inj f =
     flip map [0..n-1] $ \i ->
-        let iters' = go i 1 iters
+        let iters' = go i 0 iters
         in  MkAlg $ MkIC
-                (Ext ("zero" ++ show i) $ MkApprox $ return . genericIndex iters')
+                (Ext ("zero" ++ show i) $ MkApprox $ return . genericIndex iters' . ilogbUp 2)
                 f''
     where
     f''        = squarefreePart f
@@ -364,10 +365,10 @@ roots' inj f =
     radius     = cauchyRadius $ fmap inj f''
     iters      = subdivisions radius $ unNormedPoly $ fmap inj f''
 
-    -- Bestimmt die "Folge" der 1/n-Näherungen für die i-te Nullstelle.
+    -- Bestimmt die "Folge" der 2^(-n)-Näherungen für die i-te Nullstelle.
     -- Die Variable j gibt an, wie genau die als nächstes auszugebene
     -- Approximation sein soll -- sie soll sich von der echten Nullstelle
-    -- um höchstens (im Sinne von "<", nicht "<=") 1/j unterscheiden.
+    -- um höchstens (im Sinne von "<", nicht "<=") 2^(-j) unterscheiden.
     go :: Int -> Integer -> [[(Rational,ComplexRational)]] -> [ComplexRational]
     go i j (cs:css)
         -- Wenn die Nullstellen noch nicht isoliert sind: Weiter machen!
@@ -376,10 +377,10 @@ roots' inj f =
 	= go i j css
 
         -- Wenn die Nullstellen isoliert sind und die Fehlerschranke der
-        -- aktuellen Approximation der i-ten Nullstelle kleiner oder gleich 1/j
+        -- aktuellen Approximation der i-ten Nullstelle kleiner oder gleich 2^(-j)
         -- ist, können wir diese ausgeben und uns dann auf die Suche nach einer
-        -- 1/(j+1)-Approximation begeben.
-	| fst (cs !! i) <= 1 / fromInteger j
+        -- 2^(-(j+1))-Approximation begeben.
+	| fst (cs !! i) <= 1 / 2^fromInteger j
 	= snd (cs !! i) : go i (j + 1) (cs:css)
 
         -- Schließlich kann der Fall eintreten, dass die Nullstellen zwar schon

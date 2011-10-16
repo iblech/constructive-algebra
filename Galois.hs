@@ -104,7 +104,7 @@ galoisGroup f = trace debugMsg $ (xs, sigmas)
         , "  ` Min. Polynom:     " ++ show m
         , "  ` Gal. Konjugierte: " ++ show (map unsafeApprox conjs)
         ] ++
-        zipWith (\i p -> "  ` Nst. #" ++ show i ++ " in t:     " ++ show p) [0..] hs'
+        zipWith (\i p -> "  ` Nst. #" ++ show i ++ " in t:     " ++ show p) [(0::Integer)..] hs'
 
 -- | Berechnet zu zwei gegebenen algebraischen Zahlen /x/ und /y/ ein
 -- primitives Element /t/ in der Form /t = x + lambda*y/ für eine
