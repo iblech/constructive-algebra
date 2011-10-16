@@ -335,7 +335,7 @@ simplify (Add [z]) = z
 simplify (Add (Exact q : Exact r : zs)) = simplify $ Add (Exact (q+r) : zs)
 
 -- Addition von 0
-simplify (Add (Exact q : zs)) | q == zero = Add zs
+simplify (Add (Exact q : zs)) | q == zero = simplify $ Add zs
 
 -- Kommutativität (und Assoziativität) ausnutzen, um die Addition mit
 -- exakten Werten von rechts zu vereinfachen
@@ -343,11 +343,13 @@ simplify (Add zs) | not (null zs), Exact q <- last zs = simplify $ Add $ Exact q
 
 -- Multiplikation exakter Werte
 simplify (Mult (Exact q) (Exact r)) = Exact (q*r)
-simplify (Mult (Exact q) (Mult (Exact r) z)) = Mult (Exact (q*r)) z
+simplify (Mult (Exact q) (Mult (Exact r) z)) = simplify $ Mult (Exact (q*r)) z
 
 -- Multiplikation mit 0 und 1 vereinfachen
-simplify (Mult (Exact q) _) | q == zero = zero
-simplify (Mult (Exact q) z) | q == unit = z
+simplify (Mult   (Add []) _)             = zero
+simplify (Mult _ (Add []))               = zero
+simplify (Mult (Exact q)  _) | q == zero = zero
+simplify (Mult (Exact q)  z) | q == unit = z
 
 -- Multiplikation einer exakt gegebenen Zahl mit einer Summe
 simplify (Mult (Exact q) (Add zs)) = simplify $
