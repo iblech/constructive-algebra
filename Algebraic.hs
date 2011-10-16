@@ -61,6 +61,8 @@ instance Ord (Alg QinR) where
         | x == y    = EQ
         | otherwise = signum' . number . unAlg $ x - y
 
+instance OrderedRing (Alg QinR)
+
 goldenRatio :: Alg QinC
 goldenRatio = MkAlg $ IC.goldenRatio
 

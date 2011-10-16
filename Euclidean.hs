@@ -61,7 +61,7 @@ instance EuclideanRing Integer where
 -- (eine solche gibt es in einem allgemeinen euklidischen Ring ja auch gar
 -- nicht), sondern sollte nur als bis auf Assoziiertheit interpretiert werden.
 gcd
-    :: (EuclideanRing a, Eq a)
+    :: (EuclideanRing a)
     => a   -- ^ /x/
     -> a   -- ^ /y/
     -> (a,a,a,a)  -- ^ /(u,v,s,t)/, mit /d = ux + vy/ ein größter gemeinsamer
@@ -77,12 +77,12 @@ gcd = gcd_ (\_ _ -> Nothing)
 -- Bei /gcd/ dagegen kann auch /(0,1,u,1)/ zurückgegeben werden.
 -- Dies ist im "Smith"-Modul sehr wichtig, um Terminierung beim Algorithmus
 -- für die Smitsche Normalform zu gewährleisten.
-gcd' :: (EuclideanRing a, Eq a, HasTestableAssociatedness a) => a -> a -> (a,a,a,a)
+gcd' :: (EuclideanRing a, HasTestableAssociatedness a) => a -> a -> (a,a,a,a)
 gcd' = gcd_ areAssociated
 
 -- | Wie 'gcd', nur dass der zu verwendende Assoziiertheitstest explizit
 -- vorgegeben werden kann.
-gcd_ :: (EuclideanRing a, Eq a) => (a -> a -> Maybe a) -> a -> a -> (a,a,a,a)
+gcd_ :: (EuclideanRing a) => (a -> a -> Maybe a) -> a -> a -> (a,a,a,a)
 gcd_ associatednessTest a b
     | b == zero
     = (unit, zero, unit, zero)
@@ -98,7 +98,7 @@ gcd_ associatednessTest a b
         s             = t' + q * s'
         t             = s'
 
-props_gcd :: (EuclideanRing a, Eq a, Show a, Arbitrary a) => Proxy a -> [Property]
+props_gcd :: (EuclideanRing a, Show a, Arbitrary a) => Proxy a -> [Property]
 props_gcd x =
     [ property $ \a b -> b /= zero ==>
           let (q,r) = a `quotRem` b
@@ -158,14 +158,14 @@ areCoprime x y = isJust $ areAssociated unit d
 -- Trifft man die Wahlen konsistent, etwa indem man bei ganzen Zahlen fordert,
 -- dass der Rest positiv ist, so sind die Ketten aller Darstellungen eines
 -- Bruchs gleich.)
-euclidChain :: (EuclideanRing a, Eq a) => a -> a -> [a]
+euclidChain :: (EuclideanRing a) => a -> a -> [a]
 euclidChain a b = map (fst . (`quotRem` d)) xs
     where
     xs = euclidChain' b a
     d  = last xs
 
 -- Vorzeichenkonvention für sturmChain
-euclidChain' :: (EuclideanRing a, Eq a) => a -> a -> [a]
+euclidChain' :: (EuclideanRing a) => a -> a -> [a]
 euclidChain' a b
     | b == zero = [a]
     | otherwise = a : euclidChain' b (negate . snd $ a `quotRem` b)

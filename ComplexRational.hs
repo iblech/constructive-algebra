@@ -1,6 +1,6 @@
 -- | Dieses Modul stellt den Datentyp 'ComplexRational' komplexrationaler
 -- Zahlen, also den Elementen von /Q(i)/, bereit.
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, TypeSynonymInstances, FlexibleInstances #-}
 module ComplexRational where
 
 import Data.List (genericIndex)
@@ -16,6 +16,7 @@ import Testing
 import Control.Monad
 import Data.Maybe
 import Proxy
+import NumberField
 
 -- | Typ für komplexrationale Zahlen in kartesischer Darstellung.
 -- Der Konstruktor ist strikt in seinen beiden Argumenten.
@@ -55,10 +56,18 @@ instance Field ComplexRational where
       where sq = x^2 + y^2
 
 instance HasRationalEmbedding ComplexRational where
-  fromRational = (:+: 0)
+    fromRational = (:+: 0)
 
 instance HasFloatingApprox ComplexRational where
-  unsafeApprox (x :+: y) = P.fromRational x C.:+ P.fromRational y
+    unsafeApprox (x :+: y) = P.fromRational x C.:+ P.fromRational y
+
+instance NumberField ComplexRational where
+    type ComplexSuperfield ComplexRational = ComplexRational
+    injComplexSuperfield = id
+
+instance NumberField Rational where
+    type ComplexSuperfield Rational = ComplexRational
+    injComplexSuperfield = fromRational
 
 -- | Ringe, die eine Einbettung der rationalen Zahlen zulassen und außerdem
 -- über eine komplexe Konjugation verfügen, erlauben auch eine Einbettung
