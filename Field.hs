@@ -1,6 +1,6 @@
 -- | Dieses Modul stellt die zentrale Typklasse 'Field' für Körper
 -- zur Verfügung.
-{-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards, TypeFamilies, DeriveFunctor #-}
 module Field where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger, sum, product)
@@ -25,11 +25,19 @@ class (IntegralDomain a) => Field a where
 
 -- | Dummytyp, um überlappende Instanzdeklarationen vermeiden zu können.
 newtype F a = F { unF :: a }
-    deriving (Eq,Ord,Ring,IntegralDomain,Field,P.Num,P.Fractional,HasTestableAssociatedness,HasRationalEmbedding,HasFloatingApprox,Arbitrary)
+    deriving
+    (Eq,Ord,Functor,Ring,IntegralDomain,Field,P.Num,P.Fractional,HasTestableAssociatedness,HasRationalEmbedding,HasFloatingApprox,Arbitrary)
 instance (Show a, Field a) => Show (F a) where
     show        = show . unF
     showsPrec i = showsPrec i . unF
     showList    = showList . map unF
+
+instance (HasConjugation a) => HasConjugation (F a) where
+    type RealSubring (F a) = F (RealSubring a)
+    conjugate = fmap conjugate
+    imagUnit  = F imagUnit
+    realPart  = fmap realPart
+    imagPart  = fmap imagPart
 
 -- | Syntaktischer Zucker, um bequemer Divisionen formulieren zu können.
 -- Ist der Divisor null, wird eine Laufzeitausnahme geworfen.

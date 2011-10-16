@@ -7,7 +7,7 @@ module SimpleExtension
     ( -- * Klassen für Polynome auf Typebene
       ReifyPoly, ReifyIrreduciblePoly
       -- * Datentyp und Funktionen zu einfachen Erweiterungen
-    , SE, canonRep, adjointedRoot, fromBase
+    , SE, canonRep, adjointedRoot, SimpleExtension.fromBase
       -- * Beispiele
     , MinPolySqrt2, Qsqrt2inC
     ) where

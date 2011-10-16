@@ -6,7 +6,8 @@ module Complex
     , AST(..)
     , Complex, Real, Approx(..)
     , newInteractiveApprox, newInteractiveApprox'
-    , QinC, QinR, approx
+    , approx
+    , QinC, QinR, QIinC
     , sqrt2, goldenRatio
     , fromBase
     , normUpperBoundR, magnitudeZeroTestR, traceEvals
@@ -232,6 +233,12 @@ instance RingMorphism QinR where
     type Domain   QinR = F Rational
     type Codomain QinR = Real
     mor _ = Exact . fromRational . unF
+
+data QIinC
+instance RingMorphism QIinC where
+    type Domain   QIinC = F ComplexRational
+    type Codomain QIinC = Complex
+    mor _ = Exact . unF
 
 -- | /approx n z/ bestimmt eine Näherung von /z/, die vom wahren Wert im
 -- Betrag um weniger (<) als /1\/n/ abweicht. Im Allgemeinen werden wiederholte

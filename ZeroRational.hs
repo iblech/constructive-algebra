@@ -14,13 +14,13 @@
 -- [1] Michael Eisermann. The Fundamental Theorem of Algebra made effective:
 -- an elementary real-algebraic proof via Sturm chains. 2009.
 -- arXiv:0808.0097v2 [math.AG]
-{-# LANGUAGE PatternGuards, TupleSections, CPP, FlexibleContexts #-}
+{-# LANGUAGE PatternGuards, TupleSections, CPP, FlexibleContexts, TypeFamilies #-}
 module ZeroRational
     ( signChanges, signChanges'
     , sturmChain, index
     , rootsOnSegment, windingNumber, rootsOnRectangle
     , Cell(..), midpoint
-    , divide, cauchyRadius, roots
+    , divide, cauchyRadius, roots, roots'
     , subdivisions, newton, newtonPrecondition
     ) where
 
@@ -41,6 +41,7 @@ import Data.List hiding (sum)
 import System.IO.Unsafe
 import Data.IORef
 import qualified Data.Map as M
+import RingMorphism
 
 #define SubComplex(a) \
     Field a, HasRationalEmbedding a, HasConjugation a, \
@@ -322,7 +323,8 @@ roots f = unsafePerformIO $ do
     case canonCoeffs f `M.lookup` table of
         Just zs -> return zs
         Nothing -> do
-            let zs = roots' f
+            trace ("Suche Nullstellen von: " ++ show f) $ do
+            let zs = roots' (fromRational . unF :: F Rational -> ComplexRational) (fmap F f)
             writeIORef rootsMemoTable (M.insert (canonCoeffs f) zs table)
             return zs
 
@@ -338,19 +340,22 @@ rootsMemoTable = unsafePerformIO (newIORef M.empty)
 -- unterteilt. Sobald die Nullstellen isoliert sind, also in jeder Zelle
 -- der aktuellen Unterteilung genau eine Nullstelle liegt, können wir die
 -- Zellmittelpunkte als Näherungen für die entsprechende Nullstelle verwenden.
-roots' :: Poly Rational -> [Alg QinC]
-roots' f =
-    trace ("Suche Nullstellen von (r=" ++ show radius ++ "): " ++ show f) $
+roots'
+    :: ( RingMorphism m, Field (Domain m), Codomain m ~ Complex
+       , SubComplex(b), NormedRing b
+       )
+    => (Domain m -> b) -> Poly (Domain m) -> [Alg m]
+roots' inj f =
     flip map [0..n-1] $ \i ->
         let iters' = go i 1 iters
         in  MkAlg $ MkIC
                 (Ext ("zero" ++ show i) $ MkApprox $ return . genericIndex iters')
-                (fmap F f'')
+                f''
     where
     f''        = squarefreePart f
     n          = fromIntegral . degree . unNormedPoly $ f'' :: Int
-    radius     = cauchyRadius $ fmap (fromRational :: Rational -> ComplexRational) f''
-    iters      = subdivisions radius $ unNormedPoly $ fmap (fromRational :: Rational -> ComplexRational) f''
+    radius     = cauchyRadius $ fmap inj f''
+    iters      = subdivisions radius $ unNormedPoly $ fmap inj f''
 
     -- Bestimmt die "Folge" der 1/n-Näherungen für die i-te Nullstelle.
     -- Die Variable j gibt an, wie genau die als nächstes auszugebene
@@ -462,3 +467,6 @@ ex5 = iX^3 - fromInteger 1
 
 ex6 :: Poly Rational
 ex6 = Poly.fromBase (1/8)*iX^3 + Poly.fromBase (1/2)*iX
+
+ex7 :: [Alg QIinC]
+ex7 = roots' unF ((iX - imagUnit)^3 + (iX^2 + fromComplexRational (5 :+: 3) * iX + fromRational 2))
