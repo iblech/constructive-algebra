@@ -2,14 +2,14 @@
 -- Zu einem 'RingMorphism' /m/ ist 'IC' /m/ der Ring derjenigen Elemente
 -- von 'Codomain' /m/, welche über 'Domain' /m/ ganz sind, also eine
 -- normierte Polynomgleichung mit Koeffizienten aus 'Domain' /m/ erfüllen.
-{-# LANGUAGE FlexibleContexts, UndecidableInstances, FlexibleInstances, TypeFamilies, GADTs #-}
+{-# LANGUAGE FlexibleContexts, UndecidableInstances, FlexibleInstances, TypeFamilies, GADTs, StandaloneDeriving #-}
 module IntegralClosure
     ( -- * Typen
       IC(..), number, polynomial
       -- * Funktionen
     , IntegralClosure.fromBase
     , IntegralClosure.eval
-      -- * Hilfsfunktionen
+      -- * Hilfsfunktionen (nur intern verwendet)
     , sumAnnihilator, prodAnnihilator, evalAnnihilator, verifyPolynomial
       -- * Beispiele
     , goldenRatio, sqrt2
@@ -48,6 +48,9 @@ import Data.Array
 -- (Eine mögliche Alternativdefinition wäre, den Typ von 'polynomial'
 -- monadisch zu wählen, damit in der Bestimmung der zugehörigen
 -- Ganzheitsgleichung beliebige Nebeneffekte möglich sind.)
+--
+-- Die Show-Instanz respektiert nicht Gleichheit, zwei gleiche Zahlen können
+-- also verschieden formatiert werden.
 data IC m where
     MkIC
         :: (RingMorphism m)
@@ -56,6 +59,8 @@ data IC m where
                        -- eine die Zugehörigkeit zum Ganzheitsring bezeugende
                        -- Ganzheitsgleichung
         -> IC m
+
+deriving instance (RingMorphism m, Eq (Domain m), Show (Domain m), Show (Codomain m)) => Show (IC m)
 
 number :: (RingMorphism m) => IC m -> Codomain m
 number (MkIC z _) = z

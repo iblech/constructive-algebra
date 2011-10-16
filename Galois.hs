@@ -97,13 +97,14 @@ galoisGroup f = trace debugMsg $ (xs, sigmas)
                 -- aus der Theorie wissen wir, dass diese Liste aus genau einem
                 -- Element besteht.
 
-    debugMsg = concat $ intersperse "\n"
+    debugMsg = concat $ intersperse "\n" $
         [ "Zur Galoisgruppe von: " ++ show f
-        , "Nullstellen:          " ++ show (map unsafeApprox xs)
-        , "Prim. Element:        " ++ show res' ++ " * xs ~~ " ++ show (unsafeApprox t)
-        , "Min. Polynom:         " ++ show m
-        , "Gal. Konjugierte:     " ++ show (map unsafeApprox conjs)
-        ]
+        , "` Nullstellen:        " ++ show (map unsafeApprox xs)
+        , "` Prim. Element t:    " ++ show res' ++ " * xs ~~ " ++ show (unsafeApprox t)
+        , "  ` Min. Polynom:     " ++ show m
+        , "  ` Gal. Konjugierte: " ++ show (map unsafeApprox conjs)
+        ] ++
+        zipWith (\i p -> "  ` Nst. #" ++ show i ++ " in t:     " ++ show p) [0..] hs'
 
 -- | Berechnet zu zwei gegebenen algebraischen Zahlen /x/ und /y/ ein
 -- primitives Element /t/ in der Form /t = x + lambda*y/ für eine

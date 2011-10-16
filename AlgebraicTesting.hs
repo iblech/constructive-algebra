@@ -3,9 +3,6 @@ module AlgebraicTesting where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger)
 import Ring
-import RingMorphism
-import NormedRing
-import Proxy
 import Complex
 import ComplexRational
 import Algebraic
@@ -25,7 +22,7 @@ instance Arbitrary (Alg QinC) where
 props_maybeInvert :: [Property]
 props_maybeInvert =
     [ forAll arbitrary $ \(Blind z) ->
-        case maybeInvert (z :: Alg QinC) of
+        case recip (z :: Alg QinC) of
             Nothing -> z == zero
             Just z' -> z * z' == unit
     ]

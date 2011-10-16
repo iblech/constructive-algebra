@@ -1,8 +1,3 @@
-R durch beliebige Monade parametrisieren
-
-Complex zu Vervollständigung eines bel. Raums mit submultiplikativen |.|
-verallgemeinern. Dann sind Real, Complex zwei Beispiele
-
 Subresultanten zur beschleunigten Berechnung von Summen/Produkt-Polynomen
 siehe http://www.alexhealy.net/papers/math250a.pdf
 referenziert wird: http://www.math.colostate.edu/~hulpke/paper/gov.pdf
@@ -11,23 +6,13 @@ AnnihilatingPoly für IntBer.
 
 Gestaffelte Gradberechnung zum Finden des MP nutzen!?
 
-Field/IntegralDomain-Mess.
-
 Modulimporte sortieren
 
 normedQuotRem so umschreiben, dass Eq-Bedingung unnötig wird.
-Dann nochmal evalAnnihilator prüfen!
-Und auch sumAnnihilator und prodAnnihilator -- kommen die mit
-"pseudo"-normierten Polynomen zurecht? Sonst halt doch wieder fordern...
-
 Einheitliches Fehlermeldungsschema
 
 Fortschaltung in euclidChain
 
 Newton überlegen
-
-Besserer Ganzheitscheck in Algebraic
-
-Ist die Galgruppe von X^6 - 1 korrekt?
 
 transzendente zahl!

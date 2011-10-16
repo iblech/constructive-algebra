@@ -14,6 +14,9 @@
 -- [1] Michael Eisermann. The Fundamental Theorem of Algebra made effective:
 -- an elementary real-algebraic proof via Sturm chains. 2009.
 -- arXiv:0808.0097v2 [math.AG]
+--
+-- Einige Typklassenvoraussetzungen sehen in der HTML-Dokumentation schlimmer
+-- aus als im Code, in denen sie mit einem CPP-Makro abgekürzt sind.
 {-# LANGUAGE PatternGuards, TupleSections, CPP, FlexibleContexts, TypeFamilies #-}
 module ZeroRational
     ( signChanges, signChanges'
@@ -43,12 +46,16 @@ import Data.IORef
 import qualified Data.Map as M
 import RingMorphism
 
+-- Leider gibt es noch keine Typklassensynonyme, daher muss ein CPP-Makro als
+-- Ersatz herhalten. Dieses soll den Kontext für solche Unterkörper der komplexen
+-- Zahlen liefern, auf denen die Ordnung auf den zugeordneten Ringen reeller
+-- Elemente entscheidbar ist.
 #define SubComplex(a) \
     Field a, HasRationalEmbedding a, HasConjugation a, \
     Field (RealSubring a), OrderedRing (RealSubring a)
 
 -- | Zählt die Anzahl von Vorzeichenwechseln einer endlichen Liste von Zahlen
--- eines geordneten Rings.  Wechsel von/auf null zählen /1\/2/.
+-- eines geordneten Rings. Wechsel von/auf null zählen /1\/2/.
 signChanges :: (OrderedRing a) => [a] -> Rational
 signChanges xs = sum $ map f (pairs xs)
     where

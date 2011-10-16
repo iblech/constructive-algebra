@@ -1,14 +1,27 @@
--- | Diese Modul stellt Ringe algebraischer Zahlen zur Verfügung, also
--- Ganzheitsringe über Körpern: Zu einem 'RingMorphism' /m/ ist 'Alg' m
--- der Typ derjenigen Elemente von 'Codomain' /m/, welcher über 'Domain' m
--- algebraisch sind. Dabei muss der Ring 'Domain' m ein Körper sein.
+-- | Diese Modul stellt Ringe algebraischer Zahlen zur Verfügung.
+-- Hauptbeispiele sind die über /Q/ algebraischen komplexen Zahlen,
+-- /Alg QinC/, und die über /Q/ algebraischen reellen Zahlen, /Alg QinR/.
 --
--- Das Hauptbeispiel bilden die algebraischen Elemente der komplexen Zahlen,
--- 'Alg' 'QinC', und der reellen Zahlen, 'Alg' 'QinR'.
-{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, FlexibleContexts,
-StandaloneDeriving, UndecidableInstances, FlexibleInstances, PatternGuards,
-DatatypeContexts, CPP #-}
-module Algebraic where
+-- Solche Ringe haben gegenüber beliebigen Ganzheitsringen zwei entscheidende
+-- zusätzliche Merkmale: Sie sind diskret (d.h. Gleichheit ist entscheidbar),
+-- und sie bilden Körper im strengen Sinn (d.h. jedes Element ist entweder
+-- null oder invertierbar, wobei die Inversen explizit konstruierbar sind).
+{-# LANGUAGE CPP, FlexibleContexts, FlexibleInstances,
+    GADTs, GeneralizedNewtypeDeriving, PatternGuards, StandaloneDeriving,
+    TypeFamilies, UndecidableInstances #-}
+module Algebraic
+    ( -- * Typen
+      Alg(..), Algebraic.fromBase
+      -- * Beziehungen zu anderen Zahlbereichen
+    , fromRealAlg
+    , isRational, isComplexRational, isInteger, isApproxInteger
+    , isRationalPoly, isIntegerPoly, isApproxIntegerPoly
+      -- * Rechnungen
+    , Algebraic.eval
+      -- * Beispiele
+    , goldenRatio
+    , sqrt2
+    ) where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger)
 import qualified IntegralClosure as IC
@@ -27,12 +40,25 @@ import Data.Ratio
 import Euclidean
 import NormedRing
 
--- früher: newtype (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => Alg m =
--- dann Codomain m ~ Complex weggelassen
--- FIXME
-newtype (RingMorphism m, Field (Domain m)) => Alg m =
-    MkAlg { unAlg :: IC m }
+-- | Der Datentyp /'Alg' m/ bezeichnet für einen Ringmorphismus /m/
+-- diejenigen Elemente von /'Codomain' m/, die über /'Domain' m/ algebraisch
+-- sind, wobei wir anders als in "IntegralClosure" fordern, dass /'Domain' m/
+-- ein Körper ist.
+--
+-- Da /Ganzheit/ und /Algebraizität/ über Körpern dasselbe bedeuten,
+-- können wir zur Darstellung einfach 'IC' nutzen.
+--
+-- Die Klassenvoraussetzungen für 'Eq', 'IntegralDomain' und 'Field' sehen
+-- in der HTML-Dokumentation sicherlich sehr erschreckend aus, im Code sind sie
+-- durch das CPP-Makro @CanInvert@ besser lesbar.
+--
+-- Die Show-Instanz respektiert nicht Gleichheit, zwei gleiche algebraische
+-- Zahlen können also verschieden formatiert werden.
+newtype Alg m = MkAlg { unAlg :: IC m }
 
+deriving instance (RingMorphism m, Eq (Domain m), Show (Domain m), Show (Codomain m)) => Show (Alg m)
+
+-- | Liftet Elemente des Grundrings in den Ring algebraischer Zahlen.
 fromBase :: (RingMorphism m, Field (Domain m)) => Domain m -> Alg m
 fromBase = MkAlg . IC.fromBase
 
@@ -46,9 +72,9 @@ instance HasConjugation (Alg QinC) where
     realPart  (MkAlg z) = MkAlg (realPart  z)
     imagUnit            = MkAlg imagUnit
 
-fromRealAlg :: Alg QinR -> Alg QinC
-fromRealAlg (MkAlg (MkIC z p)) = MkAlg $ MkIC (fmap fromRational z) p
-
+-- Solange es keine Typklassensynonyme gibt, müssen wir uns mit CPP-Makros
+-- genügen. Folgendes sind genau die Voraussetzungen, die maybeInvert
+-- benötigt.
 #define CanInvert(m) \
     RingMorphism m, Field (Domain m), HasAnnihilatingPolynomials (Domain m), \
     NormedRing (Domain m), \
@@ -57,10 +83,8 @@ fromRealAlg (MkAlg (MkIC z p)) = MkAlg $ MkIC (fmap fromRational z) p
     NormedRing (DenseSubset (Codomain m)), Field (DenseSubset (Codomain m))
 
 instance (CanInvert(m)) => IntegralDomain (Alg m)
-
-instance (CanInvert(m)) => Field (Alg m) where recip = maybeInvert
-
-instance (CanInvert(m)) => Eq (Alg m)    where x == y = isNothing $ maybeInvert (x - y)
+instance (CanInvert(m)) => Field          (Alg m) where recip = maybeInvert
+instance (CanInvert(m)) => Eq             (Alg m) where x == y = isNothing $ maybeInvert (x - y)
 
 instance Ord (Alg QinR) where
     compare x y
@@ -69,18 +93,12 @@ instance Ord (Alg QinR) where
 
 instance OrderedRing (Alg QinR)
 
-goldenRatio :: Alg QinC
-goldenRatio = MkAlg $ IC.goldenRatio
-
-sqrt2 :: Alg QinC
-sqrt2 = MkAlg $ IC.sqrt2
-
--- Entscheidet, ob die gegebene algebraische Zahl invertierbar ist, und
+-- | Entscheidet, ob die gegebene algebraische Zahl invertierbar ist, und
 -- wenn ja, bestimmt ihr Inverses.
 maybeInvert :: (CanInvert(m)) => Alg m -> Maybe (Alg m)
 -- Die Verwendung von unsafeRunR ist hier offensichtlich sicher.
 maybeInvert (MkAlg z) = unsafeRunR $ do
-    -- Die Auswertung der mit z mitgelieferten Ganzheitsgleichung ist
+    -- Die Auswertung der mit z lazy mitgeführten Ganzheitsgleichung ist
     -- üblicherweise sehr teuer. Daher eine einfache Optimierung, um
     -- im Fall, dass die Nullverschiedenheit von z schon durch 1/1-, 1/10-
     -- oder 1/100-Näherungen entdeckt werden kann.
@@ -131,17 +149,9 @@ maybeInvert (MkAlg z) = unsafeRunR $ do
             then return True
             else go ns
 
--- Wie maybeInvert.
-maybeInvertReal :: Alg QinR -> Maybe (Alg QinR)
-maybeInvertReal = fmap f . maybeInvert . fromRealAlg
-    where
-    -- Semantisch nicht zu unterscheiden wäre f = realPart.
-    -- Dieses hier ist effizienter: Da wir wissen, dass z eine reelle
-    -- Zahl sein wird, können wir als Ganzheitsgleichung einfach p
-    -- nehmen. (realPart würde dagegen eine Gleichung für (z + i z) / 2
-    -- berechnen; deren Grad kann doppelt so groß sein, wie der von p!)
-    f :: Alg QinC -> Alg QinR
-    f (MkAlg (MkIC z p)) = MkAlg $ MkIC (realPart z) p
+-- | Liftet eine reell-algebraische Zahl in die komplex-algebraischen Zahlen.
+fromRealAlg :: Alg QinR -> Alg QinC
+fromRealAlg (MkAlg (MkIC z p)) = MkAlg $ MkIC (fmap fromRational z) p
 
 -- | Entscheidet, ob eine gegebene algebraische Zahl sogar rational ist.
 isRational
@@ -201,8 +211,8 @@ isApproxInteger :: Alg QinC -> Maybe Integer
 isApproxInteger z =
     let z0@(q :+: _) = unsafeRunR $ approx 100 (number . unAlg $ z)
         (a,b) = (floor q, ceiling q)
-    in  if magnitudeSq (z0 - fromInteger a) <= 1/100^2 then Just a else
-        if magnitudeSq (z0 - fromInteger b) <= 1/100^2 then Just b else Nothing
+    in  if norm (z0 - fromInteger a) (1/100) then Just a else
+        if norm (z0 - fromInteger b) (1/100) then Just b else Nothing
 -- XXX: Korrekt?
 
 -- | Entscheidet, ob ein übergebenes Polynom mit algebraischen Koeffizienten
@@ -238,3 +248,11 @@ eval
     -> Poly Rational
     -> Alg QinC
 eval z p = MkAlg $ IC.eval (unAlg z) (fmap F p)
+
+-- | Konstante für den goldenen Schnitt.
+goldenRatio :: Alg QinC
+goldenRatio = MkAlg $ IC.goldenRatio
+
+-- | Konstante für die Quadratwurzel aus 2.
+sqrt2 :: Alg QinC
+sqrt2 = MkAlg $ IC.sqrt2

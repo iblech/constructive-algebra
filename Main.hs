@@ -2,20 +2,15 @@ module Main where
 
 import Prelude (print, ($), (.), flip, tail, fst, snd)
 import qualified Prelude as P
-import Data.List hiding (sum)
 import IntegralClosure
 import Ring
-import Complex hiding (goldenRatio)
 import Algebraic as A
 import Control.Monad
-import ZeroRational
 import Factoring
 import Galois
 import Data.List (map)
 import Polynomial
-import System.IO.Unsafe
 import System.IO
-import Field
 
 --main = print =<< runR (ex exPoly)
 --main = mapM_ print $ map (map unsafeApprox) $ galoisGroup $ rootsA $ iX^4 - fromRational 10*iX^2 + unit
