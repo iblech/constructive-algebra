@@ -116,7 +116,7 @@ props_gcd x =
 props_gcdInteger :: [Property]
 props_gcdInteger =
     [ property $ \a b ->
-          let (u,v,s,t) = gcd a b
+          let (u,v,_,_) = gcd a b
               d         = u*a + v*b
               _         = a `asTypeOf` (0 :: Integer)
           in flip all [1..min a b] $ \d' ->

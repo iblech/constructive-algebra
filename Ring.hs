@@ -12,7 +12,7 @@ module Ring
       -- * Allgemeine Funktionen für Ringe
     , sum, product, (^)
       -- * QuickCheck-Eigenschaften
-    , props_ringAxioms
+    , props_ringAxioms, props_areAssociated, props_Ring
     ) where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger, sum, product)

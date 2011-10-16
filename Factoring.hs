@@ -5,7 +5,6 @@
 module Factoring where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
-import qualified Prelude as P
 import Ring
 import Polynomial as Poly
 import ZeroRational
@@ -19,9 +18,8 @@ import Complex
 import IntegralClosure hiding (eval)
 import Field
 import Debug.Trace
-import Data.Ratio
 import Testing
-import AlgebraicTesting
+import AlgebraicTesting ()
 
 -- | Entscheidet zu einem gegebenen Polynom (welches mindestens Grad 1 haben,
 -- sonst aber keine Zusatzvoraussetzungen erfüllen muss), ob es irreduzibel

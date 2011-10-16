@@ -11,9 +11,9 @@ module Polynomial
     , normalize, normalize', leadingCoeff
     , derivative, content, compose
     , squarefreePart
-    , couldBeNotX
     , normedPolyProp
     , simpleNonconstantRationalPoly
+    , props_Polynomial
     ) where
 
 import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, recip, fromInteger, fromRational, quotRem, sum)
@@ -238,17 +238,6 @@ compose
     -> Poly a  -- ^ /f . g/
 compose (MkPoly as) g = sum $ zipWith (\a i -> a .* g^i) as (map fromInteger [0..])
 
--- | Versucht, für ein gegebenes Polynom /f/ die Frage /ist es gleich 'iX'?/ zu
--- beantworten. Da kein diskreter Ring vorausgesetzt wird, kann natürlich
--- im Allgemeinen keine Entscheidung getroffen werden; wir fordern nur folgende
--- Spezifikation:
---
--- > couldBeNotX p == False  ==>  p == iX.
-couldBeNotX :: (Ring a) => Poly a -> P.Bool
-couldBeNotX (MkPoly [a0,a1])
-    | couldBeNonZero a0 == False && couldBeNonZero (a1 - unit) == False = False
-couldBeNotX _ = True
-
 -- | Berechnet zu einem gegebenen Polynom /f/ seinen quadratfreien Anteil (als
 -- normiertes Polynom), also /g/ mit /f = dg/, wobei /d/ den größten
 -- gemeinsamen Teiler von /f/ und /f'/ bezeichne.
@@ -279,4 +268,6 @@ simpleNonconstantRationalPoly = do
     return $ MkPoly $ as ++ [a]
 
 props_Polynomial :: [Property]
-props_Polynomial = props_ringAxioms (undefined :: Proxy (Poly Rational))
+props_Polynomial =
+    props_ringAxioms    (undefined :: Proxy (Poly Rational)) ++
+    props_areAssociated (undefined :: Proxy (Poly Rational))

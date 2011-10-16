@@ -22,11 +22,8 @@ import NumericHelper
 import Polynomial
 import Data.Maybe
 import Control.Monad
-import Control.Arrow
 import Data.Ratio
 import Euclidean
-import Debug.Trace
-import Testing
 
 -- früher: newtype (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => Alg m =
 -- dann Codomain m ~ Complex weggelassen

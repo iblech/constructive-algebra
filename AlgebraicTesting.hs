@@ -13,7 +13,6 @@ import Polynomial
 import qualified Polynomial as Poly
 import IntegralClosure
 import Field
-import Debug.Trace
 import Data.Ratio
 import NumericHelper
 
@@ -53,7 +52,7 @@ props_isInteger =
         case isRational z of
             Just q | numerator q `mod` denominator q == 0 ->
                 isInteger z == Just (unsafeFromRational q)
-            otherwise -> isInteger z == Nothing
+            _ -> isInteger z == Nothing
     ]
 
 props_eval :: [Property]
