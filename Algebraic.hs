@@ -7,13 +7,14 @@
 -- 'Alg' 'QinC', und der reellen Zahlen, 'Alg' 'QinR'.
 {-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, FlexibleContexts,
 StandaloneDeriving, UndecidableInstances, FlexibleInstances, PatternGuards,
-DatatypeContexts #-}
+DatatypeContexts, CPP #-}
 module Algebraic where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger)
 import qualified IntegralClosure as IC
 import IntegralClosure hiding (goldenRatio,sqrt2)
 import Complex hiding (goldenRatio,sqrt2)
+import Smith (HasAnnihilatingPolynomials)
 import ComplexRational
 import Ring
 import Field
@@ -24,6 +25,7 @@ import Data.Maybe
 import Control.Monad
 import Data.Ratio
 import Euclidean
+import NormedRing
 
 -- früher: newtype (RingMorphism m, Field (Domain m), Codomain m ~ Complex) => Alg m =
 -- dann Codomain m ~ Complex weggelassen
@@ -47,14 +49,18 @@ instance HasConjugation (Alg QinC) where
 fromRealAlg :: Alg QinR -> Alg QinC
 fromRealAlg (MkAlg (MkIC z p)) = MkAlg $ MkIC (fmap fromRational z) p
 
-instance IntegralDomain (Alg QinC)
-instance IntegralDomain (Alg QinR)
+#define CanInvert(m) \
+    RingMorphism m, Field (Domain m), HasAnnihilatingPolynomials (Domain m), \
+    NormedRing (Domain m), \
+    HasMagnitudeZeroTest (Codomain m), PseudoField (Codomain m), \
+    HasDenseSubset (Codomain m), \
+    NormedRing (DenseSubset (Codomain m)), Field (DenseSubset (Codomain m))
 
-instance Field (Alg QinC) where recip = maybeInvert
-instance Field (Alg QinR) where recip = maybeInvertReal
+instance (CanInvert(m)) => IntegralDomain (Alg m)
 
-instance Eq (Alg QinC)    where x == y = isNothing $ maybeInvert (x - y)
-instance Eq (Alg QinR)    where x == y = isNothing $ maybeInvertReal (x - y)
+instance (CanInvert(m)) => Field (Alg m) where recip = maybeInvert
+
+instance (CanInvert(m)) => Eq (Alg m)    where x == y = isNothing $ maybeInvert (x - y)
 
 instance Ord (Alg QinR) where
     compare x y
@@ -71,7 +77,7 @@ sqrt2 = MkAlg $ IC.sqrt2
 
 -- Entscheidet, ob die gegebene algebraische Zahl invertierbar ist, und
 -- wenn ja, bestimmt ihr Inverses.
-maybeInvert :: Alg QinC -> Maybe (Alg QinC)
+maybeInvert :: (CanInvert(m)) => Alg m -> Maybe (Alg m)
 -- Die Verwendung von unsafeRunR ist hier offensichtlich sicher.
 maybeInvert (MkAlg z) = unsafeRunR $ do
     -- Die Auswertung der mit z mitgelieferten Ganzheitsgleichung ist
@@ -80,23 +86,23 @@ maybeInvert (MkAlg z) = unsafeRunR $ do
     -- oder 1/100-Näherungen entdeckt werden kann.
     foundApartness <- go [1,10,100]
     if foundApartness then return $ Just zInv else do
-    zeroTest <- magnitudeZeroTestR (roundDownToRecipN $ unF (minimum bounds)) (number z)
+    zeroTest <- magnitudeZeroTestR (roundDownToRecipN $ minimum bounds) (number z)
     if zeroTest
         then return Nothing
         else return $ Just zInv
     where
     as     = canonCoeffs' (polynomial z)
-    bs     = dropWhile (== 0) as
+    bs     = dropWhile (== zero) as
     k      = length bs
     -- Der Beweis im Skript verlangt, dass wir eine Schranke epsilon suchen,
     -- die echt kleiner als (|b_0| / (k |b_j|))^(1/j) für alle j = 1, ..., k
     -- ist. Wenn man sich den Beweis genauer anschaut, sieht man, dass es
     -- genügt, wenn epsilon kleiner oder gleich diesen Wurzeln ist.
     --
-    -- Die eigentliche Berechnung der j-ten Wurzeln umgehen wir wie folgt:
-    -- Für Zahlen r zwischen 0 und 1 liegt die j-te Wurzel von r stets oberhalb
-    -- von r. Daher ist die Forderung "epsilon <= r" in solchen Fällen sogar
-    -- stärker als "epsilon <= r^(1/j)".
+    -- Wir wollen allerdings die j-ten Wurzeln nicht berechnen. Dazu folgende
+    -- Beobachtung: Für Zahlen r zwischen 0 und 1 liegt die j-te Wurzel von r
+    -- stets oberhalb von r. Daher ist die Forderung "epsilon <= r" in solchen
+    -- Fällen sogar stärker als "epsilon <= r^(1/j)".
     --
     -- Für Zahlen r >= 1 stimmt das nicht. Dann ist aber r^(1/j) >= 1;
     -- nehmen wir daher 1 stets in die Liste der Schranken auf, machen wir auch
@@ -108,19 +114,20 @@ maybeInvert (MkAlg z) = unsafeRunR $ do
     bounds = 1 : map f (tail bs)
 	where
 	f b
-	    | b == 0    = 1  -- sinngemäß unendlich
-	    | otherwise = abs (head bs) / (fromIntegral k * abs b)
+	    | b == zero = unit  -- sinngemäß unendlich
+	    | otherwise = normUpperBound (head bs) * normUpperBound (unit/b) / fromIntegral k
 
     -- Das Inverse von z als algebraische Zahl.
     -- Wird nur verwendet, wenn die Invertierbarkeit auch wirklich nachgewiesen
-    -- ist.
+    -- wurde.
     zInv   = MkAlg $ MkIC (recip' . number $ z) p'
     p'     = normalize' . MkPoly . reverse $ bs
 
     go []     = return False
     go (n:ns) = do
         q <- approx n (number z)
-        if magnitudeSq q >= 1/fromIntegral n^2
+        -- Ist |q| >= 1/n?
+        if q /= zero && norm (unit/q) (fromIntegral n)
             then return True
             else go ns
 

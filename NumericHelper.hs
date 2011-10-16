@@ -6,18 +6,22 @@ import Prelude hiding (gcd)
 import Data.List
 import Data.Ratio
 import Primes
+import Nat
 import Testing
+
+-- | Approximation an den Typ nichtnegativer rationaler Zahlen.
+type NonnegativeRational = Rational
 
 -- | Findet zu einer gegebenen rationalen Zahl /x > 0/ die kleinste positive
 -- Zahl /n/ mit /1\/n < x/.
-roundDownToRecipN :: Rational -> Integer
+roundDownToRecipN :: Rational -> PositiveNat
 roundDownToRecipN x = if recip (fromInteger n) == x then n + 1 else n where n = ceiling . recip $ x
 
 props_roundDownToRecipN :: [Property]
 props_roundDownToRecipN =
     [ forAll positive $ \x ->
         let n = roundDownToRecipN x
-        in  recip (fromInteger n) < x
+        in  n > 0 && recip (fromInteger n) < x
     , forAll positive $ \x -> forAll positive $ \n' ->
         recip (fromInteger n') < x ==> n' >= roundDownToRecipN x
     ]
@@ -40,8 +44,8 @@ props_roundUp =
 -- XXX Quelle?
 -- http://www.haskell.org/pipermail/haskell-cafe/2009-August/065854.html
 -- XXX Bessere Version nehmen!
-ilogb :: Integer -> Integer -> Integer
-ilogb b n | n < 0      = ilogb b (- n)
+ilogb :: PositiveNat -> Nat -> Integer
+ilogb b n | n < 0      = error "ilogb: Negatives Argument!"
           | n < b      = 0
           | otherwise  = (up b n 1) - 1
   where up b n a = if n < (b ^ a)
@@ -101,7 +105,7 @@ props_positiveDivisors = (:[]) $ forAll arbitrary $ \n -> n /= 0 ==>
 -- ihrer nichtnegativen Quadratwurzel.
 --
 -- Quelle: <http://www.haskell.org/haskellwiki/Generic_number_type#squareRoot>
-squareRoot :: Integer -> Integer
+squareRoot :: Nat -> Nat
 squareRoot 0 = 0
 squareRoot 1 = 1
 squareRoot n =
@@ -118,6 +122,23 @@ props_squareRoot = (:[]) $ forAll arbitrary $ \n -> n >= 0 ==>
     let s = squareRoot n
     in  s >= 0 && s*s <= n && (s+1)*(s+1) > n
 
+-- | Bestimmt zu einer gegebenen nichtnegativen rationalen Zahl untere und obere
+-- Schranken für ihre Quadratwurzel.
+squareRootBounds :: NonnegativeRational -> (NonnegativeRational, NonnegativeRational)
+squareRootBounds x = (squareRoot p % squareRootUp q, squareRootUp p % squareRoot q)
+    where
+    (p,q) = (numerator x, denominator x)
+    squareRootUp n =
+        let n' = squareRoot n
+        in  if n'*n' == n then n' else n' + 1
+
+props_squareRootBounds :: [Property]
+props_squareRootBounds =
+    [ property $ \x -> x >= 0 ==>
+        let (u,v) = squareRootBounds x
+        in  u >= 0 && v >= 0 && u*u <= x && x <= v*v
+    ]
+
 -- | Ist eine rationale Zahl /x/ sogar eine ganze Zahl, so liefert
 -- /unsafeFromRational x/ diese ganze Zahl. Sonst wirft sie eine
 -- Laufzeitausnahme.
@@ -128,11 +149,12 @@ unsafeFromRational x
     where
     (q,r) = numerator x `quotRem` denominator x
 
-prop_NumericHelper :: [Property]
-prop_NumericHelper = concat
+props_NumericHelper :: [Property]
+props_NumericHelper = concat
     [ props_roundDownToRecipN
     , props_roundUp
     , props_primeFactors
     , props_positiveDivisors
     , props_squareRoot
+    , props_squareRootBounds
     ]

@@ -4,10 +4,8 @@ module NormedRing where
 import Ring
 import Data.Ratio
 import Proxy
+import NumericHelper (NonnegativeRational)
 import Testing
-
--- | Approximation an den Typ nichtnegativer rationaler Zahlen.
-type NonnegativeRational = Rational
 
 -- | Klasse für Ringe mit Norm, wie beispielsweise 'Rational' und
 -- 'ComplexRational'.

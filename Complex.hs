@@ -6,12 +6,14 @@ module Complex
     , AST(..)
     , Complex, Real, Approx(..)
     , newInteractiveApprox, newInteractiveApprox'
-    , approx
+    , HasDenseSubset(..)
     , QinC, QinR, QIinC
     , sqrt2, goldenRatio
     , fromBase
-    , normUpperBoundR, magnitudeZeroTestR, traceEvals
-    , recip', signum')
+    , normUpperBoundR, HasMagnitudeZeroTest(..), traceEvals
+    , PseudoField(..)
+    , signum'
+    )
     where
 
 import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real, catch)
@@ -240,31 +242,47 @@ instance RingMorphism QIinC where
     type Codomain QIinC = Complex
     mor _ = Exact . unF
 
--- | /approx n z/ bestimmt eine Näherung von /z/, die vom wahren Wert im
--- Betrag um weniger (<) als /1\/n/ abweicht. Im Allgemeinen werden wiederholte
--- Auswertungen andere Näherungen berechnen.
-approx :: (NormedRing ex) => PositiveNat -> AST ex -> R ex
+-- XXX: eigentlich NormedRing-Kontext!
+-- | Klasse für Räume, deren Punkte sich durch Elemente einer gewissen Teilmenge
+-- beliebig genau approximieren lassen.
+--
+-- Wichtigstes Beispiel für uns sind die komplexen Zahlen 'Complex', die sich
+-- durch komplexrationale Zahlen approximieren lassen.
+class HasDenseSubset a where
+    -- | Dicht liegende Teilmenge, durch die approximiert werden soll
+    type DenseSubset a :: *
+
+    -- | /approx n z/ soll eine Näherung von /z/ bestimmen, die vom wahren Wert im
+    -- Betrag um weniger (<) als /1\/n/ abweicht. Wiederholte Auswertungen
+    -- dürfen andere Näherungen berechnen.
+    approx :: PositiveNat -> a -> R (DenseSubset a)
+
+instance (NormedRing ex) => HasDenseSubset (AST ex) where
+    type DenseSubset (AST ex) = ex
+    approx = approx'
+
+approx' :: (NormedRing ex) => PositiveNat -> AST ex -> R ex
 
 -- Einfachster Fall:
-approx _ (Exact q) = return q
+approx' _ (Exact q) = return q
 
 -- Addition eines exakten Werts
-approx n (Add (Exact q : zs)) = liftM (q +) $ approx n $ Add zs
+approx' n (Add (Exact q : zs)) = liftM (q +) $ approx' n $ Add zs
 -- Stelle der Prozess (z_i) eine Zahl i dar.
 -- Dann gilt in der Tat: |(q + z_n) - (q + z)| = |z_n - z| < 1/n.
 
 -- Addition beliebig (endlich) vieler Terme
-approx n (Add zs) = do
+approx' n (Add zs) = do
     let k = length zs
-    vs <- mapM (approx (fromIntegral k*n)) zs
+    vs <- mapM (approx' (fromIntegral k*n)) zs
     return $ Ring.sum vs
 -- Seien die Zahlen z^1, ..., z^k durch (z_i^1), ... (z_i^k) dargestellt.
 -- Dann gilt in der Tat: |z^1_(kn) + ... + z^k_(kn) - (z^1 + ... + z^k)| < k * 1/(nk) = 1/n.
 
 -- Multiplikation mit einem exakten Wert
-approx n (Mult (Exact q) z)
+approx' n (Mult (Exact q) z)
     | k == 0    = return zero
-    | otherwise = liftM (q *) $ approx k z
+    | otherwise = liftM (q *) $ approx' k z
     where k = roundUp (normUpperBound q * fromInteger n)
 -- Sei z durch den Prozess (z_i) dargestellt.
 -- Sei k = roundUp (normUpperBound q * fromInteger n).
@@ -274,11 +292,11 @@ approx n (Mult (Exact q) z)
 -- |q z_k - q z| < normUpperBound q * 1/k <= 1/n.
 
 -- Multiplikation zweier Terme
-approx n (Mult z w) = do
+approx' n (Mult z w) = do
     zBound <- normUpperBoundR z
     wBound <- normUpperBoundR w
     let k = roundUp $ zBound + wBound + 1
-    liftM2 (*) (approx (n*k) z) (approx (n*k) w)
+    liftM2 (*) (approx' (n*k) z) (approx' (n*k) w)
 -- Sei z durch den Prozess (z_i), w durch (w_i) dargestellt.
 -- Sei k wie im Code. Dann gilt:
 -- |z_(kn) w_(kn) - z w|
@@ -290,7 +308,7 @@ approx n (Mult z w) = do
 -- Auswertung einer Zahl, die durch einen Approximationsalgorithmus gegeben ist.
 -- Das ist an dieser Stelle einfach, denn der Approximationsalgorithmus steht
 -- in der Pflicht, eine geeignete Näherung zu konstruieren.
-approx n (Ext _ (MkApprox f)) = f n
+approx' n (Ext _ (MkApprox f)) = f n
 
 -- | Bestimmt eine obere Schranke (im Sinn von '<') für den Betrag der
 -- gegebenen Zahl.
@@ -354,6 +372,16 @@ class (Ring a) => HasMagnitudeZeroTest a where
     -- andernfalls der zweite.
     magnitudeZeroTestR :: PositiveNat -> a -> R Bool
 
+-- XXX: Eigentlich müssten wir einen NormedRing-Kontext fordern!
+-- | Klasse für Ringe, die im Sinne folgender schwächeren Definition Körper sind:
+--
+-- > Für alle /x/, die von Null entfernt sind, gibt es ein Inverses von /x/.
+class (Ring a) => PseudoField a where
+    -- | Sei /z/ von null entfernt, es existiere also eine rationale Zahl /q/ mit
+    -- /|z| >= q > 0/. Dann soll /recip' z/ die Zahl /1\/z/ darstellen.
+    -- 'recip\'' muss sonst nicht definiert sein.
+    recip' :: a -> a
+
 instance (NormedRing a, Eq a) => HasMagnitudeZeroTest (AST a) where
     magnitudeZeroTestR _ (Exact q) = return $ q == zero
     magnitudeZeroTestR n z = do
@@ -370,12 +398,13 @@ instance (NormedRing a, Eq a) => HasMagnitudeZeroTest (AST a) where
 -- > |z_n| > 1/N für alle n >= N  und  |z| > 2/N,
 --
 -- wobei /z_n/ für jede mögliche /1\/n/-Näherung von /z/ steht.
-apartnessBound :: Complex -> R PositiveNat
+apartnessBound :: (Field ex, NormedRing ex) => AST ex -> R PositiveNat
 apartnessBound z = go 1
     where
     go i = do
-	appr <- approx i z
-	if magnitudeSq appr >= (3/fromInteger i)^2
+	q <- approx i z
+        -- Ist |q| >= 3/i?
+	if q /= zero && norm (unit/q) (fromInteger i / 3)
 	    then return i
 	    else go (i + 1)
 -- Zur Korrektheit und Terminierung:
@@ -391,22 +420,20 @@ apartnessBound z = go 1
 -- Setze N := 4k.
 -- Dann gilt: |z_N| >= |z| - |z - z_N| > 1/k - 1/(4k) = (4k-1)/(4k) >= 3/N.
 
--- | Sei /z/ von null entfernt, es existiere also eine rationale Zahl /q/ mit
--- /|z| >= q > 0/. Dann stellt /recip z/ die Zahl /1\/z/ dar.
-recip' :: Complex -> Complex
-recip' (Exact q) = Exact . fromJust . recip $ q
-recip' z = Ext "recip'" $ MkApprox $ \n -> do
-    n0 <- apartnessBound z
-    let n' = halve $ n * n0^2
-    liftM (fromJust . recip) $ approx n' z
-    where
-    halve i
-	| i `mod` 2 == 0 = i `div` 2
-	| otherwise      = i `div` 2 + 1
-    -- Eigenschaft: halve i = Aufrundung(i / 2).
--- Beweis:
--- |1/z_n' - 1/z| = |z - z_n'| / (|z_n'| |z|) <
--- n' = Aufr(n/2 n0^2) >= n0? 
+instance (Field ex, NormedRing ex) => PseudoField (AST ex) where
+    recip' (Exact q) = Exact . fromJust . recip $ q
+    recip' z = Ext "recip'" $ MkApprox $ \n -> do
+        n0 <- apartnessBound z
+        let n' = halve $ n * n0^2
+        liftM (fromJust . recip) $ approx n' z
+        where
+        halve i
+            | i `mod` 2 == 0 = i `div` 2
+            | otherwise      = i `div` 2 + 1
+        -- Eigenschaft: halve i = Aufrundung(i / 2).
+    -- Beweis:
+    -- |1/z_n' - 1/z| = |z - z_n'| / (|z_n'| |z|) <
+    -- n' = Aufr(n/2 n0^2) >= n0? 
 
 -- | Bestimmt das Vorzeichen einer von null entfernten reellen Zahl.
 -- Die Auswertung von /signum' zero/ terminiert nicht.
