@@ -21,6 +21,7 @@ module Algebraic
       -- * Beispiele
     , goldenRatio
     , sqrt2
+    , Algebraic.demo
     ) where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger)
@@ -28,6 +29,7 @@ import qualified IntegralClosure as IC
 import IntegralClosure hiding (goldenRatio,sqrt2)
 import Complex hiding (goldenRatio,sqrt2)
 import Smith (HasAnnihilatingPolynomials)
+import Data.List (sortBy)
 import ComplexRational
 import Ring
 import Field
@@ -39,6 +41,7 @@ import Control.Monad
 import Data.Ratio
 import Euclidean
 import NormedRing
+import Text.Printf
 
 -- | Der Datentyp /'Alg' m/ bezeichnet für einen Ringmorphismus /m/
 -- diejenigen Elemente von /'Codomain' m/, die über /'Domain' m/ algebraisch
@@ -244,15 +247,48 @@ isGoodPoly isGood p
 --
 -- ist aber wesentlich effizienter. (Siehe 'IC.eval' in "IntegralClosure".)
 eval 
-    :: Alg QinC
-    -> Poly Rational
-    -> Alg QinC
-eval z p = MkAlg $ IC.eval (unAlg z) (fmap F p)
+    :: (RingMorphism m, Eq (Domain m), HasAnnihilatingPolynomials (Domain m))
+    => Alg m
+    -> Poly (Domain m)
+    -> Alg m
+eval z p = MkAlg $ IC.eval (unAlg z) p
 
 -- | Konstante für den goldenen Schnitt.
-goldenRatio :: Alg QinC
+goldenRatio :: Alg QinR
 goldenRatio = MkAlg $ IC.goldenRatio
 
 -- | Konstante für die Quadratwurzel aus 2.
-sqrt2 :: Alg QinC
+sqrt2 :: Alg QinR
 sqrt2 = MkAlg $ IC.sqrt2
+
+demo :: IO ()
+demo = do
+    let zs =
+            [ ("41",                  fromInteger 41)
+            , ("zero",                zero)
+            , ("zero'",               sqrt2 - sqrt2)
+            , ("zero''",              goldenRatio * (sqrt2 - sqrt2))
+            , ("goldenRatio",         goldenRatio)
+            , ("sqrt2",               sqrt2)
+            , ("sqrt2^2",             sqrt2^2)
+            , ("sqrt2^5",             sqrt2^5)
+            , ("goldenRatio + sqrt2", goldenRatio + sqrt2)
+            ]
+    mapM_ (uncurry printInfo) zs
+    
+    putStrLn "Nach Größe sortiert:"
+    print $ map fst $ sortBy (\(n,z) (n',z') -> z `compare` z') zs
+
+    where
+    printInfo name z = do
+        putStrLn $ "Zur Zahl z = " ++ name ++ ":"
+        printNumber "z" z
+        case recip z of
+            Nothing -> putStrLn "` ist nicht invertierbar."
+            Just z' -> printNumber "1/z" z'
+        putStrLn $ "` Ist rational? " ++ show (isRational $ fromRealAlg z)
+        putStrLn ""
+    printNumber name z = do
+        printf "` ungefährer Wert    von %s: %s\n" name (show (unsafeApprox z))
+        printf "` Ganzheitsgleichung von %s: %s\n" name
+            (show (unNormedPoly . polynomial . unAlg $ z))

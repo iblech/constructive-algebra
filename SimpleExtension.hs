@@ -9,10 +9,10 @@ module SimpleExtension
       -- * Datentyp und Funktionen zu einfachen Erweiterungen
     , SE, canonRep, adjointedRoot, SimpleExtension.fromBase
       -- * Beispiele
-    , MinPolySqrt2, Qsqrt2inC
+    , MinPolySqrt2, Qsqrt2inR, SimpleExtension.demo
     ) where
 
-import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
+import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd, Real)
 import Ring
 import Field
 import Polynomial hiding (fromBase)
@@ -24,6 +24,7 @@ import Euclidean
 import Data.Maybe
 import Algebraic
 import IntegralClosure hiding (fromBase)
+import Text.Printf
 
 -- | Klasse für Typen, die Polynome auf Typebene darstellen.
 -- Das Gegenstück wäre in Anlehnung an die üblichen Konventionen zur
@@ -86,7 +87,7 @@ instance (ReifyIrreduciblePoly p, Field (BaseRing p)) => Field (SE p) where
         where
         p         = modulus (toProxy z)
         (u,v,_,_) = gcd p f
-        d         = u*f + v*p
+        d         = u*p + v*f
 
 -- | Dummytyp, der das Minimalpolynom der Quadratwurzel aus 2, /X^2 - 2/,
 -- repräsentiert.
@@ -98,12 +99,25 @@ instance ReifyIrreduciblePoly MinPolySqrt2
 
 -- | Dummytyp, der die kanonische Einbettung der rationalen Zahlen in
 -- die Erweiterung /Q[X]\/(X^2-2)/ repräsentiert.
-data Qsqrt2inC
-instance RingMorphism Qsqrt2inC where
-    type Domain   Qsqrt2inC = SE MinPolySqrt2
-    type Codomain Qsqrt2inC = Complex
-    mor _ = Poly.eval Complex.sqrt2 . fmap fromRational . canonRep
+data Qsqrt2inR
+instance RingMorphism Qsqrt2inR where
+    type Domain   Qsqrt2inR = F (SE MinPolySqrt2)
+    type Codomain Qsqrt2inR = Real
+    mor _ = Poly.eval Complex.sqrt2 . fmap fromRational . canonRep . unF
 
--- Beispiel: sqrt2 als Element vom Grad 1 in Q(sqrt2).
-ex :: Alg Qsqrt2inC
-ex = MkAlg $ MkIC Complex.sqrt2 $ mkNormedPoly (iX - Poly.fromBase adjointedRoot)
+demo :: IO ()
+demo = do
+    let zs =
+            [ ("sqrt2",                   sqrt2' :: Alg Qsqrt2inR)
+            , ("goldenRatio",             goldenRatio')
+            , ("sqrt2 + goldenRatio",     sqrt2' + goldenRatio')
+            , ("(sqrt2 + goldenRatio)^2", (sqrt2' + goldenRatio')^2)
+            ]
+    putStrLn "Ganzheitsgleichungen über Q(sqrt2):"
+    flip mapM_ zs $ \(name,z) -> do
+        printf "` %-25s %s\n" (name ++ ":") (show $ unNormedPoly . polynomial . unAlg $ z)
+
+    where
+    -- sqrt(2) als Element vom Grad 1 in Q(sqrt2)
+    sqrt2'       = MkAlg $ MkIC Complex.sqrt2       $ mkNormedPoly (iX - Poly.fromBase (F adjointedRoot))
+    goldenRatio' = MkAlg $ MkIC Complex.goldenRatio $ mkNormedPoly (iX^2 - iX - unit)

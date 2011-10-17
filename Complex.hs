@@ -13,6 +13,7 @@ module Complex
     , normUpperBoundR, HasMagnitudeZeroTest(..), traceEvals
     , PseudoField(..)
     , signum'
+    , Complex.demo
     )
     where
 
@@ -190,6 +191,17 @@ traceEvals name z = Ext name $ MkApprox $ \n -> do
     q' <- R $ evaluate q
     R $ hPutStrLn stderr $ printf "%-5s_%2d = %s" ("[" ++ name ++ "]") n' (show q')
     return q'
+
+-- | /logMalEval z/ gibt ein Paar /(var, z')/ zurück, wobei /z'/ semantisch
+-- nicht von /z/ zu unterscheiden ist, aber seine maximalen Approximationsgesuche
+-- in der veränderlichen Variablen /var/ speichert.
+logMaxEval :: (NormedRing ex) => AST ex -> IO (IORef PositiveNat, AST ex)
+logMaxEval z = do
+    maxNvar <- newIORef 0
+    let z' = Ext "" $ MkApprox $ \n -> do
+        R $ modifyIORef maxNvar (`max` n)
+        approx n z
+    return (maxNvar, z')
 
 instance Show (Approx ex) where
     show _ = "<<nondet>>"
@@ -453,8 +465,29 @@ signum' x = unsafeRunR . liftM (`compare` zero) $ go 1
 -- Sollte nun x_i positiv sein, so ist x_i also >= 1/i und damit x > 0.
 -- Sollte x_i negativ sein, gilt x_i <= -1/i und daher x < 0.
 
-sqrt2 :: Complex
+sqrt2 :: Real
 sqrt2 = Ext "sqrt2" $ MkApprox $ return . sqrt2Seq
 
-goldenRatio :: Complex
+goldenRatio :: Real
 goldenRatio = Ext "goldenRatio" $ MkApprox $ return . goldenRatioSeq
+
+demo :: IO ()
+demo = do
+    (maxNvar, sqrt2') <- logMaxEval sqrt2
+    printInfo "sqrt2"                   sqrt2'
+    printInfo "goldenRatio"             goldenRatio
+    printInfo "sqrt2^2 + 3*goldenRatio" $ sqrt2'^2 + fromInteger 3 * goldenRatio
+    printInfo "(sqrt2 * goldenRatio)^3" $ (sqrt2' * goldenRatio)^3
+
+    maxN <- readIORef maxNvar
+    printf "Bei diesen Berechnungen maximal benötigte Approximation von sqrt2: 1/%d\n" maxN
+
+    where
+    printInfo name z = do
+        printf "Approximationen von %s:\n" name
+        flip mapM_ [1,10,100,1000,10000] $ printApproxs z
+        putStrLn ""
+    printApproxs z n = do
+        q <- runR $ approx n z
+        printf "` auf Genauigkeit < 1/%-6s %-10s ~~ %s\n"
+            (show n ++ ":") (show q) (show (unsafeApprox q))

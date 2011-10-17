@@ -31,20 +31,22 @@ props_isRational :: [Property]
 props_isRational =
     [ forAll simpleRational $ \r -> forAll simpleNonconstantRationalPoly $ \f ->
         let z = MkAlg $ MkIC (fromRational r) . normalize' $ fmap F f * (iX - fromRational r)
-        in  isRational z == Just r && isRational (z + A.sqrt2) == Nothing
+        in  isRational z == Just r && isRational (z + irrationalNumber) == Nothing
         -- Natürlich ist dieser Test nur als Minimalanforderung zu verstehen,
         -- besser wäre es, eine Funktion nonRationalAlgebraicNumber :: Gen (Alg QinC)
         -- zu schreiben. Aber die offensichtliche Implementation würde ja
         -- isRational verwenden, sodass der Test keine Aussagekraft hätte.
     ]
+    where irrationalNumber = fromRealAlg A.sqrt2
 
 props_isComplexRational :: [Property]
 props_isComplexRational =
     [ forAll simpleRational $ \r -> forAll simpleRational $ \s -> forAll simpleNonconstantRationalPoly $ \f ->
         let u = fromComplexRational (r :+: s) :: IC QinC
             z = MkAlg $ MkIC (number u) . normalize' $ fmap F f * unNormedPoly (polynomial u)
-        in  isComplexRational z == Just (r :+: s) && isComplexRational (z + A.sqrt2) == Nothing
+        in  isComplexRational z == Just (r :+: s) && isComplexRational (z + irrationalNumber) == Nothing
     ]
+    where irrationalNumber = fromRealAlg A.sqrt2
 
 props_isInteger :: [Property]
 props_isInteger =
@@ -58,7 +60,7 @@ props_isInteger =
 props_eval :: [Property]
 props_eval =
     [ forAll arbitrary $ \(Blind x) -> forAll simpleNonconstantRationalPoly $ \f ->
-        A.eval x f == Poly.eval x (fmap (A.fromBase . F) f)
+        A.eval (x :: Alg QinC) (fmap F f) == Poly.eval x (fmap (A.fromBase . F) f)
     ]
 
 props_Algebraic :: [Property]

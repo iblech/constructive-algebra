@@ -27,7 +27,7 @@ module ZeroRational
     , subdivisions, newton, newtonPrecondition
     ) where
 
-import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, quotRem, gcd)
+import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
 import Polynomial
 import Ring
 import Field
@@ -39,13 +39,16 @@ import Euclidean
 import ComplexRational
 import NormedRing
 import IntegralClosure hiding (eval)
-import Debug.Trace
-import Data.List hiding (sum)
+import Debug
+import Data.List (genericIndex)
 import System.IO.Unsafe
 import Data.IORef
 import qualified Data.Map as M
 import RingMorphism
 import NumericHelper
+import Text.Printf
+import Nat
+import Testing
 
 -- Leider gibt es noch keine Typklassensynonyme, daher muss ein CPP-Makro als
 -- Ersatz herhalten. Dieses soll den Kontext für solche Unterkörper der komplexen
@@ -331,7 +334,7 @@ roots f = unsafePerformIO $ do
     case canonCoeffs f `M.lookup` table of
         Just zs -> return zs
         Nothing -> do
-            trace ("Suche Nullstellen von: " ++ show f) $ do
+            debug ("Suche Nullstellen von: " ++ show f) $ do
             let zs = roots' (fromRational . unF :: F Rational -> ComplexRational) (fmap F f)
             writeIORef rootsMemoTable (M.insert (canonCoeffs f) zs table)
             return zs
@@ -424,7 +427,7 @@ subdivisions radius f =
 	    = tail $ zipWith (\n x -> [(r / 2^(2^n - 1), x)]) [0..] (newton f' (mid c))
 	    | otherwise
             -}
-	    = go (r/2) $ trace (show c) $ divide f' c
+	    = go (r/2) $ debug (show c) $ divide f' c
     mid (Cell0 z0)    = fromComplexRational $ z0
     mid (Cell1 z0 z1) = fromComplexRational $ (z0 + z1) / fromInteger 2
     mid (Cell2 z0 z1) = fromComplexRational $ (z0 + z1) / fromInteger 2
@@ -455,26 +458,23 @@ newtonPrecondition f x = eval x f /= zero && eval x (derivative f) /= zero && an
     cs       = unsafeCoeffs $ compose f (iX + fromComplexRational x)
     c1sq     = absSq (cs !! 1)
 
-ex :: Poly ComplexRational
-ex = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Poly.fromBase imagUnit))
+demo :: IO ()
+demo = do
+    let f = iX^4 + iX^3 + iX^2 + iX + unit :: Poly Rational
+    putStrLn $ "Nullstellen von " ++ show f ++ " (aus Q[X]):"
+    flip mapM_ [1,10,100,1000,10000] $ printApproxs (roots f)
+    putStrLn ""
 
-ex2 :: Poly ComplexRational
-ex2 = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 3 + fromInteger 4 * Poly.fromBase imagUnit)) * (iX + negate (fromInteger 9 + fromInteger 8 * Poly.fromBase imagUnit))
+    let g = iX^3 + fromComplexRational (3 :+: 5) * iX + fromRational 2 :: Poly (F ComplexRational)
+    putStrLn $ "Nullstellen von " ++ show g ++ " (aus Q(i)[X]):"
+    flip mapM_ [1,10,100,1000,10000] $ printApproxs (roots' unF g :: [Alg QIinC])
 
-ex' :: Poly ComplexRational
-ex' = (iX + negate (fromInteger 3)) * (iX + negate (fromInteger 4))  -- + fromInteger 4 * Poly.fromBase imagUnit))
-
-ex3 :: Poly Rational
-ex3 = iX^2 + fromInteger 1
-
-ex4 :: Poly Rational
-ex4 = iX^2 + iX + fromInteger 1
-
-ex5 :: Poly Rational
-ex5 = iX^3 - fromInteger 1
-
-ex6 :: Poly Rational
-ex6 = Poly.fromBase (1/8)*iX^3 + Poly.fromBase (1/2)*iX
-
-ex7 :: [Alg QIinC]
-ex7 = roots' unF ((iX - imagUnit)^3 + (iX^2 + fromComplexRational (5 :+: 3) * iX + fromRational 2))
+    where
+    printApproxs
+        :: (RingMorphism m, HasDenseSubset (Codomain m), Show (DenseSubset (Codomain m)), HasFloatingApprox (DenseSubset (Codomain m)))
+        => [Alg m] -> PositiveNat -> IO ()
+    printApproxs zs n = do
+        qs <- runR $ mapM (approx n . number . unAlg) zs
+        printf "` auf Genauigkeit < 1/%d:\n" n
+        flip mapM_ qs $ \q -> do
+            printf "  ` %-40s ~~ %s\n" (show q) (show (unsafeApprox q))

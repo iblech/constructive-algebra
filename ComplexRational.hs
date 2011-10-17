@@ -16,7 +16,6 @@ import Testing
 import Control.Monad
 import Data.Maybe
 import Proxy
-import NumberField
 
 -- | Typ für komplexrationale Zahlen in kartesischer Darstellung.
 -- Der Konstruktor ist strikt in seinen beiden Argumenten.
@@ -61,14 +60,6 @@ instance HasRationalEmbedding ComplexRational where
 instance HasFloatingApprox ComplexRational where
     unsafeApprox (x :+: y) = P.fromRational x C.:+ P.fromRational y
 
-instance NumberField ComplexRational where
-    type ComplexSuperfield ComplexRational = ComplexRational
-    injComplexSuperfield = id
-
-instance NumberField Rational where
-    type ComplexSuperfield Rational = ComplexRational
-    injComplexSuperfield = fromRational
-
 -- | Ringe, die eine Einbettung der rationalen Zahlen zulassen und außerdem
 -- über eine komplexe Konjugation verfügen, erlauben auch eine Einbettung
 -- der komplexrationalen Zahlen. Diese ist eindeutig, wenn man fordert, dass
@@ -95,43 +86,11 @@ props_magnitudeSq =
       magnitudeSq (z * u) == magnitudeSq z * magnitudeSq u
   ]
 
--- | Liefert Approximationen an den goldenen Schnitt. Erfüllt folgende
--- Spezifikation:
---
--- > |goldenRatioSeq n - φ| < 1/n für alle n >= 1.
-goldenRatioSeq :: Integer -> ComplexRational
-goldenRatioSeq n = xs `genericIndex` (ilogb 2 n)
-    where xs = iterate ((unit +) . fromJust . recip) unit
--- a_1 = 1, a_(n+1) = 1 + 1/a_n
--- erfüllt |a_n - a| < (4/9)^n für alle n >= 2.
--- Diese Folge hier wird künstlich verlangsamt, sie erfüllt |x_n - x| < 1/n für
--- alle n >= 1.
--- XXX: Bestimmt kann man die Folge noch viel weiter verlangsamen!
-
--- | Liefert Approximationen an /√2/. Erfüllt folgende Spezifikation:
---
--- > |sqrt2Seq n - √2| < 1/n für alle n >= 1.
-sqrt2Seq :: Integer -> ComplexRational
-sqrt2Seq n = xs `genericIndex` ((1 + ilogb 2 n) `div` 2)
-    where xs = map (+ unit) $ iterate (\x -> unit / (fromInteger 2 + x)) zero
--- Die Folge mit
---   a_1 = 0, a_(n+1) = 1/(2+a_n)
--- erfüllt |a_n - (sqrt(2) - 1)| <= gamma^n * c für alle n >= 1
--- mit gamma = 1 / (2 (1 + sqrt(2))) <= 0.2072 und c = 2.
--- Die Folge hier wird daher entsprechend künstlich verlangsamt.
--- XXX: Bestimmt kann man die Folge noch viel weiter verlangsamen!
-
-props_Approximation :: (Integer -> ComplexRational) -> C.Complex P.Double -> [Property]
-props_Approximation f x = (:[]) $ forAll positive $ \n ->
-    C.magnitude (unsafeApprox (f n) P.- x) < P.recip (P.fromInteger n)
-
 props_ComplexRational :: [Property]
 props_ComplexRational = concat
     [ props_fieldAxioms    (undefined :: Proxy ComplexRational)
     , props_normUpperBound (undefined :: Proxy ComplexRational)
     , props_magnitudeSq
-    , props_Approximation goldenRatioSeq ((1 P.+ sqrt 5) P./ 2)
-    , props_Approximation sqrt2Seq       (sqrt 2)
     ]
 
 

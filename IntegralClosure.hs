@@ -229,11 +229,11 @@ verifyPolynomial z@(MkIC x (MkNormedPoly f)) = Poly.eval x $ fmap mor' f
 
 
 -- | Konstante für den goldenen Schnitt.
-goldenRatio :: IC QinC
+goldenRatio :: IC QinR
 goldenRatio = MkIC C.goldenRatio $ mkNormedPoly (iX^2 - iX - unit)
 
 -- | Konstante für die Quadratwurzel aus 2.
-sqrt2 :: IC QinC
+sqrt2 :: IC QinR
 sqrt2 = MkIC C.sqrt2 $ mkNormedPoly (iX^2 - unit - unit)
 
 instance HasConjugation (IC QinC) where

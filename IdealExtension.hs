@@ -44,16 +44,20 @@ module IdealExtension where
 
 import Prelude hiding (gcd, quotRem, (+), (*), (-), (/), (^), negate, recip, fromInteger)
 import Ring
+import RingMorphism
+import NormedRing
+import Smith (HasAnnihilatingPolynomials)
 import Field
 import Polynomial as Poly
 import Euclidean
 import Control.Monad.Reader
 import Control.Monad.Error
-import Debug.Trace
+import Debug
 import Algebraic as A
 import IntegralClosure
 import Complex
 import Data.Maybe
+import Text.Printf
 
 -- | Monade für /ideelle Berechnungen/, also solche, die eine Umgebung vom
 -- Typ /k/ benötigen (in der Anwendung ideeller einfacher Körpererweiterungen
@@ -148,7 +152,7 @@ instance (Field k) => IdealField (ISE k s) where
 
         -- Andernfalls haben wir die echten Faktoren d uns s von p gefunden;
         -- wir müssen die Rechnung abbrechen.
-        trace ("restart!") $ do
+        debug ("IdealExtension: restart!") $ do
         restart (d,s)
 
 -- | Zu jedem gegebenen Zeitpunkt ist die ideelle Körpererweiterung /ISE k s/
@@ -204,18 +208,6 @@ execISE f phi m =
                 then execISE d phi m
                 else execISE s phi m
 
-{-
-ex :: Nondet (ISE Rational s) (Maybe (ISE Rational s))
-ex = do
-    Just x <- idealRecip $ adjointedRoot - unit
-    let z = adjointedRoot^2 - unit - unit
-    let y = (x * (adjointedRoot - unit) - unit) * z
-    idealRecip z
-
-exF :: Poly Rational
-ex F = iX^3 - fromInteger 2
--}
-
 -- | /execISEwithAlgebraic z m/ führt die Berechnung /m/ im Körper /Q(z)/ aus.
 -- Da wir das Minimalpolynom von /z/ nicht bestimmen wollen, realisieren wir
 -- /Q(z)/ als ideellen Oberkörper /Q[X]\/(f)\/, wobei /f/ das durch die
@@ -224,8 +216,34 @@ ex F = iX^3 - fromInteger 2
 -- In "Galois" wird das beispielsweise benutzt, um nach Berechnung eines
 -- primitiven Elements /t/ zu gegebenen Zahlen /x/ und /y/ durch eine Rechnung
 -- in /Q(t)/ ein nichttriviales Polynom /h/ mit /h(t) = x/ zu finden.
-execISEwithAlgebraic :: Alg QinC -> (forall s. Nondet (ISE Rational s) a) -> a
+execISEwithAlgebraic
+    :: ( RingMorphism m
+       , Field      (Domain m)
+       , HasAnnihilatingPolynomials (Domain m)
+       , NormedRing (Domain m)
+       , HasMagnitudeZeroTest (Codomain m)
+       , PseudoField          (Codomain m)
+       , HasDenseSubset (Codomain m)
+       , NormedRing (DenseSubset (Codomain m))
+       , Field      (DenseSubset (Codomain m))
+       )
+    => Alg m -> (forall s. Nondet (ISE (Domain m) s) a) -> a
 execISEwithAlgebraic z m = execISE f phi m
     where
-    f     = unNormedPoly . fmap unF . polynomial . unAlg $ z
+    f     = unNormedPoly . polynomial . unAlg $ z
     phi g = zero == A.eval z g
+
+demo :: IO ()
+demo = do
+    let f = (iX^2 - fromInteger 2) * (iX - fromInteger 3)
+        z = MkAlg $ MkIC Complex.sqrt2 $ MkNormedPoly f :: Alg QinR
+    putStrLn $
+        "Rechnungen im ideellen Oberkörper Q(sqrt(2)), wobei wir von sqrt(2)\n" ++
+        "nur wissen wollen, dass es Nullstelle von\n\tf = " ++ show f ++ "\nist:"
+    
+    flip mapM_ [adjointedRoot - fromInteger 2, adjointedRoot - fromInteger 3] $ \u -> do
+        printf "` Inverses von %s: %s\n"
+            (show u) (show $ execISEwithAlgebraic z (idealRecip u))
+    putStrLn $
+        "Für die zweite Rechnung wurde dabei ein Neustart benötigt,\n" ++
+        "denn 3 ist eine Nullstelle von f."

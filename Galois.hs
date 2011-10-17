@@ -5,7 +5,7 @@
 -- mit den Elementen der Galoisgruppe aus.
 {-# LANGUAGE TupleSections, PatternGuards #-}
 module Galois
-    ( linearResolvent, galoisGroup, primitiveElement, pseudoResolvent )
+    ( linearResolvent, galoisGroup, primitiveElement, pseudoResolvent, Galois.demo )
     where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
@@ -20,11 +20,12 @@ import ZeroRational
 import Algebraic as A
 import Control.Monad
 import Data.Maybe
-import Debug.Trace
 import NumericHelper
 import IdealExtension as I
 import IdealEuclidean
 import Euclidean
+import Text.Printf
+import Testing
 
 -- | Berechnet eine lineare galoissche Resolvente eines normierten separablen
 -- Polynoms über eine Abschätzung, in der die Nullstellen des Polynoms
@@ -56,11 +57,22 @@ pairs (x:xs)   = map (x,) xs ++ pairs xs
 allIntegers :: [Integer]
 allIntegers = 0 : go 1 where go n = n : (-n) : go (n + 1)
 
+-- | Datentyp für Ergebnisse von Galoisgruppenberechnungen von Polynomen
+-- mit Koeffizienten in /r/ und Nullstellen in /a/.
+data GaloisInfo r a = MkGaloisInfo
+    { zeros             :: [a]        -- ^ die Nullstellen des betrachteten Polynoms
+    , primitiveElt      :: a          -- ^ ein primitives Element der Nullstellen
+    , primitiveMinpoly  :: Poly r     -- ^ Minimalpolynom des primitiven Elements
+    , primitiveCombo    :: [Integer]  -- ^ Zahlen /lambda_i/ wie bei 'pseudoResolvent'
+    , rationalExprs     :: [Poly r]   -- ^ Zeugen der Rationalität der Nullstellen
+                                    -- im primitiven Element
+    , primitiveConjs    :: [a]        -- ^ die galoisch Konjugierten des primitiven Elements
+    , groupElts         :: [[Int]]    -- ^ die Element der Galoisgruppe
+    } deriving (Show)
+
 -- | Bestimmt die Galoisgruppe eines normierten separablen Polynoms.
--- Zurückgegeben werden die Nullstellen (als algebraische Zahlen)
--- und die Elemente der Galoisgruppe.
-galoisGroup :: Poly Rational -> ([Alg QinC], [[Int]])
-galoisGroup f = trace debugMsg $ (xs, sigmas)
+galoisGroup :: Poly Rational -> GaloisInfo Rational (Alg QinC)
+galoisGroup f = MkGaloisInfo xs t m res' hs' conjs sigmas
     where
     -- Die Nullstellen von f. Hier schon mit simplifyAlg die entsprechenden
     -- Minimalpolynome zu finden, bringt einiges an Effizienz.
@@ -93,18 +105,9 @@ galoisGroup f = trace debugMsg $ (xs, sigmas)
     sigmas     =
         flip map conjs $ \t' ->
             flip map inds $ \i ->
-                head [ j | j <- inds, xs !! j == A.eval t' (hs' !! i) ]
+                head [ j | j <- inds, xs !! j == A.eval t' (fmap F $ hs' !! i) ]
                 -- aus der Theorie wissen wir, dass diese Liste aus genau einem
                 -- Element besteht.
-
-    debugMsg = concat $ intersperse "\n" $
-        [ "Zur Galoisgruppe von: " ++ show f
-        , "` Nullstellen:        " ++ show (map unsafeApprox xs)
-        , "` Prim. Element t:    " ++ show res' ++ " * xs ~~ " ++ show (unsafeApprox t)
-        , "  ` Min. Polynom:     " ++ show m
-        , "  ` Gal. Konjugierte: " ++ show (map unsafeApprox conjs)
-        ] ++
-        zipWith (\i p -> "  ` Nst. #" ++ show i ++ " in t:     " ++ show p) [(0::Integer)..] hs'
 
 -- | Berechnet zu zwei gegebenen algebraischen Zahlen /x/ und /y/ ein
 -- primitives Element /t/ in der Form /t = x + lambda*y/ für eine
@@ -144,10 +147,10 @@ primitiveElement x y = (lambda, t, hX, hY)
     -- richtigen Erweiterung Q[X]/(m_t) statt der ideellen Erweiterung rechnen.
     -- Dazu müssten wir aber das Minimalpolynom von t auf Typniveau heben, und
     -- das ist wohl die Mühe nicht wert.
-    hY = execISEwithAlgebraic t $ do
+    hY = fmap unF $ execISEwithAlgebraic t $ do
         -- h = f(t - lambda X)
-        let h = fmap I.fromBase f `compose` (Poly.fromBase adjointedRoot - fromInteger lambda * iX)
-        d <- idealNormedGCD (fmap I.fromBase g) h
+        let h = fmap I.fromBase (fmap F f) `compose` (Poly.fromBase adjointedRoot - fromInteger lambda * iX)
+        d <- idealNormedGCD (fmap I.fromBase (fmap F g)) h
         -- Im Skript ist bewiesen, dass d von der Form X-y ist, daher erhalten
         -- wir y (als in t polynomiellen Ausdruck) als die Negation des ersten
         -- Koeffizienten von d.
@@ -155,6 +158,17 @@ primitiveElement x y = (lambda, t, hX, hY)
 
     -- Der Zeuge, dass x in t rational ist, ist einfacher:
     hX = iX - fromInteger lambda * hY
+
+props_primitiveElement :: [Property]
+props_primitiveElement =
+    [ property $ \x y ->
+        let (lambda,t,hX,hY) = primitiveElement x y
+        in  and
+            [ t == x + fromInteger lambda * y
+            , A.eval t (fmap F hX) == x
+            , A.eval t (fmap F hY) == y
+            ]
+    ]
 
 -- | Berechnet zu einer gegebenen Liste von algebraischen Zahlen /x_1,...,x_n/ ein primitives
 -- Element /t/ in der Form /t = lambda_1 x_1 + ... + lambda_n x_n/ und gibt
@@ -185,7 +199,43 @@ pseudoResolvent (x:y:zs) =
         --   t = zipWith (*) as (u':zs)
         --   (hs !! i)(t) = (u':zs) !! i
 
-        -- Wir können die Zeugen der Rationalität modulo dem Minimalpolynom
-        -- des primitiven Elements betrachten.
+        -- Reduktionsoperation modulo des Minimalpolynoms von t
+        reduce :: Poly Rational -> Poly Rational
         reduce = snd . (`quotRem` unNormedPoly (fmap unF . polynomial . unAlg $ t))
-    in  (1 : lambda : tail as, t, reduce (hX `compose` hU) : reduce (hY `compose` hU) : hs)
+
+    -- Wir können die Zeugen der Rationalität,
+    --     x = hX(u) = hX(hU(t)) = (hX . hU)(t)
+    --     y = hY(u) = hY(hU(t)) = (hY . hU)(t)
+    -- modulo dem Minimalpolynom von t betrachten, denn es ist je nur relevant,
+    -- dass die Einsetzung von t zu x bzw. y führt. Das führt zu kleineren
+    -- Polynomen, ist also im Hinblick auf spätere Verwendung effizienter.
+    in (1 : lambda : tail as, t, reduce (hX `compose` hU) : reduce (hY `compose` hU) : hs)
+
+props_pseudoResolvent :: [Property]
+props_pseudoResolvent =
+    [ property $ \xs ->
+        let (lambdas,t,hs) = pseudoResolvent xs
+        in  t == sum (zipWith (*) (map fromInteger lambdas) xs) &&
+            all (\(p,x) -> A.eval t (fmap F p) == x) (zip hs xs)
+    ]
+
+demo :: IO ()
+demo = do
+    flip mapM_ [iX^4 - unit, iX^5 - unit, iX^6 - unit] $ \f -> do
+        putStrLn $ "Zur Galoisgruppe von " ++ show f ++ ":"
+        putStrLn $ formatGaloisInfo $ galoisGroup f
+        putStrLn ""
+
+formatGaloisInfo
+    :: (Eq r, Show r, Ring r, HasFloatingApprox a)
+    => GaloisInfo r a -> String
+formatGaloisInfo gal = concat $ intersperse "\n" $
+    [ "` Nullstellen:        " ++ show (map unsafeApprox (zeros gal))
+    , "` Prim. Element t:    " ++ show (primitiveCombo gal) ++ " * xs ~~ "
+                               ++ show (unsafeApprox (primitiveElt gal))
+    , "  ` Min. Polynom:     " ++ show (primitiveMinpoly gal)
+    , "  ` Gal. Konjugierte: " ++ show (map unsafeApprox (primitiveConjs gal))
+    , concat . intersperse "\n" $ zipWith (\i p -> printf "  ` Nst. #%d in t:     %s" i (show p))
+        [(0::Integer)..] (rationalExprs gal)
+    , "` Galoisgruppe:       " ++ show (groupElts gal)
+    ]

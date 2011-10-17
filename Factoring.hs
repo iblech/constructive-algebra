@@ -17,9 +17,10 @@ import Control.Monad
 import Complex
 import IntegralClosure hiding (eval)
 import Field
-import Debug.Trace
+import Debug
 import Testing
 import AlgebraicTesting ()
+import Text.Printf
 
 -- | Entscheidet zu einem gegebenen Polynom (welches mindestens Grad 1 haben,
 -- sonst aber keine Zusatzvoraussetzungen erfüllen muss), ob es irreduzibel
@@ -31,7 +32,7 @@ isIrreducible
                       -- ^ entweder Nothing (irreduzibel)
                       -- oder /Just (g,h)/ mit /f = gh/ und
                       -- /deg f, deg g >= 1/.
-isIrreducible f = trace ("isIrreducible: " ++ show f) $ isIrreducible' f
+isIrreducible f = debug ("isIrreducible: " ++ show f) $ isIrreducible' f
 
 isIrreducible' :: Poly Rational -> Maybe (Poly Rational,Poly Rational)
 isIrreducible' f
@@ -73,7 +74,7 @@ isIrreducible' f
 	guard $ not $ null xs
 	guard $ length xs <= fromIntegral n `div` 2
 
-	trace ("BEARBEITE: " ++ show (map unsafeApprox xs)) $ do
+	debug ("` bearbeite Faktor: " ++ show (map unsafeApprox xs)) $ do
 	let p = product $ map ((iX -) . Poly.fromBase) xs
 	Just p' <- [isApproxIntegerPoly (fromRational contentInv .* p)]
         -- Da wir nicht isIntegerPoly, sondern nur isApproxIntegerPoly
@@ -146,7 +147,7 @@ props_irreducibleFactors = (:[]) $
 
 -- | Bestimmt das Minimalpolynom einer algebraischen Zahl.
 minimalPolynomial :: Alg QinC -> Poly Rational
-minimalPolynomial z = head $ filter (\p -> zero == A.eval z p) factors
+minimalPolynomial z = head $ filter (\p -> zero == A.eval z (fmap F p)) factors
     where
     f         = unNormedPoly . polynomial . unAlg $ z
     (_,_,s,_) = gcd f (derivative f)
@@ -167,3 +168,15 @@ props_simplifyAlg =
 
 props_Factoring :: [Property]
 props_Factoring = props_isComposedPoly ++ props_irreducibleFactors ++ props_simplifyAlg
+
+demo :: IO ()
+demo = do
+    flip mapM_ [iX^2 + unit, iX^2 - unit, iX^3 - unit, iX^4 - unit, iX^5 - unit, iX^6 - unit]
+        printInfo
+
+    where
+    printInfo f = do
+        printf "Irreduzible Faktoren von %s:\n" (show f)
+        flip mapM_ (irreducibleFactors f) $ \g -> do
+            printf "` %s\n" (show g)
+        putStrLn ""

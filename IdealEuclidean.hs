@@ -55,11 +55,6 @@ idealQuotRem f g = do
     (q,r) <- idealQuotRem (f - q' * g) g
     return (q + q', r)
 
-{-
---exi :: Nondet (ISE Rational s) (Poly (ISE Rational s), Poly (ISE Rational s))
-exi = idealGCD ((iX - Poly.fromBase (adjointedRoot :: ISE Rational ())) * (iX - fromInteger 3)) ((adjointedRoot - unit) .* (iX - Poly.fromBase adjointedRoot) * (iX - fromInteger 5))
--}
-
 -- | Ideelle Entsprechung von 'Euclidean.gcd': Bestimmt einen größten gemeinsamen Teiler
 -- zweier Polynome.
 idealGCD

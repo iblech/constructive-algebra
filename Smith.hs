@@ -10,11 +10,12 @@ module Smith
     , determinant
     , charPoly, minPoly, lambdaMatrix
     , props_Smith
+    , Smith.demo
     ) where
 
 import Matrix as M
 import Data.Array
-import Prelude hiding (gcd, (!!), (+), (*), (-), (/), negate, quotRem)
+import Prelude hiding (gcd, (!!), (+), (*), (-), (/), negate, quotRem, fromInteger)
 import qualified Prelude as P
 import Polynomial as Poly
 import Ring
@@ -22,7 +23,7 @@ import Field
 import Euclidean
 import TypeLevelNat
 import Testing
-import Debug.Trace
+import Debug
 
 -- | Führt eine Transformation derart aus, dass das /(0,j)/-Element null wird;
 -- dazu wird der größte gemeinsame Teiler vom /(0,0)/- und /(0,j)/-Element
@@ -185,12 +186,12 @@ charPoly = mkNormedPoly . unER . determinant . fmap ER . lambdaMatrix
 -- über die Smithsche Normalform von /lambda 1 - A/. Das Minimalpolynom
 -- der eindeutigen /0x0/-Matrix ist das Einspolynom.
 minPoly :: (ReifyNat n, Field a) => SqMatrix n a -> NormedPoly a
-minPoly = normalize' . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix . warn
+minPoly = normalize' . last' . map unER . elementaryDivisors . fmap ER . lambdaMatrix . warnBig
     where
     -- Ausnahme für die 0x0-Matrix:
     last' xs = if null xs then unit else last xs
-    warn mtx
-        | numRows mtx >= 10 = flip trace mtx $ concat
+    warnBig mtx
+        | numRows mtx >= 10 = flip warn mtx $ concat
             [ "Warnung: Berechne Minimalpolynom einer "
             , show (numRows mtx), "x", show (numRows mtx)
             , "-Matrix!"
@@ -206,3 +207,23 @@ lambdaMatrix (MkMatrix arr) = MkMatrix $
 
 props_Smith :: [Property]
 props_Smith = props_annihilatingPolynomial (undefined :: Proxy (F Rational))
+
+demo :: IO ()
+demo = do
+    printSNF m1
+    putStrLn ""
+    printSNF m2
+
+    where
+    printSNF m = do
+        putStrLn "Die Smithsche Normalform (also die Liste der Elementarteiler) von A = ..."
+        putStrLn $ prettyMatrix m
+        putStrLn $ "...ist: " ++ show (elementaryDivisors m)
+        putStrLn $ "Die Elementarteiler von lambda 1 - A sind:\t\n" ++
+            show (map normalize . elementaryDivisors . lambdaMatrix $ fmap (fromInteger :: Integer -> Rational) m)
+
+    m1 :: SqMatrix N3 Integer
+    m1 = MkMatrix $ listArray ((0,0), (2,2)) [5,0,0, 4,3,0, -2,1,3]
+
+    m2 :: SqMatrix N4 Integer
+    m2 = MkMatrix $ listArray ((0,0), (3,3)) [18,12,24,42, 7,9,7,3, 10,12,7,10, 4,-6,9,10]

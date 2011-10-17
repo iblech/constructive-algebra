@@ -12,7 +12,7 @@
 -- <http://www.haskell.org/haskellwiki/Type_arithmetic>.
 {-# LANGUAGE EmptyDataDecls, RankNTypes #-}
 module TypeLevelNat
-    ( Z, S
+    ( Z, S, N2, N3, N4
     , ReifyNat(..), reflectNat, reflectPositiveNat
     , module Proxy
     , props_TypeLevelNat
@@ -29,6 +29,15 @@ data Z
 -- | Darstellung des Nachfolgers /S n/ einer durch den Typ /n/ dargestellen
 -- natürlichen Zahl (Successor)
 data S n
+
+-- | Zwei
+type N2 = S (S Z)
+
+-- | Drei
+type N3 = S N2
+
+-- | Vier
+type N4 = S N3
 
 -- | Klasse, um natürliche Zahlen der Typebene in Werte zu wandeln.
 -- Das Gegenstück ist 'reflectNat'.
