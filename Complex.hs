@@ -484,7 +484,7 @@ demo = do
 
     where
     printInfo name z = do
-        printf "Approximationen von %s:\n" name
+        printf "Approximationen von %s:\n" name :: IO ()
         flip mapM_ [1,10,100,1000,10000] $ printApproxs z
         putStrLn ""
     printApproxs z n = do

@@ -1,3 +1,4 @@
+-- | Dieses Modul stellt QuickCheck-Eigenschaften für "Algebraic" bereit.
 {-# LANGUAGE FlexibleInstances, FlexibleContexts, TypeFamilies #-}
 module AlgebraicTesting where
 
@@ -64,7 +65,8 @@ props_eval =
     ]
 
 props_Algebraic :: [Property]
-props_Algebraic =
-    props_maybeInvert ++
-    props_isRational ++ props_isComplexRational ++ props_isInteger ++
-    props_eval
+props_Algebraic = concat
+    [ props_maybeInvert
+    , props_isRational, props_isComplexRational, props_isInteger
+    , props_eval
+    ]

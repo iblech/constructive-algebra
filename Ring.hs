@@ -65,6 +65,9 @@ class Ring a where
     -- Die zu erfüllende Spezifikation ist also:
     --
     -- > couldBeNonZero x == False  ==>  x == zero.
+    --
+    -- Ringe, für die es einen effizienten Gleichheitstest mit Null gibt,
+    -- können 'couldBeNonZero' entsprechend besser definieren.
     couldBeNonZero :: a -> Bool
     couldBeNonZero = const True
 
@@ -87,10 +90,14 @@ instance (Ring a, Eq a, Arbitrary a) => Arbitrary (RejectZero a) where
     shrink (MkRejectZero x) = map MkRejectZero . shrink $ x
 
 props_ringAxioms :: (Ring a, Eq a, Arbitrary a, Show a) => Proxy a -> [Property]
-props_ringAxioms a =
-    props_commutativeGroup  (+) (zero `asTypeOfProxy` a) negate ++
-    -- XXX später props_commutativeMonoid (*) (zero `asTypeOfProxy` fmap MkRejectZero a) ++
-    [ property $ \x y z -> x * (y + z) == x * y + x * (z `asTypeOfProxy` a) ]
+props_ringAxioms a = concat
+    [ props_commutativeGroup (+) (zero `asTypeOfProxy` a) negate
+    , [ property $ \x y z -> typ x && x * (y * z) == (x * y) * z ]
+    , [ property $ \x     -> typ x && x * unit    == x           ]
+    , [ property $ \x y   -> typ x && x * y       == y * x       ]
+    , [ property $ \x y z -> typ x && x * (y + z) == x * y + x * (z `asTypeOfProxy` a) ]
+    ]
+    where typ x = let _ = x `asTypeOfProxy` a in True
 
 props_commutativeMonoid :: (Eq a, Show a, Arbitrary a) => (a -> a -> a) -> a -> [Property]
 props_commutativeMonoid (+) zero =

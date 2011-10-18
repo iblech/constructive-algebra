@@ -25,6 +25,7 @@ import Data.Maybe
 import Algebraic
 import IntegralClosure hiding (fromBase)
 import Text.Printf
+import Testing
 
 -- | Klasse für Typen, die Polynome auf Typebene darstellen.
 -- Das Gegenstück wäre in Anlehnung an die üblichen Konventionen zur
@@ -42,6 +43,7 @@ class (ReifyPoly p) => ReifyIrreduciblePoly p
 newtype SE p = MkSE (Poly (BaseRing p))
 
 deriving instance (ReifyPoly p) => Ring (SE p)
+deriving instance (ReifyPoly p, Arbitrary (BaseRing p)) => Arbitrary (SE p)
 
 instance (ReifyPoly p, Field (BaseRing p), Show (BaseRing p)) => Show (SE p) where
     show z = "[" ++ show (canonRep z) ++ "]"
@@ -104,6 +106,10 @@ instance RingMorphism Qsqrt2inR where
     type Domain   Qsqrt2inR = F (SE MinPolySqrt2)
     type Codomain Qsqrt2inR = Real
     mor _ = Poly.eval Complex.sqrt2 . fmap fromRational . canonRep . unF
+
+props_SimpleExtension :: [Property]
+props_SimpleExtension =
+    props_fieldAxioms (undefined :: Proxy (SE MinPolySqrt2))
 
 demo :: IO ()
 demo = do
