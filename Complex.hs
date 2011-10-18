@@ -71,11 +71,11 @@ unsafeRunR = unsafePerformIO . runR
 --
 -- Es muss eine bestimmte Zahl /z/ geben, sodass der Algorithmus, mit einer
 -- positiven natürlichen Zahl /n/ aufgerufen, eine Näherung an /z/ produziert,
--- deren Abstand zu /z/ echt kleiner als /1\/n/ ist.
+-- deren Abstand zu /z/ echt kleiner als /n^(-1)/ ist.
 --
 -- Ansonsten ist dem Approximationsalgorithmus keinen Beschränkungen
 -- unterworfen. Insbesondere darf er beliebige nicht-deterministische Prozesse
--- anstoßen, und kann bei der wiederholten Fragen nach einer /1\/n/-Näherung
+-- anstoßen, und kann bei der wiederholten Fragen nach einer /n^(-1)/-Näherung
 -- jedes Mal ein anderes Resultat liefern.
 newtype Approx ex = MkApprox { unApprox :: PositiveNat -> R ex }
     deriving (Functor)
@@ -96,7 +96,7 @@ class HasDenseSubset a where
     type DenseSubset a :: *
 
     -- | /approx n z/ soll eine Näherung von /z/ bestimmen, die vom wahren Wert im
-    -- Betrag um weniger (<) als /1\/n/ abweicht. Wiederholte Auswertungen
+    -- Betrag um weniger (<) als /n^(-1)/ abweicht. Wiederholte Auswertungen
     -- dürfen andere Näherungen berechnen.
     approx :: PositiveNat -> a -> R (DenseSubset a)
 
@@ -131,7 +131,7 @@ newInteractiveApprox areApproxsConsistent name = do
                 loop
         loop
 
--- | Erzeugt wie 'newInteractiveApprox\'' einen interaktiven
+-- | Erzeugt wie 'newInteractiveApprox'' einen interaktiven
 -- Approximationsalgorithmus, wobei als Konsistenzprüfung
 --
 -- > |x_n - x_m| <= 1/n + 1/m
@@ -174,10 +174,10 @@ type Real    = AST Rational
 --
 -- Die hier gegebene Definition hat zwei Vorteile. Zum einen können wir so
 -- einige rudimentäre Optimierungen vornehmen: Möchte man beispielsweise
--- /x_1 + ... + x_n/ auf Genauigkeit /1\/N/ auswerten, benötigt man bei naiver
+-- /x_1 + ... + x_n/ auf Genauigkeit /N^(-1)/ auswerten, benötigt man bei naiver
 -- Klammerung, /x_1 + (x_2 + (x_3 + ...))/, eine Approximation von /x_n/ mit
--- Genauigkeit /1\/(2^n N)/. Bei balancierter Auswertung dagegen benötigt man von
--- jedem Summanden nur eine Approximation mit Genauigkeit /1\/(n N)/.
+-- Genauigkeit /(2^n N)^(-1)/. Bei balancierter Auswertung dagegen benötigt man von
+-- jedem Summanden nur eine Approximation mit Genauigkeit /(n N)^(-1)/.
 --
 -- Zum anderen ist die Definition in der Praxis effizienter: Denn bei den
 -- beiden Alternativdefinitionen häufen sich schon bei kurzen Rechnungen sehr
@@ -190,7 +190,7 @@ type Real    = AST Rational
 --
 -- > approx n (fmap f ast)
 --
--- auch eine /1\/n/-Approximation an /liftM f (approx n ast)/ liefert.
+-- auch eine /n^(-1)/-Approximation an /liftM f (approx n ast)/ liefert.
 -- Damit das garantiert ist, muss /f/ ein lipschitzstetiger Ringhomomorphismus
 -- mit Lipschitzkonstante kleinergleich /1/ sein, wie beispielsweise
 -- /f = conjugate/ oder /f = fromRational/.
@@ -389,8 +389,8 @@ class (Ring a) => HasMagnitudeZeroTest a where
 -- oder Normkontext fordern.
 class (Ring a) => PseudoField a where
     -- | Sei /z/ von null entfernt, es existiere also eine rationale Zahl /q/ mit
-    -- /|z| >= q > 0/. Dann soll /recip' z/ die Zahl /1\/z/ darstellen.
-    -- 'recip\'' muss sonst nicht definiert sein.
+    -- /|z| >= q > 0/. Dann soll /recip' z/ die Zahl /z^(-1)/ darstellen.
+    -- 'recip'' muss sonst nicht definiert sein.
     recip' :: a -> a
 
 instance (NormedRing a, Eq a) => HasMagnitudeZeroTest (AST a) where
@@ -408,7 +408,7 @@ instance (NormedRing a, Eq a) => HasMagnitudeZeroTest (AST a) where
 --
 -- > |z_n| > 1/N für alle n >= N  und  |z| > 2/N,
 --
--- wobei /z_n/ für jede mögliche /1\/n/-Näherung von /z/ steht.
+-- wobei /z_n/ für jede mögliche /n^(-1)/-Näherung von /z/ steht.
 apartnessBound :: (Field ex, NormedRing ex) => AST ex -> R PositiveNat
 apartnessBound z = go 1
     where

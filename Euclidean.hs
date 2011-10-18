@@ -139,9 +139,9 @@ areCoprime x y = isJust $ areAssociated unit d
 -- Sollte /S_k(x) = 0/ für ein /k/ mit /0 < k < n/ sein, so gilt
 -- /S_(k-1)(x) S_(k+1)(x) < 0/.
 --
--- Zu jeder rationalen Funktion /R\/S/, wobei /R/ und /S/ Polynome sind,
+-- Zu jeder rationalen Funktion /R S^(-1)/, wobei /R/ und /S/ Polynome sind,
 -- gibt es /die zugehörige Sturmkette/. Diese ist definiert als
--- /(S_0,...,S_n)/, wobei /S_k = P_k\/P_n/ (die Division geht auf) und die
+-- /(S_0,...,S_n)/, wobei /S_k = P_k P_n^(-1)/ (die Division geht auf) und die
 -- /P_i/ aus dem euklidischen Algorithmus, angewendet auf /R/ und /S/ stammen,
 -- also
 --

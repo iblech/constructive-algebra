@@ -1,5 +1,5 @@
 -- | Dieses Modul stellt einfache Ring- und Körpererweiterungen der Form
--- /R[X]\/(f)/ bereit. Das Polynom /f/ wird ausschließlich im Typ mitgeführt
+-- /R[X]\(f)/ bereit. Das Polynom /f/ wird ausschließlich im Typ mitgeführt
 -- und befindet sich nicht auf Wertebene; das verhindert unabsichtliches
 -- Vermischung von Elementen verschiedener Quotientenringe.
 {-# LANGUAGE TypeFamilies, FlexibleContexts, UndecidableInstances, GeneralizedNewtypeDeriving, EmptyDataDecls, StandaloneDeriving #-}
@@ -42,7 +42,7 @@ class (Ring (BaseRing p)) => ReifyPoly p where
 -- | Klasse für Typen, die irreduzible Polynome auf Typebene darstellen.
 class (ReifyPoly p) => ReifyIrreduciblePoly p
 
--- | Typ der Elemente der einfachen Erweiterung (simple extension) /R[X]\/(p)/.
+-- | Typ der Elemente der einfachen Erweiterung (simple extension) /R[X]\(p)/.
 newtype SE p = MkSE (Poly (BaseRing p))
 
 deriving instance (ReifyPoly p) => Ring (SE p)
@@ -63,7 +63,7 @@ modulus = reifyPoly . (undefined :: Proxy (SE p) -> Proxy p)
 canonRep :: (ReifyPoly p, Field (BaseRing p)) => SE p -> Poly (BaseRing p)
 canonRep z@(MkSE f) = snd $ f `quotRem` modulus (toProxy z)
 
--- | Liefert das Element /[X]/ im Quotientenring /R[X]\/(p)/, also die
+-- | Liefert das Element /[X]/ im Quotientenring /R[X]\(p)/, also die
 -- künstliche Nullstelle von /p/.
 adjointedRoot :: (ReifyPoly p) => SE p
 adjointedRoot = MkSE iX
@@ -103,7 +103,7 @@ instance ReifyPoly MinPolySqrt2 where
 instance ReifyIrreduciblePoly MinPolySqrt2
 
 -- | Dummytyp, der die kanonische Einbettung der rationalen Zahlen in
--- die Erweiterung /Q[X]\/(X^2-2)/ repräsentiert.
+-- die Erweiterung /Q[X]\(X^2-2)/ repräsentiert.
 data Qsqrt2inR
 instance RingMorphism Qsqrt2inR where
     type Domain   Qsqrt2inR = F (SE MinPolySqrt2)

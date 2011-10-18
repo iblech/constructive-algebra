@@ -15,7 +15,7 @@
 --
 -- Ist beispielsweise /z/ eine algebraische Zahl und /p/ ein normiertes
 -- Polynom, welches /z/ als Nullstelle besitzt aber nicht notwendigerweise
--- das Minimalpolynom von /z/ ist, so kann man /Q[X]\/(p)/ als ideelle 
+-- das Minimalpolynom von /z/ ist, so kann man /Q[X]\(p)/ als ideelle 
 -- Körpererweiterung von /Q/ ansehen:
 --
 -- Möchte man ein Element /[f]/ auf Invertierbarkeit testen, muss man den ggT /d/
@@ -39,6 +39,9 @@
 -- es nicht auf Typebene holen möchte. (Ist es statisch bekannt, so sollte man
 -- besser das Modul "SimpleExtension" verwenden, welches richtige,
 -- nicht-ideelle Körpererweiterungen bietet.)
+--
+-- (In Kommentaren notieren wir den Faktorring mit einem umgekehrten
+-- Schrägstrich, da sich der richtige Strich nicht vor Haddock verstecken lässt.)
 {-# LANGUAGE TypeFamilies, FlexibleContexts, GeneralizedNewtypeDeriving, RankNTypes, FlexibleInstances #-}
 module IdealExtension
     ( -- * Monade für ideelle Berechnungen
@@ -126,7 +129,7 @@ idealEquals :: (IdealField a) => a -> a -> Nondet a Bool
 idealEquals x y = liftM isNothing $ idealRecip (x - y)
 
 -- | Datentyp für die Elemente einer einfachen ideellen Ringerweiterung
--- /k[X]\/(p)/ des Grundrings /k/. Das dynamische Moduluspolynom /p/
+-- /k[X]\(p)/ des Grundrings /k/. Das dynamische Moduluspolynom /p/
 -- kann durch 'ask' der 'Ideal'-Monade erfragt werden.
 --
 -- Den Phantomtyp /s/ verwenden wir, um unabsichtliche Vermischungen von
@@ -138,7 +141,7 @@ newtype ISE k s = S (Poly k)
 fromBase :: k -> ISE k s
 fromBase = S . Poly.fromBase
 
--- | Liefert das Element /[X]/ der ideellen Erweiterung /k[X]\/(p)/, also die
+-- | Liefert das Element /[X]/ der ideellen Erweiterung /k[X]\(p)/, also die
 -- künstliche Nullstelle von /p/.
 adjointedRoot :: (Field k) => ISE k s
 adjointedRoot = S iX
@@ -170,7 +173,7 @@ instance (Field k) => IdealField (ISE k s) where
         restart (d,s)
 
 -- | Zu jedem gegebenen Zeitpunkt ist die ideelle Körpererweiterung /ISE k s/
--- ein Faktorring /k[X]\/(p)/ modulo eines dynamisch durch 'restart' änderbaren
+-- ein Faktorring /k[X]\(p)/ modulo eines dynamisch durch 'restart' änderbaren
 -- Polynoms /p/.
 --
 -- Diese Funktion bestimmt zu einem Element des Faktorrings seinen kanonischen
@@ -224,7 +227,7 @@ execISE f phi m =
 
 -- | /execISEwithAlgebraic z m/ führt die Berechnung /m/ im Körper /Q(z)/ aus.
 -- Da wir das Minimalpolynom von /z/ nicht bestimmen wollen, realisieren wir
--- /Q(z)/ als ideellen Oberkörper /Q[X]\/(f)\/, wobei /f/ das durch die
+-- /Q(z)/ als ideellen Oberkörper /Q[X]\(f)/, wobei /f/ das durch die
 -- Algebraizität von /z/ gegebene normierte Polynom mit /f(z) = 0/ ist.
 --
 -- In "Galois" wird das beispielsweise benutzt, um nach Berechnung eines

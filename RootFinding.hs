@@ -65,7 +65,7 @@ import RingMorphism
     Field (RealSubring a), OrderedRing (RealSubring a)
 
 -- | Zählt die Anzahl von Vorzeichenwechseln einer endlichen Liste von Zahlen
--- eines geordneten Rings. Wechsel von/auf null zählen /1\/2/.
+-- eines geordneten Rings. Wechsel von/auf null zählen /2^(-1)/.
 signChanges :: (OrderedRing a) => [a] -> Rational
 signChanges xs = sum $ map f (pairs xs)
     where
@@ -81,7 +81,7 @@ signChanges xs = sum $ map f (pairs xs)
 signChanges' :: (OrderedRing a) => a -> a -> [Poly a] -> Rational
 signChanges' a b ps = signChanges (map (eval a) ps) - signChanges (map (eval b) ps)
 
--- | Berechnet zu einer rationalen Funktion /R\/S/, wobei /R/ und /S/ Polynome
+-- | Berechnet zu einer rationalen Funktion /R S^(-1)/, wobei /R/ und /S/ Polynome
 -- sind, ihre zugehörige Sturmkette. Dabei soll der Grad von /R/ kleinergleich
 -- dem von /S/ sein, sonst wird eine Laufzeitausnahme geworfen.
 sturmChain :: (Field a) => Poly a -> Poly a -> [Poly a]
@@ -89,17 +89,17 @@ sturmChain r s
     | degree r > degree s = error "RootFinding.sturmChain: Zählergrad > Nennergrad"
     | otherwise           = euclidChain r s
 
--- | Bestimmt zu einer rationalen Funktion /R\/S/ und Intervallgrenzen /a/ und
+-- | Bestimmt zu einer rationalen Funktion /R S^(-1)/ und Intervallgrenzen /a/ und
 -- /b/ ihren Cauchyindex.
 --
--- Zwei Spezialfälle des Index sind wichtig: Der Index von /f'\/f/, wobei
+-- Zwei Spezialfälle des Index sind wichtig: Der Index von /f' f^(-1)/, wobei
 -- /f/ ein Polynom und /f'/ seine Ableitung bezeichnet, ist die Anzahl der
 -- Nullstellen von /f/ auf /[a,b]/, wobei die Nullstellen ohne Vielfachheit
--- gezählt werden und Nullstellen in den Randpunkten /a/ und /b/ /1\/2/
+-- gezählt werden und Nullstellen in den Randpunkten /a/ und /b/ /2^(-1)/
 -- beitragen.
 --
--- Der Index von /Re γ \/ Im γ/ ist das doppelte der Windungszahl der
--- Einschränkung des polynomiellen Wegs /γ/ auf das Segment /[a,b]/ der
+-- Der Index von /Re gamma (Im gamma)^(-1)/ ist das doppelte der Windungszahl der
+-- Einschränkung des polynomiellen Wegs /gamma/ auf das Segment /[a,b]/ der
 -- komplexen Zahlenebene, siehe 'windingNumber'.
 index :: (Field a, OrderedRing a) => a -> a -> Poly a -> Poly a -> Rational
 index a b r s
@@ -111,7 +111,7 @@ index a b r s
 -- keine bestimmten Voraussetzungen erfüllen.
 --
 -- Die Nullstellen werden ohne Vielfachheit gezählt, wobei Nullstelen auf
--- den Ecken /1\/2/ beitragen.
+-- den Ecken /2^(-1)/ beitragen.
 --
 -- Siehe: Korollar 3.8 von [1].
 rootsOnSegment :: (SubComplex(a)) => ComplexRational -> ComplexRational -> Poly a -> Rational

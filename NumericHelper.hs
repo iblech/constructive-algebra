@@ -34,7 +34,7 @@ unsafeFromRational x
     (q,r) = numerator x `quotRem` denominator x
 
 -- | Findet zu einer gegebenen rationalen Zahl /x > 0/ die kleinste positive
--- Zahl /n/ mit /1\/n < x/.
+-- Zahl /n/ mit /n^(-1) < x/.
 roundDownToRecipN :: Rational -> PositiveNat
 roundDownToRecipN x = if recip (fromInteger n) == x then n + 1 else n where n = ceiling . recip $ x
 
