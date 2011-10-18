@@ -255,10 +255,12 @@ check_Galois = mapM_ quickCheck $ concat
 
 demo :: IO ()
 demo = do
-    flip mapM_ [iX^4 - unit, iX^5 - unit, iX^6 - unit] $ \f -> do
+    flip mapM_ [iX^4 - unit, iX^6 - unit] $ \f -> do
         putStrLn $ "Zur Galoisgruppe von " ++ show f ++ ":"
         putStrLn $ formatGaloisInfo $ galoisGroup f
         putStrLn ""
+    -- Die Berechnung der Galoisgruppe von X^5-1 dauert wesentlich
+    -- länger.
 
 formatGaloisInfo
     :: (Eq r, Show r, Ring r, HasFloatingApprox a)

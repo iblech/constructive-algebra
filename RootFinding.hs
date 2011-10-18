@@ -30,9 +30,7 @@ module RootFinding
     , divide, subdivisions, cauchyRadius
       -- * Anwenderfunktionen
     , roots, roots'
-      -- * Newton-Verfahren
-    , newton, newtonPrecondition
-      -- * Debugging
+      -- * Beispiele
     , RootFinding.demo
     ) where
 
@@ -422,20 +420,7 @@ subdivisions radius f =
 	where
 	process :: (SubComplex(a)) => Poly a -> Cell -> [[(Rational, ComplexRational)]]
 	process _  (Cell0 z0) = repeat [(0, fromComplexRational z0)]
-	process f' c
-            -- XXX: Vorerst Newton ausgestellt.
-            -- Grund: Zähler und Nenner riesig! Zieht Berechnungstempo enorm runter.
-            -- Beispiel: Zerlegung in irred. Faktoren von X^9 - 243 X^3 mit
-            -- Newton: etwas mehr als zwei Minuten, ohne Newton: etwa 17 Sekunden.
-            -- Außerdem: XXX Falsch angewendet! Darf nur verwendet werden, wenn
-            -- die Zelle so klein ist, dass nicht andere Nullstellen verloren
-            -- gehen!
-            {-
-	    | newtonPrecondition f' (mid c)
-	    = tail $ zipWith (\n x -> [(r / 2^(2^n - 1), x)]) [0..] (newton f' (mid c))
-	    | otherwise
-            -}
-	    = go (r/2) $ debug (show c) $ divide f' c
+	process f' c          = go (r/2) $ debug (show c) $ divide f' c
     mid (Cell0 z0)    = fromComplexRational $ z0
     mid (Cell1 z0 z1) = fromComplexRational $ (z0 + z1) / fromInteger 2
     mid (Cell2 z0 z1) = fromComplexRational $ (z0 + z1) / fromInteger 2
@@ -445,26 +430,6 @@ subdivisions radius f =
     merge xsss = concat (map head xsss) : merge (map tail xsss)
     -- Wir nehmen also die ersten Iterierten der gegebenen endlich vielen
     -- Iterationsfolgen, dann die zweiten Iterierten, die dritten...
-
--- | Bestimmt zu einem Polynom und einem Startpunkt die Folge der
--- Newtoniterierten, den Startpunkt selbst eingeschlossen.
-newton :: Poly ComplexRational -> ComplexRational -> [ComplexRational]
-newton f = iterate step
-    where
-    step x = x - eval x f / eval x (derivative f)
-
--- Thm. 6.9
--- Vor.: derivative f x != 0, f x != 0.
--- Die Voraussetzungen zeigen dann auch, dass f genau eine Nullstelle im
--- offenen Ball mit Radius 2*eta um x hat.
-newtonPrecondition :: Poly ComplexRational -> ComplexRational -> Bool
-newtonPrecondition f x = eval x f /= zero && eval x (derivative f) /= zero && and ineqs
-    where
-    etaSq    = absSq (eval x f / eval x (derivative f))
-    ineqs    = zipWith (\c k -> absSq c * (fromInteger 8)^(2*k-2) * etaSq^(k-1) <= c1sq) (drop 2 cs) [2..]
-    -- XXX: okay, dass coeffs Nuller liefert?
-    cs       = unsafeCoeffs $ compose f (iX + fromComplexRational x)
-    c1sq     = absSq (cs !! 1)
 
 demo :: IO ()
 demo = do
