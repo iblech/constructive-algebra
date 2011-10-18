@@ -1,16 +1,16 @@
 -- | Dieses Modul stellt die zentrale Typklasse 'Field' für Körper
 -- zur Verfügung.
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards, TypeFamilies, DeriveFunctor #-}
-module Field where
+module Field (Field(..), (/), F(..), props_fieldAxioms) where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger, sum, product)
 import qualified Prelude as P
-import Ring
-import NormedRing
-import Testing
-import Proxy
-
 import Data.Ratio
+
+import NormedRing
+import Proxy
+import Ring
+import Testing
 
 -- | Klasse für Typen, die Körper repräsentieren. Ein Körper ist für uns ein
 -- (kommutativer) Ring, der folgendes Zusatzaxiom erfüllt:

@@ -40,24 +40,38 @@
 -- besser das Modul "SimpleExtension" verwenden, welches richtige,
 -- nicht-ideelle Körpererweiterungen bietet.)
 {-# LANGUAGE TypeFamilies, FlexibleContexts, GeneralizedNewtypeDeriving, RankNTypes, FlexibleInstances #-}
-module IdealExtension where
+module IdealExtension
+    ( -- * Monade für ideelle Berechnungen
+      Ideal, runIdeal, restart
+    , -- * Typklasse für ideelle Körper
+      IdealField(..)
+    , idealEquals
+      -- * Einfache endliche ideelle Körpererweiterungen
+    , ISE(..)
+    , IdealExtension.fromBase, adjointedRoot
+    , canonRep
+    , execISE, execISEwithAlgebraic
+      -- * Beispiele
+    , IdealExtension.demo
+    ) where
 
 import Prelude hiding (gcd, quotRem, (+), (*), (-), (/), (^), negate, recip, fromInteger)
-import Ring
-import RingMorphism
-import NormedRing
-import Smith (HasAnnihilatingPolynomials)
-import Field
-import Polynomial as Poly
-import Euclidean
-import Control.Monad.Reader
 import Control.Monad.Error
-import Debug
-import Algebraic as A
-import IntegralClosure
-import Complex
+import Control.Monad.Reader
 import Data.Maybe
 import Text.Printf
+
+import Algebraic as A
+import Complex
+import Debug
+import Euclidean
+import Field
+import IntegralClosure
+import NormedRing
+import Polynomial as Poly
+import Ring
+import RingMorphism
+import Smith (HasAnnihilatingPolynomials)
 
 -- | Monade für /ideelle Berechnungen/, also solche, die eine Umgebung vom
 -- Typ /k/ benötigen (in der Anwendung ideeller einfacher Körpererweiterungen

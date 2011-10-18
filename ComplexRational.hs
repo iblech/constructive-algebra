@@ -1,21 +1,21 @@
 -- | Dieses Modul stellt den Datentyp 'ComplexRational' komplexrationaler
 -- Zahlen, also den Elementen von /Q(i)/, bereit.
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances, FlexibleInstances #-}
-module ComplexRational where
+module ComplexRational
+    ( ComplexRational(..), fromComplexRational, check_ComplexRational )
+    where
 
-import Data.List (genericIndex)
 import qualified Prelude as P
 import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (/), (^), negate, recip)
+import Control.Monad
 import qualified Data.Complex as C
 
-import NumericHelper
-import Ring
-import NormedRing
 import Field
-import Testing
-import Control.Monad
-import Data.Maybe
+import NormedRing
+import NumericHelper
 import Proxy
+import Ring
+import Testing
 
 -- | Typ für komplexrationale Zahlen in kartesischer Darstellung.
 -- Der Konstruktor ist strikt in seinen beiden Argumenten.
@@ -86,15 +86,14 @@ props_magnitudeSq =
       magnitudeSq (z * u) == magnitudeSq z * magnitudeSq u
   ]
 
-props_ComplexRational :: [Property]
-props_ComplexRational = concat
-    [ props_fieldAxioms    (undefined :: Proxy ComplexRational)
-    , props_normUpperBound (undefined :: Proxy ComplexRational)
-    , props_magnitudeSq
-    ]
-
-
 -- Reduktion auf die 'Arbitrary'-Instanz von /(Rational,Rational)/.
 instance Arbitrary ComplexRational where
     arbitrary = liftM (uncurry (:+:)) arbitrary
     shrink    = map   (uncurry (:+:)) . shrink . (\(x :+: y) -> (x,y))
+
+check_ComplexRational :: IO ()
+check_ComplexRational = mapM_ quickCheck $ concat
+    [ props_fieldAxioms    (undefined :: Proxy ComplexRational)
+    , props_normUpperBound (undefined :: Proxy ComplexRational)
+    , props_magnitudeSq
+    ]

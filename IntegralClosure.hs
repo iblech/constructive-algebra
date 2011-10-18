@@ -13,8 +13,8 @@ module IntegralClosure
     , sumAnnihilator, prodAnnihilator, evalAnnihilator, verifyPolynomial
       -- * Beispiele
     , goldenRatio, sqrt2
-      -- * QuickCheck-Eigenschaften
-    , props_IntegralClosure
+      -- * QuickCheck
+    , check_IntegralClosure
     ) where
 
 import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (^), (/), negate)
@@ -244,11 +244,8 @@ instance HasConjugation (IC QinC) where
         where z' = fromRational (1/2) * (z + conjugate z)
 
 
--- sollte nicht mit 'stdArgs', sondern einer Beschränkung wie
--- > stdArgs{ maxSize = 4 }
--- getestet werden.
-props_IntegralClosure :: [Property]
-props_IntegralClosure = concat
+check_IntegralClosure :: IO ()
+check_IntegralClosure = mapM_ (quickCheckWith stdArgs{ maxSize = 4 }) $ concat
     [ props_sumAnnihilator  (undefined :: Proxy (F (Rational)))
     , props_prodAnnihilator (undefined :: Proxy (F (Rational)))
     , props_evalAnnihilator (undefined :: Proxy (F (Rational)))

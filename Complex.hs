@@ -2,36 +2,142 @@
 -- Zahlen) bereit.
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, DeriveFunctor, FlexibleContexts, UndecidableInstances, EmptyDataDecls, PatternGuards #-}
 module Complex
-    ( R(..), unsafeRunR
-    , AST(..)
-    , Complex, Real, Approx(..)
-    , newInteractiveApprox, newInteractiveApprox'
-    , HasDenseSubset(..)
-    , QinC, QinR, QIinC
-    , sqrt2, goldenRatio
+    ( -- * Monade für nicht-deterministische Rechnungen
+      R(..), unsafeRunR
+      -- * Approximationsalgorithmen
+    , Approx(..), HasDenseSubset(..), newInteractiveApprox, newInteractiveApprox'
+      -- * Erweiterungen von Ringen durch approximativ gegebene Elemente
+    , Complex, Real, AST(..)
     , fromBase
-    , normUpperBoundR, HasMagnitudeZeroTest(..), traceEvals
+    , QinC, QinR, QIinC
+    , normUpperBoundR, HasMagnitudeZeroTest(..)
     , PseudoField(..)
     , signum'
+      -- * Debugging
+    , traceEvals, logMaxEval
+      -- * Beispiele
+    , sqrt2, goldenRatio
     , Complex.demo
     )
     where
 
 import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real, catch)
 import Control.Monad (liftM, liftM2)
-import ComplexRational
-import Ring
-import NormedRing
-import Field
-import RingMorphism
-import NumericHelper
-import System.IO.Unsafe
-import System.IO
 import Control.Exception
-import Text.Printf
-import Nat
-import Data.Maybe
 import Data.IORef
+import Data.Maybe
+import System.IO
+import System.IO.Unsafe
+import Text.Printf
+
+import ComplexRational
+import Field
+import Nat
+import NormedRing
+import NumericHelper
+import Ring
+import RingMorphism
+
+-- | Monade für nicht-deterministische Rechnungen von
+-- Approximationsalgorithmen.
+--
+-- Wir verwenden dazu einfach die 'IO'-Monade, weil wir beliebige externe
+-- Kommunikation (beispielsweise Nutzereingaben oder Zufallszahlen) erlauben
+-- wollen.
+--
+-- Operationen, die den Kontrollfluss beeinflussen (wie beispielsweise
+-- 'forkIO'), verbieten wir. (Denn was würde so ein Algorithmus bedeuten?)
+newtype R a = R { runR :: IO a }
+    deriving (Functor,Monad)
+
+-- | /unsafeRunR m/ lässt die nicht-deterministische Operation /m/ laufen
+-- und gibt ihr Ergebnis zurück.
+--
+-- Das ist im Allgemeinen gefährlich, denn jedes Mal, wenn das Ergebnis dann
+-- ausgewertet wird, kann jeweils ein anderer Wert resultieren, da /m/ ja nicht
+-- als deterministisch vorausgesetzt wird. Außerdem werden die Nebeneffekte in /m/
+-- möglicherweise mehrmals ausgeführt.
+--
+-- Verwendet man 'unsafeRunR' in einer Funktion, muss man daher darauf achten,
+-- dass der Rückgabewert nicht von den verschiedenen Ergebnissen von
+-- 'unsafeRunR' abhängt -- sonst verletzt man das Prinzip der referentiellen
+-- Transparenz.
+unsafeRunR :: R a -> a
+unsafeRunR = unsafePerformIO . runR
+
+-- | Typ der Approximationsalgorithmen mit Approximationen aus /ex/.
+-- Dabei fordern wir folgende Bedingung (die sich aber leider in Haskell
+-- nicht auf Typebene festschreiben lässt):
+--
+-- Es muss eine bestimmte Zahl /z/ geben, sodass der Algorithmus, mit einer
+-- positiven natürlichen Zahl /n/ aufgerufen, eine Näherung an /z/ produziert,
+-- deren Abstand zu /z/ echt kleiner als /1\/n/ ist.
+--
+-- Ansonsten ist dem Approximationsalgorithmus keinen Beschränkungen
+-- unterworfen. Insbesondere darf er beliebige nicht-deterministische Prozesse
+-- anstoßen, und kann bei der wiederholten Fragen nach einer /1\/n/-Näherung
+-- jedes Mal ein anderes Resultat liefern.
+newtype Approx ex = MkApprox { unApprox :: PositiveNat -> R ex }
+    deriving (Functor)
+
+-- XXX: eigentlich NormedRing-Kontext!
+-- | Klasse für Räume, deren Punkte sich durch Elemente einer gewissen Teilmenge
+-- beliebig genau approximieren lassen.
+--
+-- Wichtigstes Beispiel für uns sind die komplexen Zahlen 'Complex', die sich
+-- durch komplexrationale Zahlen approximieren lassen.
+class HasDenseSubset a where
+    -- | Dicht liegende Teilmenge, durch die approximiert werden soll
+    type DenseSubset a :: *
+
+    -- | /approx n z/ soll eine Näherung von /z/ bestimmen, die vom wahren Wert im
+    -- Betrag um weniger (<) als /1\/n/ abweicht. Wiederholte Auswertungen
+    -- dürfen andere Näherungen berechnen.
+    approx :: PositiveNat -> a -> R (DenseSubset a)
+
+-- | Erzeugt einen interaktiven Approximationsalgorithmus, welcher Näherungen
+-- dadurch produziert, indem er den Nutzer auf der Standardkonsole fragt.
+newInteractiveApprox
+    :: (Read ex)
+    => ([(PositiveNat, ex)] -> Bool)
+               -- ^ Funktion, die übergebene Genauigkeits/Wertepaare
+               -- auf Konsistenz prüft, also prüft, ob diese Approximationen
+               -- einer ideellen Zahl sein könnten
+    -> String  -- ^ Name der Zahl (für den Nutzer)
+    -> IO (Approx ex)
+newInteractiveApprox areApproxsConsistent name = do
+    val <- newIORef []
+    return . MkApprox $ \n -> R $ do
+        as@(~((n0,q0):_)) <- readIORef val
+        -- Genügt die Genauigkeit des gemerkten Werts?
+        if not (null as) && n0 >= n then return q0 else do
+        -- Nein; den Benutzer fragen.
+        let prompt = do
+            putStr $ "Naeherung von " ++ name ++ " auf < 1/" ++ show n ++ ": "
+            q <- readLn
+            -- Konsistenzcheck
+            let as' = (n,q) : as
+            if areApproxsConsistent as'
+                then writeIORef val as' >> return q
+                else fail "Angegebene Approximation nicht konsistent mit vorherigen Werten!"
+        let loop = do
+            catch prompt $ \e -> do
+                putStrLn $ "* Fehler: " ++ show (e :: IOException)
+                loop
+        loop
+
+-- | Erzeugt wie 'newInteractiveApprox\'' einen interaktiven
+-- Approximationsalgorithmus, wobei als Konsistenzprüfung
+--
+-- > |x_n - x_m| <= 1/n + 1/m
+--
+-- verwendet wird. Diese ist noch zu schwach, aber die Methoden der
+-- 'NormedRing'-Klasse erlauben keine Prüfung auf /</.
+newInteractiveApprox' :: (Read ex, NormedRing ex) => String -> IO (Approx ex)
+newInteractiveApprox' = newInteractiveApprox $ \as -> and $ do
+    (n,q)   <- as
+    (n',q') <- as
+    return $ norm (q - q') (1/fromIntegral n + 1/fromIntegral n')
 
 -- | Der Typ der komplexen Zahlen.
 type Complex = AST ComplexRational
@@ -91,117 +197,27 @@ data AST ex
                                   -- Debugging-Zwecke dienen.
     deriving (Show,Functor)
 
--- | Monade für nicht-deterministische Approximationsalgorithmen.
---
--- Wir verwenden dazu einfach die 'IO'-Monade, weil wir beliebige externe
--- Kommunikation (beispielsweise Nutzereingaben oder Zufallszahlen) erlauben
--- wollen.
---
--- Operationen, die den Kontrollfluss beeinflussen (wie beispielsweise
--- 'forkIO'), verbieten wir. (Denn was würde so ein Algorithmus bedeuten?)
-newtype R a = R { runR :: IO a }
-    deriving (Functor,Monad)
-
--- | Typ der Approximationsalgorithmen mit Approximationen aus /ex/.
--- Dabei fordern wir folgende Bedingung (die sich aber leider in Haskell
--- nicht auf Typebene festschreiben lässt):
---
--- Es muss eine bestimmte Zahl /z/ geben, sodass der Algorithmus, mit einer
--- positiven natürlichen Zahl /n/ aufgerufen, eine Näherung an /z/ produziert,
--- deren Abstand zu /z/ echt kleiner als /1\/n/ ist.
---
--- Ansonsten ist dem Approximationsalgorithmus keinen Beschränkungen
--- unterworfen. Insbesondere darf er beliebige nicht-deterministische Prozesse
--- anstoßen, und kann bei der wiederholten Fragen nach einer /1\/n/-Näherung
--- jedes Mal ein anderes Resultat liefern.
-newtype Approx ex = MkApprox { unApprox :: PositiveNat -> R ex }
-    deriving (Functor)
-
--- | Erzeugt einen interaktiven Approximationsalgorithmus, welcher Näherungen
--- dadurch produziert, indem er den Nutzer auf der Standardkonsole fragt.
-newInteractiveApprox
-    :: (Read ex)
-    => ([(PositiveNat, ex)] -> Bool)
-               -- ^ Funktion, die übergebene Genauigkeits/Wertepaare
-               -- auf Konsistenz prüft, also prüft, ob diese Approximationen
-               -- einer ideellen Zahl sein könnten
-    -> String  -- ^ Name der Zahl (für den Nutzer)
-    -> IO (Approx ex)
-newInteractiveApprox areApproxsConsistent name = do
-    val <- newIORef []
-    return . MkApprox $ \n -> R $ do
-        as@(~((n0,q0):_)) <- readIORef val
-        -- Genügt die Genauigkeit des gemerkten Werts?
-        if not (null as) && n0 >= n then return q0 else do
-        -- Nein; den Benutzer fragen.
-        let prompt = do
-            putStr $ "Naeherung von " ++ name ++ " auf < 1/" ++ show n ++ ": "
-            q <- readLn
-            -- Konsistenzcheck
-            let as' = (n,q) : as
-            if areApproxsConsistent as'
-                then writeIORef val as' >> return q
-                else fail "Angegebene Approximation nicht konsistent mit vorherigen Werten!"
-        let loop = do
-            catch prompt $ \e -> do
-                putStrLn $ "* Fehler: " ++ show (e :: IOException)
-                loop
-        loop
-
--- | Erzeugt wie 'newInteractiveApprox\'' einen interaktiven
--- Approximationsalgorithmus, wobei als Konsistenzprüfung
---
--- > |x_n - x_m| <= 1/n + 1/m
---
--- verwendet wird. Diese ist noch zu schwach, aber die Methoden der
--- 'NormedRing'-Klasse erlauben keine Prüfung auf /</.
-newInteractiveApprox' :: (Read ex, NormedRing ex) => String -> IO (Approx ex)
-newInteractiveApprox' = newInteractiveApprox $ \as -> and $ do
-    (n,q)   <- as
-    (n',q') <- as
-    return $ norm (q - q') (1/fromIntegral n + 1/fromIntegral n')
-
--- | /unsafeRunR m/ lässt die nicht-deterministische Operation /m/ laufen
--- und gibt ihr Ergebnis zurück.
---
--- Das ist im Allgemeinen gefährlich, denn jedes Mal, wenn das Ergebnis dann
--- ausgewertet wird, kann jeweils ein anderer Wert resultieren, da /m/ ja nicht
--- als deterministisch vorausgesetzt wird. Außerdem werden die Nebeneffekte in /m/
--- möglicherweise mehrmals ausgeführt.
---
--- Verwendet man 'unsafeRunR' in einer Funktion, muss man daher darauf achten,
--- dass der Rückgabewert nicht von den verschiedenen Ergebnissen von
--- 'unsafeRunR' abhängt -- sonst verletzt man das Prinzip der referentiellen
--- Transparenz.
-unsafeRunR :: R a -> a
-unsafeRunR = unsafePerformIO . runR
-
 -- | Hebt exakte Werte vom Typ /ex/ in den Typ /AST ex/.
 fromBase :: ex -> AST ex
 fromBase = Exact
 
--- | /traceEvals name z/ ist semantisch nicht von /z/ zu unterscheiden,
--- gibt aber bei jeder Auswertung Debugging-Informationen auf die
--- Standardfehlerkonsole aus.
-traceEvals :: (Show ex, NormedRing ex) => String -> AST ex -> AST ex
-traceEvals name z = Ext name $ MkApprox $ \n -> do
-    n' <- R $ evaluate n
-    R $ hPutStrLn stderr $ printf "%-5s_%2d = ..." ("[" ++ name ++ "]") n'
-    q  <- approx n' z
-    q' <- R $ evaluate q
-    R $ hPutStrLn stderr $ printf "%-5s_%2d = %s" ("[" ++ name ++ "]") n' (show q')
-    return q'
+data QinC
+instance RingMorphism QinC where
+    type Domain   QinC = F Rational
+    type Codomain QinC = Complex
+    mor _ = Exact . fromRational . unF
 
--- | /logMalEval z/ gibt ein Paar /(var, z')/ zurück, wobei /z'/ semantisch
--- nicht von /z/ zu unterscheiden ist, aber seine maximalen Approximationsgesuche
--- in der veränderlichen Variablen /var/ speichert.
-logMaxEval :: (NormedRing ex) => AST ex -> IO (IORef PositiveNat, AST ex)
-logMaxEval z = do
-    maxNvar <- newIORef 0
-    let z' = Ext "" $ MkApprox $ \n -> do
-        R $ modifyIORef maxNvar (`max` n)
-        approx n z
-    return (maxNvar, z')
+data QinR
+instance RingMorphism QinR where
+    type Domain   QinR = F Rational
+    type Codomain QinR = Real
+    mor _ = Exact . fromRational . unF
+
+data QIinC
+instance RingMorphism QIinC where
+    type Domain   QIinC = F ComplexRational
+    type Codomain QIinC = Complex
+    mor _ = Exact . unF
 
 instance Show (Approx ex) where
     show _ = "<<nondet>>"
@@ -235,39 +251,6 @@ instance (HasRationalEmbedding ex, Eq ex) => HasRationalEmbedding (AST ex) where
 
 instance (NormedRing ex, HasFloatingApprox ex, Eq ex) => HasFloatingApprox (AST ex) where
     unsafeApprox = unsafeApprox . unsafeRunR . approx 100
-
-data QinC
-instance RingMorphism QinC where
-    type Domain   QinC = F Rational
-    type Codomain QinC = Complex
-    mor _ = Exact . fromRational . unF
-
-data QinR
-instance RingMorphism QinR where
-    type Domain   QinR = F Rational
-    type Codomain QinR = Real
-    mor _ = Exact . fromRational . unF
-
-data QIinC
-instance RingMorphism QIinC where
-    type Domain   QIinC = F ComplexRational
-    type Codomain QIinC = Complex
-    mor _ = Exact . unF
-
--- XXX: eigentlich NormedRing-Kontext!
--- | Klasse für Räume, deren Punkte sich durch Elemente einer gewissen Teilmenge
--- beliebig genau approximieren lassen.
---
--- Wichtigstes Beispiel für uns sind die komplexen Zahlen 'Complex', die sich
--- durch komplexrationale Zahlen approximieren lassen.
-class HasDenseSubset a where
-    -- | Dicht liegende Teilmenge, durch die approximiert werden soll
-    type DenseSubset a :: *
-
-    -- | /approx n z/ soll eine Näherung von /z/ bestimmen, die vom wahren Wert im
-    -- Betrag um weniger (<) als /1\/n/ abweicht. Wiederholte Auswertungen
-    -- dürfen andere Näherungen berechnen.
-    approx :: PositiveNat -> a -> R (DenseSubset a)
 
 instance (NormedRing ex) => HasDenseSubset (AST ex) where
     type DenseSubset (AST ex) = ex
@@ -322,17 +305,6 @@ approx' n (Mult z w) = do
 -- in der Pflicht, eine geeignete Näherung zu konstruieren.
 approx' n (Ext _ (MkApprox f)) = f n
 
--- | Bestimmt eine obere Schranke (im Sinn von '<') für den Betrag der
--- gegebenen Zahl.
---
--- Mehrmalige Aufrufe dieser Funktion können verschiedene obere Schranken
--- produzieren.
-normUpperBoundR :: (NormedRing ex) => AST ex -> R Rational
-normUpperBoundR (Exact q) = return $ normUpperBound q
-normUpperBoundR z         = liftM ((+1) . normUpperBound) $ approx 1 z
--- Sei z_1 eine 1/1-Näherung von z.
--- Dann gilt: |z| <= |z_1| + |z - z_1| < |z_1| + 1.
-
 -- | Vereinfacht einen gegebenen Syntaxbaum unter der Annahme, dass er aus
 -- einem bereits vereinfachten Baum durch eine einzige Operation in der
 -- Implementierung der Ring-Instanz hervorging.
@@ -373,6 +345,17 @@ simplify (Mult z (Exact q)) = simplify $ Mult (Exact q) z
 
 -- Sonst.
 simplify z = z
+
+-- | Bestimmt eine obere Schranke (im Sinn von '<') für den Betrag der
+-- gegebenen Zahl.
+--
+-- Mehrmalige Aufrufe dieser Funktion können verschiedene obere Schranken
+-- produzieren.
+normUpperBoundR :: (NormedRing ex) => AST ex -> R Rational
+normUpperBoundR (Exact q) = return $ normUpperBound q
+normUpperBoundR z         = liftM ((+1) . normUpperBound) $ approx 1 z
+-- Sei z_1 eine 1/1-Näherung von z.
+-- Dann gilt: |z| <= |z_1| + |z - z_1| < |z_1| + 1.
 
 -- XXX: Eigentlich müssten wir einen NormedRing-Kontext fordern!
 class (Ring a) => HasMagnitudeZeroTest a where
@@ -464,6 +447,29 @@ signum' x = unsafeRunR . liftM (`compare` zero) $ go 1
 -- i <- apartnessBound x). Es gilt dann also |x - x_i| < 1/i.
 -- Sollte nun x_i positiv sein, so ist x_i also >= 1/i und damit x > 0.
 -- Sollte x_i negativ sein, gilt x_i <= -1/i und daher x < 0.
+
+-- | /traceEvals name z/ ist semantisch nicht von /z/ zu unterscheiden,
+-- gibt aber bei jeder Auswertung Debugging-Informationen auf die
+-- Standardfehlerkonsole aus.
+traceEvals :: (Show ex, NormedRing ex) => String -> AST ex -> AST ex
+traceEvals name z = Ext name $ MkApprox $ \n -> do
+    n' <- R $ evaluate n
+    R $ hPutStrLn stderr $ printf "%-5s_%2d = ..." ("[" ++ name ++ "]") n'
+    q  <- approx n' z
+    q' <- R $ evaluate q
+    R $ hPutStrLn stderr $ printf "%-5s_%2d = %s" ("[" ++ name ++ "]") n' (show q')
+    return q'
+
+-- | /logMaxEval z/ gibt ein Paar /(var, z')/ zurück, wobei /z'/ semantisch
+-- nicht von /z/ zu unterscheiden ist, aber seine maximalen Approximationsgesuche
+-- in der veränderlichen Variablen /var/ speichert.
+logMaxEval :: (NormedRing ex) => AST ex -> IO (IORef PositiveNat, AST ex)
+logMaxEval z = do
+    maxNvar <- newIORef 0
+    let z' = Ext "" $ MkApprox $ \n -> do
+        R $ modifyIORef maxNvar (`max` n)
+        approx n z
+    return (maxNvar, z')
 
 sqrt2 :: Real
 sqrt2 = Ext "sqrt2" $ MkApprox $ return . sqrt2Seq

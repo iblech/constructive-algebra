@@ -7,11 +7,12 @@ module IdealEuclidean
     ) where
 
 import Prelude hiding (gcd, quotRem, (+), (*), (-), (/), (^), negate, fromInteger)
-import Ring
-import IdealExtension
-import Polynomial
 import Control.Monad
 import Data.List
+
+import IdealExtension
+import Polynomial
+import Ring
 
 -- | Ideelle Entsprechung von 'canonCoeffs': Liste der Koeffizienten ohne
 -- abschließende Nuller.

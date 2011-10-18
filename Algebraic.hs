@@ -25,23 +25,24 @@ module Algebraic
     ) where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger)
-import qualified IntegralClosure as IC
-import IntegralClosure hiding (goldenRatio,sqrt2)
-import Complex hiding (goldenRatio,sqrt2)
-import Smith (HasAnnihilatingPolynomials)
+import Control.Monad
+import Data.Maybe
+import Data.Ratio
 import Data.List (sortBy)
+import Text.Printf
+
+import Complex hiding (goldenRatio,sqrt2)
 import ComplexRational
-import Ring
+import Euclidean
 import Field
-import RingMorphism
+import IntegralClosure hiding (goldenRatio,sqrt2)
+import qualified IntegralClosure as IC
+import NormedRing
 import NumericHelper
 import Polynomial
-import Data.Maybe
-import Control.Monad
-import Data.Ratio
-import Euclidean
-import NormedRing
-import Text.Printf
+import Ring
+import RingMorphism
+import Smith (HasAnnihilatingPolynomials)
 
 -- | Der Datentyp /'Alg' m/ bezeichnet für einen Ringmorphismus /m/
 -- diejenigen Elemente von /'Codomain' m/, die über /'Domain' m/ algebraisch
@@ -277,7 +278,7 @@ demo = do
     mapM_ (uncurry printInfo) zs
     
     putStrLn "Nach Größe sortiert:"
-    print $ map fst $ sortBy (\(n,z) (n',z') -> z `compare` z') zs
+    print $ map fst $ sortBy (\(_,z) (_,z') -> z `compare` z') zs
 
     where
     printInfo name z = do
@@ -289,6 +290,6 @@ demo = do
         putStrLn $ "` Ist rational? " ++ show (isRational $ fromRealAlg z)
         putStrLn ""
     printNumber name z = do
-        printf "` ungefährer Wert    von %s: %s\n" name (show (unsafeApprox z))
+        printf "` ungefährer Wert    von %s: %s\n" name (show (unsafeApprox z)) :: IO ()
         printf "` Ganzheitsgleichung von %s: %s\n" name
-            (show (unNormedPoly . polynomial . unAlg $ z))
+            (show (unNormedPoly . polynomial . unAlg $ z)) :: IO ()

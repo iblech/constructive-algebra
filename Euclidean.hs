@@ -3,10 +3,14 @@
 -- zur Verfügung.
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards #-}
 module Euclidean
-    ( EuclideanRing(..), ER(..)
+    ( -- * Typklasse für euklidische Ringe
+      EuclideanRing(..), ER(..)
+      -- * Umsetzungen des erweiterten euklidischen Algorithmus
     , gcd, gcd', areCoprime
+      -- * Funktionen für \"Euklidketten\" (Sturmketten in allemeinerem Kontext)
     , euclidChain
-    , props_Euclidean
+      -- * QuickCheck
+    , check_Euclidean
     ) where
 
 import Prelude hiding (gcd, quotRem, (+), (*), (-), (/), negate)
@@ -86,8 +90,8 @@ gcd_ :: (EuclideanRing a) => (a -> a -> Maybe a) -> a -> a -> (a,a,a,a)
 gcd_ associatednessTest a b
     | b == zero
     = (unit, zero, unit, zero)
-    | Just u <- associatednessTest a b
-    = (unit, zero, unit, u)
+    | Just k <- associatednessTest a b
+    = (unit, zero, unit, k)
     | otherwise
     = (u,v,s,t)
         where
@@ -170,8 +174,8 @@ euclidChain' a b
     | b == zero = [a]
     | otherwise = a : euclidChain' b (negate . snd $ a `quotRem` b)
 
-props_Euclidean :: [Property]
-props_Euclidean = concat
+check_Euclidean :: IO ()
+check_Euclidean = mapM_ quickCheck $ concat
     [ props_gcd (undefined :: Proxy Integer)
     , props_gcd (undefined :: Proxy (F Rational))
     , props_gcdInteger

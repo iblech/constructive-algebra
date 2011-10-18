@@ -12,13 +12,15 @@ module Ring
       -- * Allgemeine Funktionen für Ringe
     , sum, product, (^)
       -- * QuickCheck-Eigenschaften
-    , props_ringAxioms, props_areAssociated, props_Ring
+    , props_ringAxioms, props_areAssociated
+    , check_Ring
     ) where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger, sum, product)
 import qualified Prelude as P
-import Data.Ratio
 import qualified Data.Complex as C
+import Data.Ratio
+
 import Proxy
 import Testing
 
@@ -100,15 +102,15 @@ props_ringAxioms a = concat
     where typ x = let _ = x `asTypeOfProxy` a in True
 
 props_commutativeMonoid :: (Eq a, Show a, Arbitrary a) => (a -> a -> a) -> a -> [Property]
-props_commutativeMonoid (+) zero =
-    [ property $ \x y z -> x + (y + z)    == (x + y) + z
-    , property $ \x     -> x + zero       == x
-    , property $ \x y   -> x + y          == y + x
+props_commutativeMonoid (#) nul =
+    [ property $ \x y z -> x # (y # z)    == (x # y) # z
+    , property $ \x     -> x # nul        == x
+    , property $ \x y   -> x # y          == y # x
     ]
 
 props_commutativeGroup :: (Eq a, Show a, Arbitrary a) => (a -> a -> a) -> a -> (a -> a) -> [Property]
-props_commutativeGroup (+) zero negate =
-    props_commutativeMonoid (+) zero ++ [ property $ \x -> x + (negate x) == zero ]
+props_commutativeGroup (#) nul neg =
+    props_commutativeMonoid (#) nul ++ [ property $ \x -> x # neg x == nul ]
 
 
 -- | Klasse für Typen, die Integritätsbereiche repräsentieren, also
@@ -224,6 +226,8 @@ product = product' unit
 
 -- | Potenziert ein gegebenes Ringelement mittels binärer Exponentiation
 -- (square and multiply).
+--
+-- Quelle: Das Haskell-Prelude.
 (^) :: (Ring a) => a -> Integer -> a
 _ ^ 0           = unit
 x ^ n | n > 0 = f x (n-1) x
@@ -233,7 +237,6 @@ x ^ n | n > 0 = f x (n-1) x
                           | otherwise = f x (n-1) (x*y)
 _ ^ _           = error "Ring.^: negative exponent"
 infixr 8 ^
--- Quelle: Das Haskell-Prelude.
 
 -- Die größenbeschränkten Ganzzahlen bilden einen bestimmten Faktorring
 -- des echten Rings der ganzen Zahlen.
@@ -291,11 +294,11 @@ instance (IntegralDomain a, Integral a, HasFloatingApprox a) => HasFloatingAppro
         in  unsafeApprox p P./ unsafeApprox q
 instance OrderedRing (Ratio Integer)
 
-props_Ring :: [Property]
-props_Ring = concat
-    [ props_ringAxioms (undefined :: Proxy Integer)
-    , props_ringAxioms (undefined :: Proxy Int)
-    , props_ringAxioms (undefined :: Proxy Rational)
+check_Ring :: IO ()
+check_Ring = mapM_ quickCheck $ concat
+    [ props_ringAxioms    (undefined :: Proxy Integer)
+    , props_ringAxioms    (undefined :: Proxy Int)
+    , props_ringAxioms    (undefined :: Proxy Rational)
     , props_areAssociated (undefined :: Proxy Integer)
     , props_areAssociated (undefined :: Proxy Rational)
     ]

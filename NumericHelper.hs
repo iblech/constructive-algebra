@@ -1,6 +1,16 @@
 -- | Dieses Modul stellt numerische Hilfsfunktionen bereit.
 {-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
-module NumericHelper where
+module NumericHelper
+    ( NonnegativeRational
+    , unsafeFromRational
+    , roundDownToRecipN
+    , roundUp
+    , ilogb, ilogbUp
+    , squareRoot, squareRootBounds
+    , primeFactors, positiveDivisors
+    , sqrt2Seq, goldenRatioSeq
+    , check_NumericHelper
+    ) where
 
 import Prelude hiding (gcd)
 import Data.List
@@ -11,6 +21,16 @@ import Testing
 
 -- | Approximation an den Typ nichtnegativer rationaler Zahlen.
 type NonnegativeRational = Rational
+
+-- | Ist eine rationale Zahl /x/ sogar eine ganze Zahl, so liefert
+-- /unsafeFromRational x/ diese ganze Zahl. Sonst wirft sie eine
+-- Laufzeitausnahme.
+unsafeFromRational :: Rational -> Integer
+unsafeFromRational x
+    | r == 0    = q
+    | otherwise = error $ "unsafeFromRational: " ++ show x
+    where
+    (q,r) = numerator x `quotRem` denominator x
 
 -- | Findet zu einer gegebenen rationalen Zahl /x > 0/ die kleinste positive
 -- Zahl /n/ mit /1\/n < x/.
@@ -40,23 +60,17 @@ props_roundUp =
         x <= fromInteger (roundUp x)  &&  fromInteger (roundUp x) - x < 1
     ]
 
--- ilog b n == Abrundung von log_b n
--- XXX Quelle?
--- http://www.haskell.org/pipermail/haskell-cafe/2009-August/065854.html
--- XXX Bessere Version nehmen!
+-- | /ilog b n == Abrundung von log_b n/.
+--
+-- Quelle: <http://www.haskell.org/pipermail/haskell-cafe/2009-August/065845.html>
 ilogb :: PositiveNat -> Nat -> Integer
-ilogb b n | n < 0      = error "ilogb: Negatives Argument!"
-          | n < b      = 0
-          | otherwise  = (up b n 1) - 1
-  where up b n a = if n < (b ^ a)
-                      then bin b (quot a 2) a
-                      else up b n (2*a)
-        bin b lo hi = if (hi - lo) <= 1
-                         then hi
-                         else let av = quot (lo + hi) 2
-                              in if n < (b ^ av)
-                                    then bin b lo av
-                                    else bin b av hi
+ilogb = (fst .) . ilogb'
+    where
+    ilogb' b n
+        | n < 0      = error "ilogb: Negatives Argument!"
+        | n < b      = (0, n)
+        | otherwise  = let (e, r) = ilogb' (b*b) n
+                       in  if r < b then (2*e, r) else (2*e+1, r `div` b)
 
 props_ilogb :: [Property]
 props_ilogb = (:[]) $ forAll positive $ \b -> forAll positive $ \n ->
@@ -68,43 +82,6 @@ ilogbUp :: PositiveNat -> Nat -> Integer
 ilogbUp b n =
     let l = ilogb b n
     in  if b^l == n then l else l + 1
-
--- | Bestimmt zu einer gegebenen ganzen Zahl /n ≠ 0/ ihre Primfaktorzerlegung
--- (in positive Primzahlen). Die Vielfachheiten sind jeweils die zweiten
--- Komponenten der Paare. Jeder Primfaktor kommt genau einmal in der
--- Rückgabeliste vor.
-primeFactors :: Integer -> [(Integer,Integer)]
-primeFactors = multiplicities . group . go primes
-    where
-    go (p:ps) n
-        | abs n == 1           = []
-        | (q,0) <- quotRem n p = p : go (p:ps) q
-        | otherwise            = go ps n
-    go [] _ = undefined  -- kann nicht eintreten
-    multiplicities = map (\xs -> (head xs, genericLength xs))
-
-props_primeFactors :: [Property]
-props_primeFactors = (:[]) $ forAll arbitrary $ \n -> n /= 0 ==> and
-    [ abs n == product (map (uncurry (^)) . primeFactors $ n)
-    , all (`elem` primes) . map fst $ primeFactors n
-    ]
-
--- | Liefert alle positiven Teiler einer gegebenen ganzen Zahl /n ≠ 0/, auch
--- /1/ und den (Betrag der) Zahl selbst. Erfüllt folgende Spezifikation:
---
--- > positiveDivisors n = [x | x <- [1..abs n], n `mod` x == 0]
-positiveDivisors :: Integer -> [Integer]
-positiveDivisors = sort . go . primeFactors
-    where
-    go []         = [1]
-    go ((p,n):ps) = do
-        i <- [0..n]
-        q <- go ps
-        return $ p^i * q
-
-props_positiveDivisors :: [Property]
-props_positiveDivisors = (:[]) $ forAll arbitrary $ \n -> n /= 0 ==>
-    positiveDivisors n == [x | x <- [1..abs n], n `mod` x == 0]
 
 -- | Bestimmt zu einer gegebenen nichtnegativen ganzen Zahl /n/ die Abrundung
 -- ihrer nichtnegativen Quadratwurzel.
@@ -144,15 +121,42 @@ props_squareRootBounds =
         in  u >= 0 && v >= 0 && u*u <= x && x <= v*v
     ]
 
--- | Ist eine rationale Zahl /x/ sogar eine ganze Zahl, so liefert
--- /unsafeFromRational x/ diese ganze Zahl. Sonst wirft sie eine
--- Laufzeitausnahme.
-unsafeFromRational :: Rational -> Integer
-unsafeFromRational x
-    | r == 0    = q
-    | otherwise = error $ "unsafeFromRational: " ++ show x
+-- | Bestimmt zu einer gegebenen ganzen Zahl /n ≠ 0/ ihre Primfaktorzerlegung
+-- (in positive Primzahlen). Die Vielfachheiten sind jeweils die zweiten
+-- Komponenten der Paare. Jeder Primfaktor kommt genau einmal in der
+-- Rückgabeliste vor.
+primeFactors :: Integer -> [(Integer,Integer)]
+primeFactors = multiplicities . group . go primes
     where
-    (q,r) = numerator x `quotRem` denominator x
+    go (p:ps) n
+        | abs n == 1           = []
+        | (q,0) <- quotRem n p = p : go (p:ps) q
+        | otherwise            = go ps n
+    go [] _ = undefined  -- kann nicht eintreten
+    multiplicities = map (\xs -> (head xs, genericLength xs))
+
+props_primeFactors :: [Property]
+props_primeFactors = (:[]) $ forAll arbitrary $ \n -> n /= 0 ==> and
+    [ abs n == product (map (uncurry (^)) . primeFactors $ n)
+    , all (`elem` primes) . map fst $ primeFactors n
+    ]
+
+-- | Liefert alle positiven Teiler einer gegebenen ganzen Zahl /n ≠ 0/, auch
+-- /1/ und den (Betrag der) Zahl selbst. Erfüllt folgende Spezifikation:
+--
+-- > positiveDivisors n = [x | x <- [1..abs n], n `mod` x == 0]
+positiveDivisors :: Integer -> [Integer]
+positiveDivisors = sort . go . primeFactors
+    where
+    go []         = [1]
+    go ((p,n):ps) = do
+        i <- [0..n]
+        q <- go ps
+        return $ p^i * q
+
+props_positiveDivisors :: [Property]
+props_positiveDivisors = (:[]) $ forAll arbitrary $ \n -> n /= 0 ==>
+    positiveDivisors n == [x | x <- [1..abs n], n `mod` x == 0]
 
 -- | Liefert Approximationen an den goldenen Schnitt. Erfüllt folgende
 -- Spezifikation:
@@ -180,18 +184,19 @@ sqrt2Seq n = xs `genericIndex` ((1 + ilogb 2 n) `div` 2)
 -- Die Folge hier wird daher entsprechend künstlich verlangsamt.
 -- XXX: Bestimmt kann man die Folge noch viel weiter verlangsamen!
 
-props_Approximation :: (Integer -> Rational) -> Double -> [Property]
-props_Approximation f x = (:[]) $ forAll positive $ \n ->
+props_approximation :: (Integer -> Rational) -> Double -> [Property]
+props_approximation f x = (:[]) $ forAll positive $ \n ->
     abs (fromRational (f n) - x) < recip (fromInteger n)
 
-props_NumericHelper :: [Property]
-props_NumericHelper = concat
+check_NumericHelper :: IO ()
+check_NumericHelper = mapM_ quickCheck $ concat
     [ props_roundDownToRecipN
     , props_roundUp
-    , props_primeFactors
-    , props_positiveDivisors
+    , props_ilogb
     , props_squareRoot
     , props_squareRootBounds
-    , props_Approximation goldenRatioSeq ((1 + sqrt 5) / 2)
-    , props_Approximation sqrt2Seq       (sqrt 2)
+    , props_primeFactors
+    , props_positiveDivisors
+    , props_approximation goldenRatioSeq ((1 + sqrt 5) / 2)
+    , props_approximation sqrt2Seq       (sqrt 2)
     ]

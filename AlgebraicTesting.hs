@@ -1,21 +1,22 @@
 -- | Dieses Modul stellt QuickCheck-Eigenschaften für "Algebraic" bereit.
 {-# LANGUAGE FlexibleInstances, FlexibleContexts, TypeFamilies #-}
-module AlgebraicTesting where
+module AlgebraicTesting (check_Algebraic) where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger)
-import Ring
-import Complex
-import ComplexRational
+import Data.Ratio
+
 import Algebraic
 import qualified Algebraic as A
-import Testing
-import ZeroRational
+import Complex
+import ComplexRational
+import Field
+import IntegralClosure
+import NumericHelper
 import Polynomial
 import qualified Polynomial as Poly
-import IntegralClosure
-import Field
-import Data.Ratio
-import NumericHelper
+import Ring
+import Testing
+import ZeroRational
 
 instance Arbitrary (Alg QinC) where
     arbitrary = elements . roots =<< simpleNonconstantRationalPoly
@@ -64,8 +65,8 @@ props_eval =
         A.eval (x :: Alg QinC) (fmap F f) == Poly.eval x (fmap (A.fromBase . F) f)
     ]
 
-props_Algebraic :: [Property]
-props_Algebraic = concat
+check_Algebraic :: IO ()
+check_Algebraic = mapM_ (quickCheckWith stdArgs{ maxSize = 1 }) $ concat
     [ props_maybeInvert
     , props_isRational, props_isComplexRational, props_isInteger
     , props_eval

@@ -9,23 +9,24 @@ module Galois
     where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
-import Ring
-import Field
-import Polynomial as Poly
-import Factoring
-import Data.List hiding (sum,product)
-import Complex
-import IntegralClosure
-import ZeroRational
-import Algebraic as A
 import Control.Monad
+import Data.List hiding (sum,product)
 import Data.Maybe
-import NumericHelper
-import IdealExtension as I
-import IdealEuclidean
-import Euclidean
 import Text.Printf
+
+import Algebraic as A
+import Complex
+import Euclidean
+import Factoring
+import Field
+import IdealEuclidean
+import IdealExtension as I
+import IntegralClosure
+import NumericHelper
+import Polynomial as Poly
+import Ring
 import Testing
+import ZeroRational
 
 -- | Berechnet eine lineare galoissche Resolvente eines normierten separablen
 -- Polynoms über eine Abschätzung, in der die Nullstellen des Polynoms
@@ -159,6 +160,7 @@ primitiveElement x y = (lambda, t, hX, hY)
     -- Der Zeuge, dass x in t rational ist, ist einfacher:
     hX = iX - fromInteger lambda * hY
 
+-- in der Praxis fürs Testen zu langsam
 props_primitiveElement :: [Property]
 props_primitiveElement =
     [ property $ \x y ->
@@ -211,6 +213,7 @@ pseudoResolvent (x:y:zs) =
     -- Polynomen, ist also im Hinblick auf spätere Verwendung effizienter.
     in (1 : lambda : tail as, t, reduce (hX `compose` hU) : reduce (hY `compose` hU) : hs)
 
+-- in der Praxis fürs Testen zu langsam
 props_pseudoResolvent :: [Property]
 props_pseudoResolvent =
     [ property $ \xs ->
