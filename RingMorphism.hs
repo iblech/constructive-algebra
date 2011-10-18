@@ -5,8 +5,8 @@
 module RingMorphism where
 
 import Prelude hiding (fromInteger)
-import Ring
 import Proxy
+import Ring
 
 -- | Klasse für Ringhomomorphismen.
 class (Ring (Domain m), Ring (Codomain m)) => RingMorphism m where
@@ -17,10 +17,11 @@ class (Ring (Domain m), Ring (Codomain m)) => RingMorphism m where
     -- | Der eigentliche Morphismus.
     mor :: Proxy m -> Domain m -> Codomain m
 
-
 -- | Bezeichnung für den eindeutigen Ringhomomorphismus vom Ring
 -- der ganzen Zahlen in einen beliebigen Ring /a/ (nur zu
 -- Demonstrationszwecken).
+--
+-- Zentral nutzen wir 'Complex.QinC' für die algebraischen Zahlen.
 data Zin a
 
 instance (Ring a) => RingMorphism (Zin a) where

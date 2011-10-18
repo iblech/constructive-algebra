@@ -15,8 +15,9 @@ module NumericHelper
 import Prelude hiding (gcd)
 import Data.List
 import Data.Ratio
-import Primes
+
 import Nat
+import Primes
 import Testing
 
 -- | Approximation an den Typ nichtnegativer rationaler Zahlen.
@@ -162,27 +163,24 @@ props_positiveDivisors = (:[]) $ forAll arbitrary $ \n -> n /= 0 ==>
 -- Spezifikation:
 --
 -- > |goldenRatioSeq n - φ| < 1/n für alle n >= 1.
-goldenRatioSeq :: Integer -> Rational
-goldenRatioSeq n = xs `genericIndex` (ilogb 2 n)
+goldenRatioSeq :: PositiveNat -> Rational
+goldenRatioSeq n = xs `genericIndex` (ilogbUp 2 n)
     where xs = iterate ((1 +) . recip) 1
--- a_1 = 1, a_(n+1) = 1 + 1/a_n
--- erfüllt |a_n - a| < (4/9)^n für alle n >= 2.
--- Diese Folge hier wird künstlich verlangsamt, sie erfüllt |x_n - x| < 1/n für
--- alle n >= 1.
--- XXX: Bestimmt kann man die Folge noch viel weiter verlangsamen!
+-- Die Folge mit
+--     x_1 = 1, x_(n+1) = 1 + 1/a_n
+-- erfüllt |x_n - a| < (4/9)^(n-1) für alle n >= 1.
 
 -- | Liefert Approximationen an /√2/. Erfüllt folgende Spezifikation:
 --
 -- > |sqrt2Seq n - √2| < 1/n für alle n >= 1.
-sqrt2Seq :: Integer -> Rational
-sqrt2Seq n = xs `genericIndex` ((1 + ilogb 2 n) `div` 2)
+sqrt2Seq :: PositiveNat -> Rational
+sqrt2Seq n = xs `genericIndex` ((1 + ilogbUp 2 n) `div` 2)
     where xs = map (+ 1) $ iterate (\x -> 1 / (fromInteger 2 + x)) 0
 -- Die Folge mit
---   a_1 = 0, a_(n+1) = 1/(2+a_n)
+--     x_1 = 0, x_(n+1) = 1/(2+x_n)
 -- erfüllt |a_n - (sqrt(2) - 1)| <= gamma^n * c für alle n >= 1
--- mit gamma = 1 / (2 (1 + sqrt(2))) <= 0.2072 und c = 2.
--- Die Folge hier wird daher entsprechend künstlich verlangsamt.
--- XXX: Bestimmt kann man die Folge noch viel weiter verlangsamen!
+-- mit gamma = 1 / (2 (1 + sqrt(2))) < 0.2072 und c = 2.
+-- Die Folge dann noch entsprechend künstlich verlangsamt.
 
 props_approximation :: (Integer -> Rational) -> Double -> [Property]
 props_approximation f x = (:[]) $ forAll positive $ \n ->

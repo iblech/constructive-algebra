@@ -1,29 +1,33 @@
 -- | Dieses Modul erlaubt es, eine gegebene Matrix über einem euklidischen Ring
 -- auf /Smithsche Normalform/ zu bringen.
 --
--- Dies verwenden wir unter anderem, um Minimalpolynome von Matrizen
+-- Diese verwenden wir, um in "IntegralClosure" Minimalpolynome von Matrizen
 -- auszurechnen.
 {-# LANGUAGE FlexibleContexts, FlexibleInstances #-}
 module Smith
-    ( diagonalForm, elementaryDivisors
+    ( -- * Transformationen
+      diagonalForm, elementaryDivisors
+      -- * Anwendungen der Smithschen Normalform
     , HasAnnihilatingPolynomials(..)
     , determinant
     , charPoly, minPoly, lambdaMatrix
-    , props_Smith
+      -- * Debugging
+    , check_Smith
     , Smith.demo
     ) where
 
-import Matrix as M
-import Data.Array
 import Prelude hiding (gcd, (!!), (+), (*), (-), (/), negate, quotRem, fromInteger)
 import qualified Prelude as P
+import Data.Array
+
+import Debug
+import Euclidean
+import Field
+import Matrix as M
 import Polynomial as Poly
 import Ring
-import Field
-import Euclidean
-import TypeLevelNat
 import Testing
-import Debug
+import TypeLevelNat
 
 -- | Führt eine Transformation derart aus, dass das /(0,j)/-Element null wird;
 -- dazu wird der größte gemeinsame Teiler vom /(0,0)/- und /(0,j)/-Element
@@ -205,8 +209,9 @@ lambdaMatrix :: (ReifyNat n, Ring a) => SqMatrix n a -> SqMatrix n (Poly a)
 lambdaMatrix (MkMatrix arr) = MkMatrix $
     accum (+) (fmap (negate . Poly.fromBase) arr) [((i,i), iX) | i <- [0..fst (snd (bounds arr))]]
 
-props_Smith :: [Property]
-props_Smith = props_annihilatingPolynomial (undefined :: Proxy (F Rational))
+check_Smith :: IO ()
+check_Smith = mapM_ quickCheck $
+    props_annihilatingPolynomial (undefined :: Proxy (F Rational))
 
 demo :: IO ()
 demo = do
@@ -219,7 +224,7 @@ demo = do
         putStrLn "Die Smithsche Normalform (also die Liste der Elementarteiler) von A = ..."
         putStrLn $ prettyMatrix m
         putStrLn $ "...ist: " ++ show (elementaryDivisors m)
-        putStrLn $ "Die Elementarteiler von lambda 1 - A sind:\t\n" ++
+        putStrLn $ "Die Elementarteiler von X 1 - A sind:\t\n" ++
             show (map normalize . elementaryDivisors . lambdaMatrix $ fmap (fromInteger :: Integer -> Rational) m)
 
     m1 :: SqMatrix N3 Integer

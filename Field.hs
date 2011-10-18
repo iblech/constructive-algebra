@@ -27,7 +27,7 @@ class (IntegralDomain a) => Field a where
 -- | Dummytyp, um überlappende Instanzdeklarationen vermeiden zu können.
 newtype F a = F { unF :: a }
     deriving
-    (Eq,Ord,Functor,Ring,NormedRing,IntegralDomain,Field,P.Num,P.Fractional,HasTestableAssociatedness,HasRationalEmbedding,HasFloatingApprox,Arbitrary)
+    (Eq,Ord,Functor,Ring,OrderedRing,NormedRing,IntegralDomain,Field,P.Num,P.Fractional,HasTestableAssociatedness,HasRationalEmbedding,HasFloatingApprox,Arbitrary)
 instance (Show a, Field a) => Show (F a) where
     show        = show . unF
     showsPrec i = showsPrec i . unF

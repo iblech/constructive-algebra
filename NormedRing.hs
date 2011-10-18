@@ -1,10 +1,14 @@
 {-# LANGUAGE FlexibleInstances #-}
-module NormedRing where
+module NormedRing
+    ( NormedRing(..)
+    , props_normUpperBound, props_NormedRing
+    ) where
 
-import Ring
 import Data.Ratio
-import Proxy
+
 import NumericHelper (NonnegativeRational)
+import Proxy
+import Ring
 import Testing
 
 -- | Klasse für Ringe mit Norm, wie beispielsweise 'Rational' und

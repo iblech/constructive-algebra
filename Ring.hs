@@ -21,6 +21,7 @@ import qualified Prelude as P
 import qualified Data.Complex as C
 import Data.Ratio
 
+import Nat
 import Proxy
 import Testing
 
@@ -228,14 +229,14 @@ product = product' unit
 -- (square and multiply).
 --
 -- Quelle: Das Haskell-Prelude.
-(^) :: (Ring a) => a -> Integer -> a
+(^) :: (Ring a) => a -> Nat -> a
 _ ^ 0           = unit
-x ^ n | n > 0 = f x (n-1) x
+z ^ m | m > 0 = f z (m-1) z
     where f _ 0 y = y
           f x n y = g x n  where
-                    g x n | even n    = g (x*x) (n `quot` 2)
-                          | otherwise = f x (n-1) (x*y)
-_ ^ _           = error "Ring.^: negative exponent"
+                    g u k | even k    = g (u*u) (k `quot` 2)
+                          | otherwise = f u (k-1) (u*y)
+_ ^ _           = error "Ring.^: Negativer Exponent"
 infixr 8 ^
 
 -- Die größenbeschränkten Ganzzahlen bilden einen bestimmten Faktorring
@@ -301,4 +302,5 @@ check_Ring = mapM_ quickCheck $ concat
     , props_ringAxioms    (undefined :: Proxy Rational)
     , props_areAssociated (undefined :: Proxy Integer)
     , props_areAssociated (undefined :: Proxy Rational)
+    , [ property $ \x n -> n >= 1 ==> x^n == x^(n-1) * (x :: Rational) ]
     ]

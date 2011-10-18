@@ -5,29 +5,35 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, MultiParamTypeClasses,
 TupleSections, TypeSynonymInstances, FlexibleInstances #-}
 module Matrix
-    ( Nat
-    , Matrix(..), SqMatrix
+    ( -- * Typen
+      Nat, Matrix(..), SqMatrix
     , (!!)
+      -- * Konstruktion von Matrizen
     , fromArray, fromArray'
+    , fromBase
+      -- * Dimensionsabfrage
     , numRows, numRows'
     , numCols, numCols'
+      -- * Laufzeitprüfungen über bestimmte Dimensionseigenschaften
     , withNontrivialRows, withNontrivialCols, withNontrivialRowsCols, withSquare
+      -- * Operationen mit Matrizen
     , deleteRow, deleteColumn, transpose
-    , fromBase
     , naiveDeterminant
+      -- * Debugging
     , prettyMatrix
     ) where
 
 import Prelude hiding ((!!), (+), (*), (-), negate, (^), sum, fromInteger)
 
-import Data.Array
-import Control.Monad
 import Control.Arrow ((***), (&&&))
+import Control.Monad
+import Data.Array
 import Data.List hiding (transpose, (!!), sum)
 import Text.Printf
-import TypeLevelNat
+
 import Ring
 import Testing
+import TypeLevelNat
 
 -- | Approximation an den Typ für natürliche Zahlen (beginnend bei Null),
 -- abweichend vom restlichen Projekt einfach 'Int' statt 'Integer'.
@@ -47,6 +53,10 @@ newtype Matrix n m a = MkMatrix { unMatrix :: Array (Nat,Nat) a }
 
 -- | Typ der quadratischen /n x n/-Matrizen über /a/.
 -- Der Typ /n/ sollte der 'TypeLevelNat.ReifyNat'-Klasse angehören.
+--
+-- Die 'Ring'-Instanz von /SqMatrix n/ ist eine Lüge, da diese die
+-- Multiplikation als kommutativ voraussetzt. Sie wird nur in "Smith"
+-- für eine QuickCheck-Eigenschaft verwendet.
 type SqMatrix n a = Matrix n n a
 
 -- | /m !! (i,j)/ ist der /(i,j)/-Eintrag der Matrix /m/.
@@ -113,7 +123,9 @@ withNontrivialRowsCols
     -> r
 withNontrivialRowsCols k = withNontrivialRows (withNontrivialCols k)
 -- Leider kann man das nicht punktfrei als withNontrivialRows .
--- withNontrivialCols schreiben: GHC kann die Typen nicht erschließen.
+-- withNontrivialCols schreiben: GHC bringt wegen des forall-Typs höherer
+-- Ordnung dann einen Typfehler, da er den Kompositionsoperator (.)
+-- nicht richtig instanziieren kann.
 
 -- | Bringt die Information darüber, dass die gegebene Matrix quadratisch ist,
 -- aufs Typniveau; ist dem nicht so, wird eine Laufzeitausnahme geworfen.
@@ -187,7 +199,9 @@ naiveDeterminant m
     f i = (negate unit)^fromIntegral i * (m !! (0,i)) *
         withNontrivialRowsCols (withSquare naiveDeterminant . deleteColumn i . deleteRow 0) m
 
--- Ringstruktur der quadratischen (n x n)-Matrizen
+-- Ringstruktur der quadratischen (n x n)-Matrizen.
+-- Da wir unsere Ringe als kommutativ voraussetzen, ist diese eigentlich
+-- nicht zulässig.
 instance (ReifyNat n, Ring a) => Ring (SqMatrix n a) where
     zero        = fromBase zero
     unit        = fromBase unit

@@ -10,21 +10,24 @@ module SimpleExtension
     , SE, canonRep, adjointedRoot, SimpleExtension.fromBase
       -- * Beispiele
     , MinPolySqrt2, Qsqrt2inR, SimpleExtension.demo
+      -- * QuickCheck
+    , check_SimpleExtension
     ) where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd, Real)
-import Ring
+import Data.Maybe
+import Text.Printf
+
+import Algebraic
+import Complex hiding (fromBase)
+import Euclidean
 import Field
+import IntegralClosure hiding (fromBase)
 import Polynomial hiding (fromBase)
 import qualified Polynomial as Poly
-import Complex hiding (fromBase)
-import RingMorphism
 import Proxy
-import Euclidean
-import Data.Maybe
-import Algebraic
-import IntegralClosure hiding (fromBase)
-import Text.Printf
+import Ring
+import RingMorphism
 import Testing
 
 -- | Klasse für Typen, die Polynome auf Typebene darstellen.
@@ -107,8 +110,8 @@ instance RingMorphism Qsqrt2inR where
     type Codomain Qsqrt2inR = Real
     mor _ = Poly.eval Complex.sqrt2 . fmap fromRational . canonRep . unF
 
-props_SimpleExtension :: [Property]
-props_SimpleExtension =
+check_SimpleExtension :: IO ()
+check_SimpleExtension = mapM_ quickCheck $
     props_fieldAxioms (undefined :: Proxy (SE MinPolySqrt2))
 
 demo :: IO ()

@@ -179,20 +179,22 @@ type Real    = AST Rational
 -- viele Approx-Objekte, welche Bezüge auf ihre Definitionsumgebung enthalten
 -- und daher automatische Speicherbereinigung verhindern.
 --
--- /Warnung/: /AST ex/ ist natürlich funktoriell in /ex/. Man kann jedoch
--- von einer allgemeinen Funktion /f/ nicht erwarten, dass
+-- /Warnung/: Wenn man sich nur für die syntaktische Struktur interessiert,
+-- ist /AST ex/ natürlich faktoriell in /ex/. Von einer allgemeinen Funktion /f/
+-- kann man aber nicht erwarten, dass
 --
 -- > approx n (fmap f ast)
 --
 -- auch eine /1\/n/-Approximation an /liftM f (approx n ast)/ liefert.
--- Damit das garantiert ist, muss /f/ lipschitzstetig mit Konstante /1/ sein,
--- wie beispielsweise /f = negate/ oder /f = conjugate/.
+-- Damit das garantiert ist, muss /f/ ein lipschitzstetiger Ringhomomorphismus
+-- mit Lipschitzkonstante kleinergleich /1/ sein, wie beispielsweise
+-- /f = conjugate/ oder /f = fromRational/.
 data AST ex
     = Exact ex                    -- ^ Einbettung exakter Werte
     | Add   [AST ex]              -- ^ Addition beliebig (endlich) vieler Terme
     | Mult  (AST ex) (AST ex)     -- ^ Multiplikation zweier Terme
     | Ext   String   (Approx ex)  -- ^ ideeller Wert, gegeben durch einen
-                                  -- Approximationsalgorithmus. Die übergebene
+                                  -- Approximationsalgorithmus. Die
                                   -- Zeichenkette kann als Bezeichner für
                                   -- Debugging-Zwecke dienen.
     deriving (Show,Functor)
@@ -201,18 +203,21 @@ data AST ex
 fromBase :: ex -> AST ex
 fromBase = Exact
 
+-- | Bezeichnung für die Einbettung der rationalen in die komplexen Zahlen
 data QinC
 instance RingMorphism QinC where
     type Domain   QinC = F Rational
     type Codomain QinC = Complex
     mor _ = Exact . fromRational . unF
 
+-- | Bezeichnung für die Einbettung der rationalen in die reellen Zahlen
 data QinR
 instance RingMorphism QinR where
     type Domain   QinR = F Rational
     type Codomain QinR = Real
     mor _ = Exact . fromRational . unF
 
+-- | Bezeichnung für die Einbettung der komplexrationalen in die komplexen Zahlen
 data QIinC
 instance RingMorphism QIinC where
     type Domain   QIinC = F ComplexRational

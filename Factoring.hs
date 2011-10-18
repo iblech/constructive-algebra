@@ -120,19 +120,22 @@ props_isComposedPoly = (:[]) $ forAll arbitrary $ \f -> forAll (elements [0..30]
 -- >     where fs = irreducibleFactors f
 irreducibleFactors :: Poly Rational -> [Poly Rational]
 irreducibleFactors f
-    | Nothing <- test
-    = [f]
-    | Just (p,q) <- test
-    -- = irreducibleFactors p ++ irreducibleFactors q
-    = let ps = irreducibleFactors p in ps ++ go p ps q
+    | Nothing    <- test = [f]
+    | Just (p,q) <- test = let ps = irreducibleFactors p in ps ++ go p ps q
+    | otherwise          = undefined  -- kann nicht eintreten
     where
     test = isIrreducible f
-    -- auf gut Glück denselben Faktor nochmal versuchen
+
+    -- auf gut Glück denselben Faktor nochmal versuchen.
+    -- Eine einfachere Implementierung oben wäre einfach
+    --
+    --     Just (p,q) <- test = irreducibleFactors p ++ irreducibleFactors q.
     go p ps q =
         let (r,s) = q `quotRem` p
         in  if s == zero
-                then (mapFirst ((leadingCoeff q / leadingCoeff p) .*) ps) ++ go p ps r
+                then mapFirst ((leadingCoeff q / leadingCoeff p) .*) ps ++ go p ps r
                 else if degree q < 1 then [] else irreducibleFactors q
+
     mapFirst g (x:xs) = g x:xs
     mapFirst _ _      = error "irreducibleFactors.mapFirst"  -- kann nicht eintreten
 
@@ -146,8 +149,8 @@ props_irreducibleFactors = (:[]) $
     in  all (isNothing . isIrreducible) fs' && product fs' == f
 
 -- | Bestimmt das Minimalpolynom einer algebraischen Zahl.
-minimalPolynomial :: Alg QinC -> Poly Rational
-minimalPolynomial z = head $ filter (\p -> zero == A.eval z (fmap F p)) factors
+minimalPolynomial :: Alg QinC -> NormedPoly Rational
+minimalPolynomial z = mkNormedPoly . head $ filter (\p -> zero == A.eval z (fmap F p)) factors
     where
     f         = unNormedPoly . polynomial . unAlg $ z
     (_,_,s,_) = gcd f (derivative f)
@@ -160,7 +163,7 @@ minimalPolynomial z = head $ filter (\p -> zero == A.eval z (fmap F p)) factors
 -- Aus Effizienzgründen ist es manchmal ratsam, an einigen ausgewählten Stellen
 -- 'simplifyAlg' einzufügen.
 simplifyAlg :: Alg QinC -> Alg QinC
-simplifyAlg z = MkAlg $ MkIC (number . unAlg $ z) (mkNormedPoly $ fmap F $ minimalPolynomial z)
+simplifyAlg z = MkAlg $ MkIC (number . unAlg $ z) (fmap F $ minimalPolynomial z)
 
 props_simplifyAlg :: [Property]
 props_simplifyAlg =
@@ -172,11 +175,21 @@ props_Factoring = props_isComposedPoly ++ props_irreducibleFactors ++ props_simp
 demo :: IO ()
 demo = do
     flip mapM_ [iX^2 + unit, iX^2 - unit, iX^3 - unit, iX^4 - unit, iX^5 - unit, iX^6 - unit]
-        printInfo
+        printPolyInfo
+
+    flip mapM_ [A.sqrt2, A.sqrt2^2, A.sqrt2^3, A.sqrt2 + A.goldenRatio]
+        printNumberInfo
 
     where
-    printInfo f = do
-        printf "Irreduzible Faktoren von %s:\n" (show f)
+    printPolyInfo f = do
+        printf "Irreduzible Faktoren von %s:\n" (show f) :: IO ()
         flip mapM_ (irreducibleFactors f) $ \g -> do
             printf "` %s\n" (show g)
+        putStrLn ""
+
+    printNumberInfo z = do
+        let z' = fromRealAlg z
+        printf "Zur Zahl %s:\n" (show $ number . unAlg $ z) :: IO ()
+        printf "` Ganzheitsgleichung: %s\n" (show $ unNormedPoly . polynomial . unAlg $ z) :: IO ()
+        printf "` Minimalpolynom:     %s\n" (show $ unNormedPoly . minimalPolynomial  $ z') :: IO ()
         putStrLn ""

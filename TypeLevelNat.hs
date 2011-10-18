@@ -12,16 +12,16 @@
 -- <http://www.haskell.org/haskellwiki/Type_arithmetic>.
 {-# LANGUAGE EmptyDataDecls, RankNTypes #-}
 module TypeLevelNat
-    ( Z, S, N2, N3, N4
+    ( Z, S, N0, N1, N2, N3, N4
     , ReifyNat(..), reflectNat, reflectPositiveNat
     , module Proxy
-    , props_TypeLevelNat
+    , check_TypeLevelNat
     ) where
 
 import Prelude hiding (pred,succ)
+import Nat
 import Proxy
 import Testing
-import Nat
 
 -- | Darstellung der Null (Zero)
 data Z
@@ -30,8 +30,14 @@ data Z
 -- natürlichen Zahl (Successor)
 data S n
 
+-- | Null
+type N0 = Z
+
+-- | Eins
+type N1 = S N0
+
 -- | Zwei
-type N2 = S (S Z)
+type N2 = S N1
 
 -- | Drei
 type N3 = S N2
@@ -82,8 +88,8 @@ pred = undefined
 succ :: n -> S n
 succ = undefined
 
-props_TypeLevelNat :: [Property]
-props_TypeLevelNat = 
+check_TypeLevelNat :: IO ()
+check_TypeLevelNat = mapM_ quickCheck $
     [ forAll arbitrary $ \n            -> reflectNat         n reifyNat == n
     , forAll arbitrary $ \(Positive n) -> reflectPositiveNat n reifyNat == n
     ]

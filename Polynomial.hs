@@ -2,31 +2,37 @@
 -- einer Variablen zur Verfügung.
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards, TypeFamilies #-}
 module Polynomial
-    ( Poly(MkPoly)
+    ( -- * Typen für Polynome und normierte Polynome
+      Poly(MkPoly)
     , NormedPoly(..), mkNormedPoly
     , canonCoeffs, canonCoeffs', unsafeCoeffs
-    , fromBase, eval, eval0
-    , normedQuotRem
+    , fromBase
     , (.*), iX
+      -- * Operationen
+    , eval, eval0
+    , content
+    , normedQuotRem
     , normalize, normalize', leadingCoeff
-    , derivative, content, compose
+    , derivative, compose
     , squarefreePart
+      -- * QuickCheck
     , normedPolyProp
     , simpleNonconstantRationalPoly
-    , props_Polynomial
+    , check_Polynomial
     ) where
 
 import Prelude hiding (gcd, (+), (-), (*), (/), (^), negate, recip, fromInteger, fromRational, quotRem, sum)
 import qualified Prelude as P
-import Data.List (intersperse, genericLength, foldl1')
-import Ring
-import Field
-import Euclidean
-import Testing
 import Control.Monad
+import Data.List (intersperse, genericLength, foldl1')
 import Data.Ratio
+
+import Euclidean
+import Field
 import NumericHelper
 import Proxy
+import Ring
+import Testing
 
 -- | Typ der Polynome über 'a', repräsentiert durch die zugehörigen Folgen der
 -- Koeffizienten, von niedrigster zur höchsten Potenz geordnet. Die Darstellung
@@ -44,7 +50,7 @@ newtype Poly a = MkPoly { unPoly :: [a] }
 -- > forAll arbitrary $ \MkNormedPoly p -> ...
 newtype NormedPoly a = MkNormedPoly { unNormedPoly :: Poly a } deriving (Show,Eq,Functor)
 
--- | Kluger Konstruktor für 'NormedPoly': Er prüft, ob wirklich ein normiertes
+-- | /Kluger Konstruktor/ für 'NormedPoly': Er prüft, ob wirklich ein normiertes
 -- Polynom vorliegt (wirft sonst eine Laufzeitausnahme) und kanonisiert es.
 mkNormedPoly :: (Ring a, Eq a) => Poly a -> NormedPoly a
 mkNormedPoly f
@@ -52,6 +58,19 @@ mkNormedPoly f
     | otherwise       = error "mkNormedPoly auf einem nicht-normierten Polynom!"
     where
     as = canonCoeffs f
+
+infixl 7 .*
+-- | Multiplikation mit Skalaren des Grundrings.
+(.*) :: (Ring a) => a -> Poly a -> Poly a
+x .* f = MkPoly $ map (x *) $ unPoly f
+
+-- | Die formale Variable des Polynomrings /Poly a/.
+iX :: (Ring a) => Poly a
+iX = MkPoly [zero, unit]
+
+-- | Gibt zu jedem Element sein zugehöriges konstantes Polynom.
+fromBase :: a -> Poly a
+fromBase x = MkPoly [x]
 
 instance (Ring a, Eq a, Show a) => Show (Poly a) where
   show f = addZero $ concat . intersperse " + " $ filter (not . null) $ zipWith mult (canonCoeffs f) vars
@@ -179,19 +198,6 @@ instance (Field a, Eq a) => HasTestableAssociatedness (Poly a) where
             in  if x .* p == q then Just (fromBase x) else Nothing
         | otherwise        = Nothing
 
-infixl 7 .*
--- | Multiplikation mit Skalaren des Grundrings.
-(.*) :: (Ring a) => a -> Poly a -> Poly a
-x .* f = MkPoly $ map (x *) $ unPoly f
-
--- | Die formale Variable des Polynomrings /Poly a/.
-iX :: (Ring a) => Poly a
-iX = MkPoly [zero, unit]
-
--- | Gibt zu jedem Element sein zugehöriges konstantes Polynom.
-fromBase :: a -> Poly a
-fromBase x = MkPoly [x]
-
 -- | Normiert ein Polynom. Angewendet aufs Nullpolynom wird eine Laufzeitausnahme
 -- geworfen.
 normalize :: (Field a, Eq a) => Poly a -> Poly a
@@ -267,7 +273,8 @@ simpleNonconstantRationalPoly = do
     a  <- simpleNonzeroRational
     return $ MkPoly $ as ++ [a]
 
-props_Polynomial :: [Property]
-props_Polynomial =
-    props_ringAxioms    (undefined :: Proxy (Poly Rational)) ++
-    props_areAssociated (undefined :: Proxy (Poly Rational))
+check_Polynomial :: IO ()
+check_Polynomial = mapM_ quickCheck $ concat
+    [ props_ringAxioms    (undefined :: Proxy (Poly Rational))
+    , props_areAssociated (undefined :: Proxy (Poly Rational))
+    ]

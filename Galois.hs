@@ -73,7 +73,7 @@ data GaloisInfo r a = MkGaloisInfo
 
 -- | Bestimmt die Galoisgruppe eines normierten separablen Polynoms.
 galoisGroup :: Poly Rational -> GaloisInfo Rational (Alg QinC)
-galoisGroup f = MkGaloisInfo xs t m res' hs' conjs sigmas
+galoisGroup f = MkGaloisInfo xs t m res hs conjs sigmas
     where
     -- Die Nullstellen von f. Hier schon mit simplifyAlg die entsprechenden
     -- Minimalpolynome zu finden, bringt einiges an Effizienz.
@@ -84,17 +84,10 @@ galoisGroup f = MkGaloisInfo xs t m res' hs' conjs sigmas
     -- und
     --   eval t (hs'!!i) == xs!!i
     -- gelten.
-    -- Bezeichnet n den Grad von f, so genügt es, nur nach einem primitiven
-    -- Element der letzten (n-1) Nullstellen zu suchen. Denn die fehlende erste
-    -- Nullstelle lässt sich (Satz von Vieta) sowieso über die anderen ausdrücken.
-    (res,t,hs) = pseudoResolvent (tail xs)
-    res'       = 0:res
-    hs'        = negate (sum hs + Poly.fromBase a) : hs where a = (!! 1) . reverse . canonCoeffs $ f
+    (res,t,hs) = pseudoResolvent' xs $ mkNormedPoly f
 
     -- Minimalpolynom und galoissch Konjugierte von t.
-    -- pseudoResolvent garantiert, dass das zum zurückgegebenen primitiven Element
-    -- gehörende Polynom schon das Minimalpolynom ist.
-    m          = unNormedPoly . fmap unF . polynomial . unAlg $ t
+    m          = unNormedPoly . minimalPolynomial $ t
     conjs      = roots m
 
     -- Schließlich die Elemente der Galoisgruppe. Diese stehen in Bijektion mit
@@ -106,7 +99,7 @@ galoisGroup f = MkGaloisInfo xs t m res' hs' conjs sigmas
     sigmas     =
         flip map conjs $ \t' ->
             flip map inds $ \i ->
-                head [ j | j <- inds, xs !! j == A.eval t' (fmap F $ hs' !! i) ]
+                head [ j | j <- inds, xs !! j == A.eval t' (fmap F $ hs !! i) ]
                 -- aus der Theorie wissen wir, dass diese Liste aus genau einem
                 -- Element besteht.
 
@@ -177,8 +170,8 @@ props_primitiveElement =
 -- außerdem Zeugen der Rationalität der /x_i/ in /t/ zurück, also Polynome /hs/
 -- mit /eval t (hs!!i) == x_i/.
 --
--- Es wird garantiert, dass auf das zurückgegebene primitive Element schon
--- 'Factoring.simplifyAlg' aufgerufen wurde.
+-- (Es wird nicht garantiert, dass auf das zurückgegebene primitive Element schon
+-- 'Factoring.simplifyAlg' aufgerufen wurde.)
 --
 -- Der Name /pseudoResolvent/ erklärt sich dadurch, als dass im Spezifall, dass
 -- die /x_i/ die Nullstellen eines separablen Polynoms sind, zumindest die Zahlen
@@ -187,14 +180,14 @@ props_primitiveElement =
 pseudoResolvent
     :: [Alg QinC]                              -- ^ /x_1, ..., x_n/
     -> ([Integer], Alg QinC, [Poly Rational])  -- ^ /(lambdas,t,hs)/
-pseudoResolvent []       = ([],  zero,        [])
-pseudoResolvent [x]      = ([1], simplifyAlg x, [iX])
+pseudoResolvent []       = ([],  zero, [])
+pseudoResolvent [x]      = ([1], x,    [iX])
 pseudoResolvent (x:y:zs) =
     -- Wir berechnen ein primitives Element u der ersten beiden Zahlen x und y,
     -- und bestimmen dann rekursiv ein primitives Element zu u und den
     -- restlichen Zahlen zs.
     let (lambda, u, hX, hY) = primitiveElement x y
-        u'                  = simplifyAlg u
+        u'                  = simplifyAlg u  -- damit es der rekursive Aufruf leichter hat
         -- u = x + lambda y
         (as, t, hU:hs)      = pseudoResolvent (u':zs)
         -- Es gilt:
@@ -216,10 +209,46 @@ pseudoResolvent (x:y:zs) =
 -- in der Praxis fürs Testen zu langsam
 props_pseudoResolvent :: [Property]
 props_pseudoResolvent =
-    [ property $ \xs ->
-        let (lambdas,t,hs) = pseudoResolvent xs
-        in  t == sum (zipWith (*) (map fromInteger lambdas) xs) &&
-            all (\(p,x) -> A.eval t (fmap F p) == x) (zip hs xs)
+    [ property $ \xs -> isPseudoResolvent xs (pseudoResolvent xs) ]
+
+isPseudoResolvent :: [Alg QinC] -> ([Integer], Alg QinC, [Poly Rational]) -> Bool
+isPseudoResolvent xs (lambdas,t,hs) =
+    t == sum (zipWith (*) (map fromInteger lambdas) xs) &&
+    all (\(p,x) -> A.eval t (fmap F p) == x) (zip hs xs)
+
+-- | Wie 'pseudoResolvent', nur mit der Zusatzvoraussetzungen, dass die
+-- übergebenen algebraischen Zahlen /x_i/ die Nullstellen des Polynoms /f/
+-- sind.
+--
+-- Dann gilt nämlich /Q(x_1,...,x_n) = Q(x_2,...,x_n)/, denn die fehlende
+-- erste Nullstelle lässt sich (Satz von Vieta) sowieso über die die anderen
+-- ausdrücken.
+--
+-- Somit muss einmal weniger oft 'primitiveElement' verwendet werden.
+pseudoResolvent'
+    :: [Alg QinC]                              -- ^ /x_1, ..., x_n/
+    -> NormedPoly Rational                           -- ^ /f/
+    -> ([Integer], Alg QinC, [Poly Rational])  -- ^ /(lambdas,t,hs)/
+pseudoResolvent' xs f = (lambdas', t, hs')
+    where
+    (lambdas,t,hs) = pseudoResolvent (tail xs)
+    lambdas'       = 0:lambdas
+    hs'            = negate (sum hs + Poly.fromBase a) : hs
+        where a = (!! 1) . reverse . canonCoeffs' $ f
+
+props_pseudoResolvent' :: [Property]
+props_pseudoResolvent' =
+    [ forAll simpleNonconstantRationalPoly $ \f ->
+        let f' = normalize f
+            xs = map simplifyAlg $ roots f'
+        in  isPseudoResolvent xs (pseudoResolvent' xs $ mkNormedPoly f')
+    ]
+
+check_Galois :: IO ()
+check_Galois = mapM_ quickCheck $ concat
+    [ props_primitiveElement
+    , props_pseudoResolvent
+    , props_pseudoResolvent'
     ]
 
 demo :: IO ()

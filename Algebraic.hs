@@ -267,8 +267,8 @@ demo = do
     let zs =
             [ ("41",                  fromInteger 41)
             , ("zero",                zero)
-            , ("zero'",               sqrt2 - sqrt2)
-            , ("zero''",              goldenRatio * (sqrt2 - sqrt2))
+            , ("sqrt2 - sqrt2",       sqrt2 - sqrt2)
+            , ("goldenRatio * (sqrt2 - sqrt2)", goldenRatio * (sqrt2 - sqrt2))
             , ("goldenRatio",         goldenRatio)
             , ("sqrt2",               sqrt2)
             , ("sqrt2^2",             sqrt2^2)
@@ -287,7 +287,7 @@ demo = do
         case recip z of
             Nothing -> putStrLn "` ist nicht invertierbar."
             Just z' -> printNumber "1/z" z'
-        putStrLn $ "` Ist rational? " ++ show (isRational $ fromRealAlg z)
+        putStrLn $ "` ist rational? " ++ show (isRational $ fromRealAlg z)
         putStrLn ""
     printNumber name z = do
         printf "` ungefährer Wert    von %s: %s\n" name (show (unsafeApprox z)) :: IO ()

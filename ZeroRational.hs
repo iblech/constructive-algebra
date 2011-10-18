@@ -19,36 +19,44 @@
 -- aus als im Code, in denen sie mit einem CPP-Makro abgekürzt sind.
 {-# LANGUAGE PatternGuards, TupleSections, CPP, FlexibleContexts, TypeFamilies #-}
 module ZeroRational
-    ( signChanges, signChanges'
+    ( -- * Zur algebraischen Windungszahl
+      signChanges, signChanges'
     , sturmChain, index
-    , rootsOnSegment, windingNumber, rootsOnRectangle
+    , windingNumber
+      -- * Zählen von Nullstellen
+    , rootsOnSegment, rootsOnRectangle
+      -- * Unterteilungsalgorithmus zur Nullstellensuche
     , Cell(..), midpoint
-    , divide, cauchyRadius, roots, roots'
-    , subdivisions, newton, newtonPrecondition
+    , divide, subdivisions, cauchyRadius
+      -- * Anwenderfunktionen
+    , roots, roots'
+      -- * Newton-Verfahren
+    , newton, newtonPrecondition
+      -- * Debugging
+    , ZeroRational.demo
     ) where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
+import Control.Monad
+import Data.IORef
+import Data.List (genericIndex)
+import qualified Data.Map as M
+import System.IO.Unsafe
+import Text.Printf
+
+import Algebraic hiding (eval)
+import Complex
+import ComplexRational
+import Debug
+import Euclidean
+import Field
+import IntegralClosure hiding (eval)
+import Nat
+import NormedRing
+import NumericHelper
 import Polynomial
 import Ring
-import Field
-import Complex
-import Algebraic hiding (eval)
-import Polynomial as Poly
-import Control.Monad
-import Euclidean
-import ComplexRational
-import NormedRing
-import IntegralClosure hiding (eval)
-import Debug
-import Data.List (genericIndex)
-import System.IO.Unsafe
-import Data.IORef
-import qualified Data.Map as M
 import RingMorphism
-import NumericHelper
-import Text.Printf
-import Nat
-import Testing
 
 -- Leider gibt es noch keine Typklassensynonyme, daher muss ein CPP-Makro als
 -- Ersatz herhalten. Dieses soll den Kontext für solche Unterkörper der komplexen
@@ -461,13 +469,19 @@ newtonPrecondition f x = eval x f /= zero && eval x (derivative f) /= zero && an
 demo :: IO ()
 demo = do
     let f = iX^4 + iX^3 + iX^2 + iX + unit :: Poly Rational
-    putStrLn $ "Nullstellen von " ++ show f ++ " (aus Q[X]):"
+    printf "Nullstellen von %s (aus Q[X]):\n" (show f) :: IO ()
     flip mapM_ [1,10,100,1000,10000] $ printApproxs (roots f)
+    printf "Anzahl Nullstellen im Einheitsquadrat: %d/2\n" $ unsafeFromRational $
+        2 * rootsOnRectangle (0 :+: 0) (1 :+: 1) (fmap fromRational f :: Poly ComplexRational)
+            :: IO ()
     putStrLn ""
 
     let g = iX^3 + fromComplexRational (3 :+: 5) * iX + fromRational 2 :: Poly (F ComplexRational)
-    putStrLn $ "Nullstellen von " ++ show g ++ " (aus Q(i)[X]):"
+    printf "Nullstellen von %s (aus Q(i)[X]):\n" (show g)
     flip mapM_ [1,10,100,1000,10000] $ printApproxs (roots' unF g :: [Alg QIinC])
+    printf "Anzahl Nullstellen im Einheitsquadrat: %d/2\n" $
+        unsafeFromRational $
+            2 * rootsOnRectangle (0 :+: 0) (1 :+: 1) g
 
     where
     printApproxs
@@ -475,6 +489,6 @@ demo = do
         => [Alg m] -> PositiveNat -> IO ()
     printApproxs zs n = do
         qs <- runR $ mapM (approx n . number . unAlg) zs
-        printf "` auf Genauigkeit < 1/%d:\n" n
+        printf "` auf Genauigkeit < 1/%d:\n" n :: IO ()
         flip mapM_ qs $ \q -> do
             printf "  ` %-40s ~~ %s\n" (show q) (show (unsafeApprox q))
