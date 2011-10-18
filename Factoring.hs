@@ -37,7 +37,7 @@ isIrreducible f = debug ("isIrreducible: " ++ show f) $ isIrreducible' f
 isIrreducible' :: Poly Rational -> Maybe (Poly Rational,Poly Rational)
 isIrreducible' f
     -- Triviale Fälle
-    | n <  1 = error "isIrreducible: Polynom konstant"
+    | n <  1 = error "Factoring.isIrreducible: Polynom konstant"
     | n == 1 = Nothing
 
     -- Hat f einen nichttrivialen Faktor mit seiner Ableitung gemein?
@@ -96,7 +96,7 @@ isIrreducible' f
 -- sonst /Just (g, iX^n)/.
 isComposedPoly :: Poly Rational -> Maybe (Poly Rational, Poly Rational)
 isComposedPoly f 
-    | length as < 2 = error "isComposedPoly: Polynom konstant"
+    | length as < 2 = error "Factoring.isComposedPoly: Polynom konstant"
     | null cands = Nothing
     | otherwise  =
         let n = last cands
@@ -137,7 +137,7 @@ irreducibleFactors f
                 else if degree q < 1 then [] else irreducibleFactors q
 
     mapFirst g (x:xs) = g x:xs
-    mapFirst _ _      = error "irreducibleFactors.mapFirst"  -- kann nicht eintreten
+    mapFirst _ _      = undefined  -- kann nicht eintreten
 
 props_irreducibleFactors :: [Property]
 props_irreducibleFactors = (:[]) $

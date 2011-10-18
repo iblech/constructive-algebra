@@ -29,7 +29,7 @@ type NonnegativeRational = Rational
 unsafeFromRational :: Rational -> Integer
 unsafeFromRational x
     | r == 0    = q
-    | otherwise = error $ "unsafeFromRational: " ++ show x
+    | otherwise = error $ "NumericHelper.unsafeFromRational: " ++ show x
     where
     (q,r) = numerator x `quotRem` denominator x
 
@@ -68,7 +68,7 @@ ilogb :: PositiveNat -> Nat -> Integer
 ilogb = (fst .) . ilogb'
     where
     ilogb' b n
-        | n < 0      = error "ilogb: Negatives Argument!"
+        | n < 0      = error "NumericHelper.ilogb: Negatives Argument"
         | n < b      = (0, n)
         | otherwise  = let (e, r) = ilogb' (b*b) n
                        in  if r < b then (2*e, r) else (2*e+1, r `div` b)

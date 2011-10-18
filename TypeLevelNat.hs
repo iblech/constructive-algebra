@@ -65,7 +65,7 @@ reflectNat
     -> r    -- ^ das Endergebnis
 reflectNat n k
     | n == 0    = k (undefined :: Proxy Z)
-    | n  < 0    = error "reflectNat einer negativen Zahl!"
+    | n  < 0    = error "TypeLevelNat.reflectNat: Argument negativ"
     | otherwise = reflectNat (n - 1) $ k . fmap succ
 
 -- | Bringt eine auf Wertebene gegebene positive natürliche Zahl aufs
@@ -78,7 +78,7 @@ reflectPositiveNat
             -- Typ /r/ produziert
     -> r    -- ^ das Endergebnis
 reflectPositiveNat n k
-    | n  < 1    = error "reflectPositiveNat einer nicht-positiven Zahl!"
+    | n  < 1    = error "TypeLevelNat.reflectPositiveNat: Argument negativ oder Null"
     | n == 1    = k (undefined :: Proxy (S Z))
     | otherwise = reflectPositiveNat (n - 1) $ k . fmap succ
 

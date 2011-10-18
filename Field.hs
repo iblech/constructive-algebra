@@ -45,7 +45,7 @@ instance (HasConjugation a) => HasConjugation (F a) where
 (/) :: (Field a) => a -> a -> a
 x / y
     | Just y' <- recip y = x * y'
-    | otherwise          = error "Field./: Division durch Null!"
+    | otherwise          = error "Field./: Division durch Null"
 infixl 7 /
 
 instance (IntegralDomain a, P.Integral a) => Field (Ratio a) where

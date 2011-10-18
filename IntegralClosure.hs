@@ -167,7 +167,7 @@ prodAnnihilator f g =
 	| i == n - 1 && j == m - 1
 	= xs !! k * ys !! l
         | otherwise
-        = error "prodAnnihilator: unmöglicher Fall"
+        = undefined  -- kann nicht eintreten
     inds = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
     (n,m)   = (length xs - 1, length ys - 1)
     (xs,ys) = (canonCoeffs' f, canonCoeffs' g)

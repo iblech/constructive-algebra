@@ -19,6 +19,7 @@ module Smith
 import Prelude hiding (gcd, (!!), (+), (*), (-), (/), negate, quotRem, fromInteger)
 import qualified Prelude as P
 import Data.Array
+import Data.Ratio
 
 import Debug
 import Euclidean
@@ -113,7 +114,7 @@ divisors as = go (length as - 1) as
 splice :: Int -> a -> [a] -> [a]
 splice 0 x (_:ys) = x : ys
 splice n x (y:ys) = y : splice (n-1) x ys
-splice _ _ _      = error "splice"  -- sollte nicht eintreten
+splice _ _ _      = undefined  -- sollte nicht eintreten
 
 -- | Klasse für Ringe, die es unterstützen, zu jeder gegebenen quadratischen
 -- Matrix /A/ ein normiertes Polynom /f/ zu finden, welches die Matrix
@@ -136,19 +137,23 @@ class (Ring a) => HasAnnihilatingPolynomials a where
     -- annihiliert. Das Nullpolynom zählt nicht als normiert.
     annihilatingPolynomial :: (ReifyNat n) => SqMatrix n a -> NormedPoly a
 
--- XXX: QuickCheck für annihilatingPolynomial!
-
-{-
- - XXX: noch verbessern: Sollte für jeden IntBer. funktionieren. Hat mit ER nichts zu tun!
-instance (EuclideanRing a, Integral a, IntegralDomain a, HasTestableAssociatedness a, Eq a) => HaveAnnihilatingPolynomial (ER a) where
-    annihilatingPolynomial = fmap unsafeFromRatio . charPoly . fmap toRatio
-	where
-	toRatio = (% unit)
-	unsafeFromRatio z =
-	    let (p,q) = (numerator z, denominator z)
-		(r,s) = p `quotRem` q
-	    in  if s == 0 then r else error $ "unsafeFromRatio"
--}
+instance (Integral a, EuclideanRing a) => HasAnnihilatingPolynomials (ER a) where
+    -- Ist R lediglich ein euklidischer Bereich, so haben wir die Smithsche
+    -- Normalform nicht für Matrizen über dem Ring R[X] und müssten daher
+    -- eigentlich auf den naiven Determinantenalgorithmus zur Berechnung
+    -- charakteristischer Polynome zurückgreifen.
+    --
+    -- Wir können aber eine gegebene Matrix auch nach K[X] heben, wobei K der
+    -- Quotientenkörper von R ist; über K[X] können wir die Smithsche Normalform
+    -- und somit effizient das charakteristische Polynom über K berechnen.
+    -- Dieses muss dann dasselbe wie das über R sein.
+    annihilatingPolynomial = fmap unsafeFromRatio . fmap unF . charPoly . fmap F . fmap toRatio
+        where
+        toRatio = (% unit)
+        unsafeFromRatio z =
+            let (p,q) = (numerator z, denominator z)
+                (r,s) = p `quotRem` q
+            in  if s == 0 then r else error $ "unsafeFromRatio"
 
 -- Über Körpern können wir das Minimalpolynom verwenden.
 instance (Field a) => HasAnnihilatingPolynomials (F a) where
@@ -210,8 +215,10 @@ lambdaMatrix (MkMatrix arr) = MkMatrix $
     accum (+) (fmap (negate . Poly.fromBase) arr) [((i,i), iX) | i <- [0..fst (snd (bounds arr))]]
 
 check_Smith :: IO ()
-check_Smith = mapM_ quickCheck $
-    props_annihilatingPolynomial (undefined :: Proxy (F Rational))
+check_Smith = mapM_ quickCheck $ concat
+    [ props_annihilatingPolynomial (undefined :: Proxy (ER Integer))
+    , props_annihilatingPolynomial (undefined :: Proxy (F Rational))
+    ]
 
 demo :: IO ()
 demo = do

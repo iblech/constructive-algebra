@@ -80,12 +80,17 @@ unsafeRunR = unsafePerformIO . runR
 newtype Approx ex = MkApprox { unApprox :: PositiveNat -> R ex }
     deriving (Functor)
 
--- XXX: eigentlich NormedRing-Kontext!
 -- | Klasse für Räume, deren Punkte sich durch Elemente einer gewissen Teilmenge
 -- beliebig genau approximieren lassen.
 --
--- Wichtigstes Beispiel für uns sind die komplexen Zahlen 'Complex', die sich
--- durch komplexrationale Zahlen approximieren lassen.
+-- Damit man die Forderung der Approximation formulieren kann, muss man eigentlich
+-- auf dem Typ /a/ eine Norm (oder Metrik) gegeben haben. Dann könnten wir aber unser
+-- wichtigstes Beispiel, die komplexen Zahlen 'Complex', nicht mehr
+-- unterstützen, denn die Ordnung auf Normen komplexer Zahlen (also gewissen reellen
+-- Zahlen) ist nicht entscheidbar.
+--
+-- Möglicherweise könnte man dieses Problem durch eine bessere Definition
+-- normierter Räume beheben.
 class HasDenseSubset a where
     -- | Dicht liegende Teilmenge, durch die approximiert werden soll
     type DenseSubset a :: *
@@ -362,7 +367,8 @@ normUpperBoundR z         = liftM ((+1) . normUpperBound) $ approx 1 z
 -- Sei z_1 eine 1/1-Näherung von z.
 -- Dann gilt: |z| <= |z_1| + |z - z_1| < |z_1| + 1.
 
--- XXX: Eigentlich müssten wir einen NormedRing-Kontext fordern!
+-- | Wie bei 'HasDenseSubset' müssten wir eigentlich einen geeigneten
+-- Metrik- oder Normkontext fordern.
 class (Ring a) => HasMagnitudeZeroTest a where
     -- | Sei /z/ eine Zahl. Dann ist nicht entscheidbar, ob /|z| = 0/ oder
     -- ob nicht /|z| = 0/. Für festes /n >= 1/ gilt aber stets:
@@ -374,10 +380,13 @@ class (Ring a) => HasMagnitudeZeroTest a where
     -- andernfalls der zweite.
     magnitudeZeroTestR :: PositiveNat -> a -> R Bool
 
--- XXX: Eigentlich müssten wir einen NormedRing-Kontext fordern!
 -- | Klasse für Ringe, die im Sinne folgender schwächeren Definition Körper sind:
 --
 -- > Für alle /x/, die von Null entfernt sind, gibt es ein Inverses von /x/.
+--
+-- Da wir das Konzept der Entferntheit nutzen, müssten wir (wie bei
+-- 'HasDenseSubset' genauer erläutert) eigentlich einen geeigneten Metrik-
+-- oder Normkontext fordern.
 class (Ring a) => PseudoField a where
     -- | Sei /z/ von null entfernt, es existiere also eine rationale Zahl /q/ mit
     -- /|z| >= q > 0/. Dann soll /recip' z/ die Zahl /1\/z/ darstellen.

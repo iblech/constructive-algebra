@@ -27,7 +27,7 @@ idealDegree = liftM pred . liftM genericLength . idealCanonCoeffs
 idealNormalize :: (IdealField a) => Poly a -> Nondet a (Poly a)
 idealNormalize f = do
     as <- idealCanonCoeffs f
-    if null as then error "idealNorm zero" else do
+    if null as then error "IdealEuclidean.idealNormalize: aufs Nullpolynom angewendet" else do
     Just r <- idealRecip (last as)
     return . MkPoly $ map (r *) as
 

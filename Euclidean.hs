@@ -42,7 +42,7 @@ class (IntegralDomain a) => EuclideanRing a where
 
 -- | Dummytyp, um überlappende Instanzdeklarationen vermeiden zu können.
 newtype ER a = ER { unER :: a }
-    deriving (Eq,Ring,Integral,Real,Enum,Ord,IntegralDomain,Field,EuclideanRing,Num,Fractional,HasTestableAssociatedness,HasFloatingApprox)
+    deriving (Eq,Ring,Integral,Real,Enum,Ord,IntegralDomain,Field,EuclideanRing,Num,Fractional,HasTestableAssociatedness,HasFloatingApprox,Arbitrary)
 instance (Show a, EuclideanRing a) => Show (ER a) where
     show        = show . unER
     showsPrec i = showsPrec i . unER
@@ -50,10 +50,10 @@ instance (Show a, EuclideanRing a) => Show (ER a) where
 
 instance (Field a) => EuclideanRing (F a) where
     degree x
-        | x == zero = error "degree zero"
+        | x == zero = error "Euclidean.degree: degree zero"
         | otherwise = 1
     quotRem x y
-        | y == zero = error "quotRem: Division durch null"
+        | y == zero = error "Euclidean.quotRem: Division durch Null"
         | otherwise = (x/y, zero)
 
 instance EuclideanRing Integer where

@@ -55,7 +55,7 @@ newtype NormedPoly a = MkNormedPoly { unNormedPoly :: Poly a } deriving (Show,Eq
 mkNormedPoly :: (Ring a, Eq a) => Poly a -> NormedPoly a
 mkNormedPoly f
     | last as == unit = MkNormedPoly (MkPoly as)
-    | otherwise       = error "mkNormedPoly auf einem nicht-normierten Polynom!"
+    | otherwise       = error "Polynomial.mkNormedPoly: auf einem nicht-normierten Polynom aufgerufen"
     where
     as = canonCoeffs f
 
@@ -179,8 +179,8 @@ eval0 (MkPoly (a:_)) = a
 -- einsetzbar zu sein.
 normedQuotRem :: (Ring a, Eq a) => Poly a -> Poly a -> (Poly a, Poly a)
 normedQuotRem f g
-    | g' == zero              = error "normedQuotRem: Nenner ist null!"
-    | leadingCoeff g' /= unit = error "normedQuotRem: Nenner ist nicht normiert!"
+    | g' == zero              = error "Polynomial.normedQuotRem: Nenner ist null"
+    | leadingCoeff g' /= unit = error "Polynomial.normedQuotRem: Nenner ist nicht normiert"
     | n < m                   = (zero, f')
     | otherwise               =
         let (q,r) = normedQuotRem (f' - q' * g') g'

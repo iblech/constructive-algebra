@@ -72,7 +72,7 @@ fromArray :: Array (Nat,Nat) a -> (forall n m. (ReifyNat n, ReifyNat m) => Matri
 fromArray arr k
     | fst (bounds arr) == (0,0) =
         reflectNat n $ \n' -> reflectNat m $ \m' -> k (MkMatrix arr `asTypeOf` dummy n' m')
-    | otherwise                 = error "Unkonventionsgemäße Indizierung in fromArray!"
+    | otherwise                 = error "Matrix.fromArray: Unkonventionsgemäße Indizierung in fromArray!"
     where
     dummy :: Proxy n -> Proxy m -> Matrix n m a
     dummy = undefined
@@ -83,7 +83,7 @@ fromArray arr k
 fromArray' :: (forall n. (ReifyNat n) => SqMatrix n a -> r) -> Array (Nat,Nat) a -> r
 fromArray' k arr
     | n == m    = reflectNat n $ \n' -> k (MkMatrix arr `asTypeOf` dummy n')
-    | otherwise = error "fromArray' eines nicht-quadratischen Felds!"
+    | otherwise = error "Matrix.fromArray': auf nicht-quadratisches Feld aufgerufen!"
     where
     dummy = undefined :: Proxy n -> SqMatrix n a
     (n,m) = dim arr
@@ -97,7 +97,7 @@ withNontrivialRows
     -> Matrix n m a
     -> r
 withNontrivialRows k mtx@(MkMatrix arr)
-    | n == 0    = error "withNontrivialRows' einer Matrix ohne Zeilen!"
+    | n == 0    = error "Matrix.withNontrivialRows': aufgerufen auf einer Matrix ohne Zeilen!"
     | otherwise = reflectPositiveNat n $ \n' -> k (MkMatrix arr `asTypeOf` dummy n' (numCols' mtx))
     where
     dummy = undefined :: Proxy k -> Proxy l -> Matrix k l a
@@ -170,7 +170,7 @@ numCols' = undefined
 deleteRow :: (ReifyNat n, ReifyNat m) => Nat -> Matrix (S n) m a -> Matrix n m a
 deleteRow a (MkMatrix matrix)
     | a <= n    = MkMatrix $ ixmap ((0,0), (n-1,m)) f matrix
-    | otherwise = error "deleteRow"
+    | otherwise = error "Matrix.deleteRow: Zeilenindex übersteigt Dimension"
     where
     ((0,0), (n,m)) = bounds matrix
     f (i,j)

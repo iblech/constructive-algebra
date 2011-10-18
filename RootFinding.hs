@@ -88,7 +88,7 @@ signChanges' a b ps = signChanges (map (eval a) ps) - signChanges (map (eval b) 
 -- dem von /S/ sein, sonst wird eine Laufzeitausnahme geworfen.
 sturmChain :: (Field a) => Poly a -> Poly a -> [Poly a]
 sturmChain r s
-    | degree r > degree s = error "sturmChain: Zählergrad > Nennergrad"
+    | degree r > degree s = error "RootFinding.sturmChain: Zählergrad > Nennergrad"
     | otherwise           = euclidChain r s
 
 -- | Bestimmt zu einer rationalen Funktion /R\/S/ und Intervallgrenzen /a/ und
@@ -400,7 +400,7 @@ roots' inj f =
         -- Iterationen in 'css' untersuchen.
 	| otherwise
 	= go i j css 
-    go _ _ _ = error "roots'"  -- kann nicht eintreten
+    go _ _ _ = undefined  -- kann nicht eintreten
 
 -- | Zu einem gegebenen separablen Polynom und einem Suchradius gibt
 -- 'subdivisions' eine (unendliche) Folge von Iterierten zurück, wobei jeder

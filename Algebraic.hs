@@ -217,7 +217,6 @@ isApproxInteger z =
         (a,b) = (floor q, ceiling q)
     in  if norm (z0 - fromInteger a) (1/100) then Just a else
         if norm (z0 - fromInteger b) (1/100) then Just b else Nothing
--- XXX: Korrekt?
 
 -- | Entscheidet, ob ein übergebenes Polynom mit algebraischen Koeffizienten
 -- sogar ausschließlich rationale Koeffizienten besitzt.
