@@ -19,8 +19,8 @@ import Ring
 import SimpleExtension
 import Smith
 import TypeLevelNat
-import ZeroRational
-import ZeroRationalTesting
+import RootFinding
+import RootFindingTesting
 
 demos :: [(String, IO ())]
 demos =
@@ -28,7 +28,7 @@ demos =
     , ("Smith",           Smith.demo)
     , ("Complex",         Complex.demo)
     , ("Algebraic",       Algebraic.demo)
-    , ("ZeroRational",    ZeroRational.demo)
+    , ("RootFinding",    RootFinding.demo)
     , ("Factoring",       Factoring.demo)
     , ("IdealExtension",  IdealExtension.demo)
     , ("Galois",          Galois.demo)
@@ -49,7 +49,7 @@ tests =
     , ("SimpleExtension", check_SimpleExtension)
     , ("Smith",           check_Smith)
     , ("TypeLevelNat",    check_TypeLevelNat)
-    , ("ZeroRational",    check_ZeroRational)
+    , ("RootFinding",     check_RootFinding)
     ]
 
 main :: IO ()

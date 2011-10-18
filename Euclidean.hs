@@ -151,7 +151,7 @@ areCoprime x y = isJust $ areAssociated unit d
 --
 -- für gewisse Reste /P_(k+1)/ für alle /k >= 1/ erfüllen.
 --
--- Angewendet wird die Funktion 'euclidChain' in "ZeroRational" auf Polynome.
+-- Angewendet wird die Funktion 'euclidChain' in "RootFinding" auf Polynome.
 -- Derart spezialisiert bestimmt sie zu zwei gegebenen Polynomen /R/ und /S/ 
 -- ihre zugehörige Sturmkette. Sie funktioniert aber auch allgemeiner in
 -- beliebigen euklidischen Ringen.

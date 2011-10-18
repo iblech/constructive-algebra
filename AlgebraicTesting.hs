@@ -16,7 +16,7 @@ import Polynomial
 import qualified Polynomial as Poly
 import Ring
 import Testing
-import ZeroRational
+import RootFinding
 
 instance Arbitrary (Alg QinC) where
     arbitrary = elements . roots =<< simpleNonconstantRationalPoly

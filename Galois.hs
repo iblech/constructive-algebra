@@ -26,7 +26,7 @@ import NumericHelper
 import Polynomial as Poly
 import Ring
 import Testing
-import ZeroRational
+import RootFinding
 
 -- | Berechnet eine lineare galoissche Resolvente eines normierten separablen
 -- Polynoms über eine Abschätzung, in der die Nullstellen des Polynoms

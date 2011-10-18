@@ -18,7 +18,7 @@
 -- Einige Typklassenvoraussetzungen sehen in der HTML-Dokumentation schlimmer
 -- aus als im Code, in denen sie mit einem CPP-Makro abgekürzt sind.
 {-# LANGUAGE PatternGuards, TupleSections, CPP, FlexibleContexts, TypeFamilies #-}
-module ZeroRational
+module RootFinding
     ( -- * Zur algebraischen Windungszahl
       signChanges, signChanges'
     , sturmChain, index
@@ -33,7 +33,7 @@ module ZeroRational
       -- * Newton-Verfahren
     , newton, newtonPrecondition
       -- * Debugging
-    , ZeroRational.demo
+    , RootFinding.demo
     ) where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)

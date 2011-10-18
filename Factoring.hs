@@ -7,7 +7,7 @@ module Factoring where
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
 import Ring
 import Polynomial as Poly
-import ZeroRational
+import RootFinding
 import Data.Maybe
 import Data.List hiding (product)
 import Euclidean
