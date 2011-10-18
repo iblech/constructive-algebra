@@ -90,6 +90,6 @@ succ = undefined
 
 check_TypeLevelNat :: IO ()
 check_TypeLevelNat = mapM_ quickCheck $
-    [ forAll arbitrary $ \n            -> reflectNat         n reifyNat == n
-    , forAll arbitrary $ \(Positive n) -> reflectPositiveNat n reifyNat == n
+    [ forAll arbitrary $ \(NonNegative n) -> reflectNat         n reifyNat == n
+    , forAll arbitrary $ \(Positive    n) -> reflectPositiveNat n reifyNat == n
     ]

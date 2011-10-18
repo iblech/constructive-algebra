@@ -477,7 +477,7 @@ demo = do
     putStrLn ""
 
     let g = iX^3 + fromComplexRational (3 :+: 5) * iX + fromRational 2 :: Poly (F ComplexRational)
-    printf "Nullstellen von %s (aus Q(i)[X]):\n" (show g)
+    printf "Nullstellen von %s (aus Q(i)[X]):\n" (show g) :: IO ()
     flip mapM_ [1,10,100,1000,10000] $ printApproxs (roots' unF g :: [Alg QIinC])
     printf "Anzahl Nullstellen im Einheitsquadrat: %d/2\n" $
         unsafeFromRational $

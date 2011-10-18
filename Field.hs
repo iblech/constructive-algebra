@@ -1,7 +1,7 @@
 -- | Dieses Modul stellt die zentrale Typklasse 'Field' für Körper
 -- zur Verfügung.
 {-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards, TypeFamilies, DeriveFunctor #-}
-module Field (Field(..), (/), F(..), props_fieldAxioms) where
+module Field (Field(..), (/), F(..), props_fieldAxioms, check_Field) where
 
 import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quotRem, fromInteger, sum, product)
 import qualified Prelude as P
@@ -58,4 +58,9 @@ props_fieldAxioms a =
         case recip (x `asTypeOfProxy` a) of
             Just y  -> x /= zero && x * y == unit
             Nothing -> x == zero
+    ]
+
+check_Field :: IO ()
+check_Field = mapM_ quickCheck $ concat
+    [ props_fieldAxioms (undefined :: Proxy Rational)
     ]

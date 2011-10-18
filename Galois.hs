@@ -5,7 +5,7 @@
 -- mit den Elementen der Galoisgruppe aus.
 {-# LANGUAGE TupleSections, PatternGuards #-}
 module Galois
-    ( linearResolvent, galoisGroup, primitiveElement, pseudoResolvent, Galois.demo )
+    ( linearResolvent, galoisGroup, primitiveElement, pseudoResolvent, check_Galois, Galois.demo )
     where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
@@ -236,6 +236,7 @@ pseudoResolvent' xs f = (lambdas', t, hs')
     hs'            = negate (sum hs + Poly.fromBase a) : hs
         where a = (!! 1) . reverse . canonCoeffs' $ f
 
+-- in der Praxis fürs Testen zu langsam
 props_pseudoResolvent' :: [Property]
 props_pseudoResolvent' =
     [ forAll simpleNonconstantRationalPoly $ \f ->
@@ -244,6 +245,7 @@ props_pseudoResolvent' =
         in  isPseudoResolvent xs (pseudoResolvent' xs $ mkNormedPoly f')
     ]
 
+-- in der Praxis fürs Testen zu langsam
 check_Galois :: IO ()
 check_Galois = mapM_ quickCheck $ concat
     [ props_primitiveElement

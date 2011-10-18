@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module NormedRing
     ( NormedRing(..)
-    , props_normUpperBound, props_NormedRing
+    , props_normUpperBound, check_NormedRing
     ) where
 
 import Data.Ratio
@@ -39,5 +39,7 @@ props_normUpperBound proxy = (:[]) $ forAll arbitrary $ \x ->
     let _ = x `asTypeOf` unProxy proxy
     in  normUpperBound x >= 0 && norm x (normUpperBound x)
 
-props_NormedRing :: [Property]
-props_NormedRing = props_normUpperBound (undefined :: Proxy Rational)
+check_NormedRing :: IO ()
+check_NormedRing = mapM_ quickCheck $ concat
+    [ props_normUpperBound (undefined :: Proxy Rational)
+    ]

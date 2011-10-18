@@ -274,7 +274,7 @@ simpleNonconstantRationalPoly = do
     return $ MkPoly $ as ++ [a]
 
 check_Polynomial :: IO ()
-check_Polynomial = mapM_ quickCheck $ concat
+check_Polynomial = mapM_ (quickCheckWith stdArgs{ maxSize = 30 }) $ concat
     [ props_ringAxioms    (undefined :: Proxy (Poly Rational))
     , props_areAssociated (undefined :: Proxy (Poly Rational))
     ]

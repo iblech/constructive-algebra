@@ -111,7 +111,7 @@ instance RingMorphism Qsqrt2inR where
     mor _ = Poly.eval Complex.sqrt2 . fmap fromRational . canonRep . unF
 
 check_SimpleExtension :: IO ()
-check_SimpleExtension = mapM_ quickCheck $
+check_SimpleExtension = mapM_ (quickCheckWith stdArgs{ maxSize = 20 }) $
     props_fieldAxioms (undefined :: Proxy (SE MinPolySqrt2))
 
 demo :: IO ()

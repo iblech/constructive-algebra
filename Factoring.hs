@@ -109,7 +109,7 @@ isComposedPoly f
 
 props_isComposedPoly :: [Property]
 props_isComposedPoly = (:[]) $ forAll arbitrary $ \f -> forAll (elements [0..30]) $ \n ->
-    degree f >= 1 ==>
+    (degree f >= 1 && n >= 1) ==>
     let f' = f `compose` (iX^n)
     in  if n >= 2 then isComposedPoly f' == Just (f,iX^n) else isComposedPoly f' == Nothing
 
@@ -142,11 +142,10 @@ irreducibleFactors f
 props_irreducibleFactors :: [Property]
 props_irreducibleFactors = (:[]) $
     forAll (elements [1..5]) $ \n ->
-    forAll (replicateM n arbitrary) $ \fs ->
-    all ((>= 1) . degree) fs ==>
+    forAll (replicateM n simpleNonconstantRationalPoly) $ \fs ->
     let f   = product fs
         fs' = irreducibleFactors f
-    in  all (isNothing . isIrreducible) fs' && product fs' == f
+    in  degree f <= 4 ==> (all (isNothing . isIrreducible) fs' && product fs' == f)
 
 -- | Bestimmt das Minimalpolynom einer algebraischen Zahl.
 minimalPolynomial :: Alg QinC -> NormedPoly Rational
@@ -169,8 +168,13 @@ props_simplifyAlg :: [Property]
 props_simplifyAlg =
     [ forAll arbitrary $ \(Blind z) -> simplifyAlg z == z ]
 
-props_Factoring :: [Property]
-props_Factoring = props_isComposedPoly ++ props_irreducibleFactors ++ props_simplifyAlg
+check_Factoring :: IO ()
+check_Factoring = do
+    mapM_ (quickCheckWith stdArgs{ maxSize = 5 }) props_isComposedPoly
+    mapM_ (quickCheckWith stdArgs{ maxSize = 5, maxSuccess = 5 }) $ concat
+        [ props_irreducibleFactors
+        , props_simplifyAlg
+        ]
 
 demo :: IO ()
 demo = do
