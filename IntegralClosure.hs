@@ -187,7 +187,7 @@ props_prodAnnihilator proxy = (:[]) $ forAll arbitrary $ \(f@(MkNormedPoly f'), 
 -- 'sumAnnihilator' sowie 'prodAnnihilator' erreichen, aber die Funktion hier ist
 -- wesentlich effizienter: Sie nutzt die /R/-Algebra /R[x]/, die unabhängig von
 -- dem Grad von /p/ das bekannte Erzeugendensystem /x^i/, wobei /i/ von /0/
--- (einschließlich) bis zum Grad von /f/ läuft (ausschließlich, besitzt.
+-- (einschließlich) bis zum Grad von /f/ läuft (ausschließlich), besitzt.
 --
 -- Somit ist der Grad des ermittelten Polynoms dann höchstens (/<=/) der von /f/.
 evalAnnihilator :: (Ring a, Eq a, HasAnnihilatingPolynomials a) => Poly a -> NormedPoly a -> NormedPoly a
