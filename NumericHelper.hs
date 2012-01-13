@@ -1,7 +1,7 @@
 -- | Dieses Modul stellt numerische Hilfsfunktionen bereit.
 {-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
 module NumericHelper
-    ( NonnegativeRational
+    ( NonnegativeRational, PositiveRational
     , unsafeFromRational
     , roundDownToRecipN
     , roundUp
@@ -22,6 +22,9 @@ import Testing
 
 -- | Approximation an den Typ nichtnegativer rationaler Zahlen.
 type NonnegativeRational = Rational
+
+-- | Approximation an den Typ positiver rationaler Zahlen.
+type PositiveRational    = Rational
 
 -- | Ist eine rationale Zahl /x/ sogar eine ganze Zahl, so liefert
 -- /unsafeFromRational x/ diese ganze Zahl. Sonst wirft sie eine

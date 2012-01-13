@@ -36,9 +36,14 @@ instance Ring ComplexRational where
     unit = fromInteger 1
     couldBeNonZero = (/= zero)
 
+instance MetricSpace ComplexRational where
+    dist           x y = norm           (x - y)
+    distUpperBound x y = normUpperBound (x - y)
+
 instance NormedRing ComplexRational where
     norm (x :+: y) q = x^2 + y^2 <= q^2
-    normUpperBound = snd . squareRootBounds . magnitudeSq
+    normUpperBound = incr . snd . squareRootBounds . magnitudeSq
+	where incr z = if z == 0 then 1e-10 else z
 
 instance IntegralDomain ComplexRational
 

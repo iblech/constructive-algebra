@@ -6,38 +6,40 @@ module NormedRing
 
 import Data.Ratio
 
-import NumericHelper (NonnegativeRational)
+import NumericHelper (PositiveRational)
 import Proxy
 import Ring
 import Testing
+import Nondet
+import MetricSpace
 
 -- | Klasse für Ringe mit Norm, wie beispielsweise 'Rational' und
--- 'ComplexRational'.
-class (Ring a) => NormedRing a where
-    -- | Gewöhnlich erwartet man ja von einer Norm, dass sie jedem Element
-    -- ihre Länge als reelle Zahl zuordnet.
-    -- Diese Definition ist für unsere Zwecke aber nicht geeignet, da wir die
-    -- reellen Zahlen erst durch einen geeigneten Vervollständigungsprozess aus
-    -- den rationalen Zahlen erhalten wollen.
-    --
-    -- Die Anschauung hinter unserer Definition ist folgende: /norm x q/
-    -- soll genau dann wahr sein, wenn die Länge von /x/ kleinergleich /q/ ist.
-    norm :: a -> NonnegativeRational -> Bool
+-- 'ComplexRational'. Die Normstruktur soll mit der Metrikstruktur
+-- verträglich sein, d.h. es soll gelten:
+-- 
+-- > norm x = dist zero x
+class (Ring a, MetricSpace a) => NormedRing a where
+    -- | /norm x q/ ist genau dann wahr, wenn die Norm von /x/ kleinergleich
+    -- /q/ ist.
+    norm :: a -> PositiveRational -> Bool
+    norm = dist zero
 
-    -- | Liefert eine obere Schranke für die Norm einer Zahl, es soll also
-    -- folgende Spezifikation erfüllt sein:
+    -- | Liefert nicht-deterministisch eine obere Schranke für die Norm einer
+    -- Zahl, der monadische Ausdruck
     --
-    -- > norm x (normUpperBound x) == True.
-    normUpperBound :: a -> NonnegativeRational
+    -- > do { q <- normUpperBound x; return (norm x q); }
+    --
+    -- soll also stets zu /True/ evaluieren.
+    normUpperBound :: a -> R PositiveRational
+    normUpperBound = distUpperBound zero
 
-instance NormedRing (Ratio Integer) where
-    norm x q = abs x <= q
-    normUpperBound = abs
+instance NormedRing (Ratio Integer)
 
 props_normUpperBound :: (NormedRing a, Arbitrary a, Show a) => Proxy a -> [Property]
 props_normUpperBound proxy = (:[]) $ forAll arbitrary $ \x ->
     let _ = x `asTypeOf` unProxy proxy
-    in  normUpperBound x >= 0 && norm x (normUpperBound x)
+	d = unsafeRunR $ normUpperBound x
+    in  d > 0 && norm x d
 
 check_NormedRing :: IO ()
 check_NormedRing = mapM_ quickCheck $ concat

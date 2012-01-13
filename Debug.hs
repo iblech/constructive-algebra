@@ -6,7 +6,7 @@ import Debug.Trace
 
 -- | Konstante, die angibt, ob Debugging-Meldungen ausgegeben werden sollen.
 doDebug :: Bool
-doDebug = False
+doDebug = True
 
 {-# NOINLINE debug #-}
 -- | /debug msg x/ verhält sich semantisch wie /x/, gibt aber (bei gesetztem
