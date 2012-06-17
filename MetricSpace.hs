@@ -1,9 +1,9 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, UndecidableInstances #-}
 module MetricSpace where
 
 import Data.Ratio
 
-import NumericHelper (NonnegativeRational)
+import NumericHelper (NonnegativeRational, PositiveRational)
 import Proxy
 import Testing
 import Nondet
@@ -16,13 +16,14 @@ import Nondet
 -- durch einen geeigneten Vervollständigungsprozess aus den rationalen Zahlen
 -- erhalten wollen.
 --
--- Die Anschauung hinter unserer Definition ist folgende: /dist x y q/ soll
--- genau dann wahr sein, wenn die Entfernung von /x/ zu /y/ kleinergleich /q/
--- ist. Wir schreiben
+-- Für uns ist ein metrischer Raum eine Menge /X/ zusammen mit einer
+-- Relation /d/, die wir als /d(x,y) <= q/ schreiben, wobei /x/ und /y/
+-- aus /X/ stammen und /q/ eine nichtnegative rationale Zahl sein kann.
 --
--- > d(x,y) <= q  genau dann, wenn  dist x y q wahr ist.
+-- Anschaulich soll /d(x,y) <= q/ genau dann wahr sein, wenn die Entfernung
+-- von /x/ zu /y/ kleinergleich /q/ ist.
 --
--- Konkret müssen folgende Axiome erfüllt sein:
+-- Wir fordern folgende Axiome erfüllt sein:
 --
 -- (1) für alle x, y gibt es ein q mit d(x,y) <= q
 --
@@ -30,7 +31,7 @@ import Nondet
 --
 -- (3) d(x,y) <= q + eps, für alle eps > 0  ==>  d(x,y) <= q
 --
--- (4) d(x,y) <= eps für alle eps > 0  <==>  x = y
+-- (4) d(x,y) <= 0 <==>  x = y
 --
 -- (5) d(x,y) <= q  ==>  d(y,x) <= q
 --
@@ -51,20 +52,22 @@ import Nondet
 -- >     |--> X mit Definition dist x y q := (d(x,y) <= q),
 -- >
 -- > X mit Distanzrelation dist
--- >     |--> X mit Abstandsfunktion d(x,y) := inf { q | dist x y q stets True }.
+-- >     |--> X mit Abstandsfunktion d(x,y) := inf { q | d(x,y) <= q }.
 -- 
 -- eine Äquivalenz (sogar ein Isomorphismus) von Kategorien gegeben wird.
 -- Im Nachweis wird dabei jedes Axiom verwendet.
 --
+-- Überraschend ist vielleicht, dass die Typklasse "MetricSpace" keine
+-- Funktion beinhaltet, die die Distanzrelation kodiert. Die Existenz
+-- einer solchen stets terminierenden Funktion ist gleichbedeutend mit
+-- der Entscheidbarkeit der Distanzrelation, die wir für allgemeine
+-- metrische Räume nicht fordern wollen.
+--
 -- (Alternativ denkbar wäre auch, dist x y q als "d(x,y) < q" zu
 -- verstehen. XXX (wieso) ist das schlecht?)
 class MetricSpace a where
-    -- | /dist x y q/ soll genau dann wahr sein, wenn die Entfernung von /x/
-    -- zu /y/ kleinergleich /q/ ist.
-    dist :: a -> a -> PositiveRational -> Bool
-
     -- | /distUpperBound x y/ soll eine obere Schranke für die Entfernung
-    -- von /x/ zu /y/ produzieren, d.h.
+    -- von /x/ zu /y/ produzieren, d.h. XXX Doku anpassen
     --
     -- > do { q <- distUpperBound x y; return (dist x y q) }
     --
@@ -75,12 +78,29 @@ class MetricSpace a where
     -- 
     -- /distUpperBound/ darf nicht-deterministisch sein, also für jeden Aufruf
     -- neue obere Schranken produzieren.
-    distUpperBound :: a -> a -> R PositiveRational
+    distUpperBound :: a -> a -> R NonnegativeRational
+
+class (MetricSpace a) => DecidableMetricSpace a where
+    -- | /dist q x y/ soll genau dann wahr sein, wenn die Entfernung von /x/
+    -- zu /y/ kleinergleich /q/ ist.
+    dist :: NonnegativeRational -> a -> a -> Bool
+
+class (MetricSpace a) => LocatedMetricSpace a where
+    -- /locate eps delta x y/ soll für /0 <= delta < eps/ entscheiden, ob
+    --   d(x,y) <= eps  oder  nicht: d(x,y) <= delta
+    -- gilt und im ersten Fall /Left/, im zweiten Fall /Right/ zurückgeben.
+    -- Falls beide Fälle erfüllt sind, darf die Wahl nichtdeterministisch
+    -- erfolgen.
+    locate :: PositiveRational -> NonnegativeRational -> a -> a -> R (Either () ())
+
+instance (DecidableMetricSpace a) => LocatedMetricSpace a where
+    locate eps delta x y = return $ if dist eps x y then Left () else Right ()
 
 instance MetricSpace (Ratio Integer) where
-    dist           x y q = abs (x - y) <= q
-    distUpperBound x y   = return $ incr $ abs (x - y)
-	where incr q = if q == 0 then 1e-20 else q
+    distUpperBound x y = return $ abs (x - y)
+
+instance DecidableMetricSpace (Ratio Integer) where
+    dist x y q = abs (x - y) <= q
 
 {-
 props_dist :: (MetricSpace a, Arbitrary a, Show a) => Proxy a -> [Property]
@@ -89,6 +109,7 @@ props_dist proxy = (:[]) $ forAll arbitrary $ \(x,y,q) -> q > 0 ==>
 -- usw.
 -}
 
+{-
 props_distUpperBound :: (MetricSpace a, Arbitrary a, Show a) => Proxy a -> [Property]
 props_distUpperBound proxy = (:[]) $ forAll arbitrary $ \(x,y) ->
     let _ = x `asTypeOf` y `asTypeOf` unProxy proxy
@@ -99,3 +120,4 @@ check_MetricSpace :: IO ()
 check_MetricSpace = mapM_ quickCheck $ concat
     [ props_distUpperBound (undefined :: Proxy Rational)
     ]
+-}

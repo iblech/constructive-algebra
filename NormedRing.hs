@@ -17,21 +17,25 @@ import MetricSpace
 -- 'ComplexRational'. Die Normstruktur soll mit der Metrikstruktur
 -- verträglich sein, d.h. es soll gelten:
 -- 
--- > norm x = dist zero x
+-- > norm(x) <= q  <==>  d(x,0) <= q.
 class (Ring a, MetricSpace a) => NormedRing a where
-    -- | /norm x q/ ist genau dann wahr, wenn die Norm von /x/ kleinergleich
-    -- /q/ ist.
-    norm :: a -> PositiveRational -> Bool
-    norm = dist zero
-
     -- | Liefert nicht-deterministisch eine obere Schranke für die Norm einer
     -- Zahl, der monadische Ausdruck
     --
     -- > do { q <- normUpperBound x; return (norm x q); }
     --
     -- soll also stets zu /True/ evaluieren.
-    normUpperBound :: a -> R PositiveRational
+    normUpperBound :: a -> R NonnegativeRational
     normUpperBound = distUpperBound zero
+
+class (NormedRing a, DecidableMetricSpace a) => DecidableNormedRing a where
+    -- | /norm q x/ soll genau dann wahr sein, wenn die Norm von /x/
+    -- kleinergleich /q/ ist.
+    norm :: NonnegativeRational -> a -> Bool
+    norm = flip dist zero
+
+class (NormedRing a, LocatedMetricSpace a) => LocatedNormedRing a where
+    
 
 instance NormedRing (Ratio Integer)
 
