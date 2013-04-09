@@ -23,7 +23,7 @@ import Nondet
 -- Anschaulich soll /d(x,y) <= q/ genau dann wahr sein, wenn die Entfernung
 -- von /x/ zu /y/ kleinergleich /q/ ist.
 --
--- Wir fordern folgende Axiome erfüllt sein:
+-- Wir fordern, dass folgende Axiome erfüllt sind:
 --
 -- (1) für alle x, y gibt es ein q mit d(x,y) <= q
 --
@@ -31,7 +31,7 @@ import Nondet
 --
 -- (3) d(x,y) <= q + eps, für alle eps > 0  ==>  d(x,y) <= q
 --
--- (4) d(x,y) <= 0 <==>  x = y
+-- (4) d(x,y) <= 0  <==>  x = y
 --
 -- (5) d(x,y) <= q  ==>  d(y,x) <= q
 --
