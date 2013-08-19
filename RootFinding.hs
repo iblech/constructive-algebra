@@ -349,7 +349,7 @@ roots f = unsafePerformIO $ do
 rootsMemoTable :: IORef (M.Map ([Rational]) [Alg QinC])
 rootsMemoTable = unsafePerformIO (newIORef M.empty)
 
--- Das ist eigentliche Nullstellenberechnungsfunktion.
+-- Das ist die eigentliche Nullstellenberechnungsfunktion.
 -- Unser Vorgehen ist folgendes: Zunächst machen wir das Polynom durch
 -- Betrachtung seines quadratfreien Anteils separabel. Dann bestimmen wir
 -- mittels 'cauchyRadius' eine genügend große 2-Zelle, in deren Innerem
@@ -396,6 +396,7 @@ roots' inj f =
         -- isoliert sind, aber die Zelle noch zu groß für eine
         -- 1/j-Approximation sind. Dann müssen wir einfach die restlichen
         -- Iterationen in 'css' untersuchen.
+        -- XXX: Meinte ich 1/2^j?
 	| otherwise
 	= go i j css 
     go _ _ _ = undefined  -- kann nicht eintreten
