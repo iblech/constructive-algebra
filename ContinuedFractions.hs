@@ -28,5 +28,7 @@ floor' z = go y
 -- | Berechnet die unendliche Kettenbruchentwicklung einer reellen
 -- algebraischen Zahl. Terminiert auf jeder Eingabe.
 cf :: Alg QinR -> [Integer]
-cf x = a : cf (unit / (x - fromInteger a))
+cf x = case recip (x - fromInteger a) of
+    Just r  -> a : cf r
+    Nothing -> [a]
     where a = floor' x
