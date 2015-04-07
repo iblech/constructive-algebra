@@ -419,8 +419,10 @@ apartnessBound z = go 10
         -- Ist |q| >= 3/i?
 	if q /= zero && norm (unit/q) (fromInteger i / 3)
 	    then return i
-	    else go (i + 1)
-            -- XXX: Man könnte überlegen, ob go (2*i) in der Praxis schneller ist.
+	    else go (2*i)
+            -- /go (2*i)/ ist der Praxis (zum Beispiel für
+            -- /cf (goldenRatio + sqrt2)/) schneller als /go (i+1)/.
+            -- Semantisch ist beides okay.
 -- Zur Korrektheit und Terminierung:
 -- a) |z_N| >= 3/N  ==>  |z_n| > 1/N f.a. n >= N  und  |z| > 2/N.
 -- b) z # 0  ==>  es gibt ein N wie in a)
