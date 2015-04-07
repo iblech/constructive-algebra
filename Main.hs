@@ -6,6 +6,7 @@ import Algebraic
 import AlgebraicTesting
 import Complex
 import ComplexRational
+import ContinuedFractions
 import Euclidean
 import Factoring
 import Field
@@ -28,7 +29,8 @@ demos =
     , ("Smith",           Smith.demo)
     , ("Complex",         Complex.demo)
     , ("Algebraic",       Algebraic.demo)
-    , ("RootFinding",    RootFinding.demo)
+    , ("ContinuedFractions", ContinuedFractions.demo)
+    , ("RootFinding",     RootFinding.demo)
     , ("Factoring",       Factoring.demo)
     , ("IdealExtension",  IdealExtension.demo)
     , ("Galois",          Galois.demo)

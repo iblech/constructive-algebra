@@ -410,7 +410,9 @@ instance (NormedRing a, Eq a) => HasMagnitudeZeroTest (AST a) where
 --
 -- wobei /z_n/ für jede mögliche /n^(-1)/-Näherung von /z/ steht.
 apartnessBound :: (Field ex, NormedRing ex) => AST ex -> R PositiveNat
-apartnessBound z = go 1
+apartnessBound z = go 10
+    -- go 1 ist semantisch genauso gut. go 10 führt aber in der Praxis zu viel
+    -- besseren Laufzeiten.
     where
     go i = do
 	q <- approx i z
@@ -418,6 +420,7 @@ apartnessBound z = go 1
 	if q /= zero && norm (unit/q) (fromInteger i / 3)
 	    then return i
 	    else go (i + 1)
+            -- XXX: Man könnte überlegen, ob go (2*i) in der Praxis schneller ist.
 -- Zur Korrektheit und Terminierung:
 -- a) |z_N| >= 3/N  ==>  |z_n| > 1/N f.a. n >= N  und  |z| > 2/N.
 -- b) z # 0  ==>  es gibt ein N wie in a)
