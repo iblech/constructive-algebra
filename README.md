@@ -10,3 +10,4 @@ by using arbitrary-precision arithmetic.
 
 Note: When experimenting, use commit d1880d5f. All tests work at this commit.
 The next few commits point to a good direction, but are work in progress.
+You can also check out the continued-fractions branch.
