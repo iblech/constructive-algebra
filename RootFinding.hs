@@ -65,7 +65,7 @@ import RingMorphism
     Field (RealSubring a), OrderedRing (RealSubring a)
 
 -- | Zählt die Anzahl von Vorzeichenwechseln einer endlichen Liste von Zahlen
--- eines geordneten Rings. Wechsel von/auf null zählen /2^(-1)/.
+-- eines geordneten Rings. Wechsel von\/auf null zählen /2^(-1)/.
 signChanges :: (OrderedRing a) => [a] -> Rational
 signChanges xs = sum $ map f (pairs xs)
     where
@@ -349,7 +349,7 @@ roots f = unsafePerformIO $ do
 rootsMemoTable :: IORef (M.Map ([Rational]) [Alg QinC])
 rootsMemoTable = unsafePerformIO (newIORef M.empty)
 
--- Das ist eigentliche Nullstellenberechnungsfunktion.
+-- Das ist die eigentliche Nullstellenberechnungsfunktion.
 -- Unser Vorgehen ist folgendes: Zunächst machen wir das Polynom durch
 -- Betrachtung seines quadratfreien Anteils separabel. Dann bestimmen wir
 -- mittels 'cauchyRadius' eine genügend große 2-Zelle, in deren Innerem
@@ -396,6 +396,7 @@ roots' inj f =
         -- isoliert sind, aber die Zelle noch zu groß für eine
         -- 1/j-Approximation sind. Dann müssen wir einfach die restlichen
         -- Iterationen in 'css' untersuchen.
+        -- XXX: Meine ich 1/2^j?
 	| otherwise
 	= go i j css 
     go _ _ _ = undefined  -- kann nicht eintreten
