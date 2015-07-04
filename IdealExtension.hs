@@ -169,7 +169,7 @@ instance (Field k) => IdealField (ISE k s) where
 
         -- Andernfalls haben wir die echten Faktoren d uns s von p gefunden;
         -- wir müssen die Rechnung abbrechen.
-        debug ("IdealExtension: restart!") $ do
+        debug "IdealExtension: restart!" $ do
         restart (d,s)
 
 -- | Zu jedem gegebenen Zeitpunkt ist die ideelle Körpererweiterung /ISE k s/
