@@ -73,7 +73,7 @@ unsafeRunR = unsafePerformIO . runR
 -- positiven natürlichen Zahl /n/ aufgerufen, eine Näherung an /z/ produziert,
 -- deren Abstand zu /z/ echt kleiner als /n^(-1)/ ist.
 --
--- Ansonsten ist dem Approximationsalgorithmus keinen Beschränkungen
+-- Ansonsten ist der Approximationsalgorithmus keinen Beschränkungen
 -- unterworfen. Insbesondere darf er beliebige nicht-deterministische Prozesse
 -- anstoßen, und kann bei der wiederholten Fragen nach einer /n^(-1)/-Näherung
 -- jedes Mal ein anderes Resultat liefern.
