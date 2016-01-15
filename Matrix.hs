@@ -139,7 +139,7 @@ withSquare k (MkMatrix arr) = fromArray' k arr
 -- | Liefert die Anzahl Zeilen und Spalten des zugrundeliegenden Felds.
 -- Wird nur intern in diesem Modul benötigt. Benutzer dieses Moduls sollten
 -- die Funktionen 'numRows' und 'numCols' verwenden, die auch nur statische
--- Typinformation benötigen und nichts das zugrundeliegende Feld betrachten.
+-- Typinformation benötigen und nicht das zugrundeliegende Feld betrachten.
 dim :: Array (Nat,Nat) a -> (Integer,Integer)
 dim = (succ *** succ) . (fromIntegral *** fromIntegral) . snd . bounds
 

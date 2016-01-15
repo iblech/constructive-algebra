@@ -105,7 +105,7 @@ maybeInvert (MkAlg z) = unsafeRunR $ do
     -- Die Auswertung der mit z lazy mitgeführten Ganzheitsgleichung ist
     -- üblicherweise sehr teuer. Daher eine einfache Optimierung, um
     -- im Fall, dass die Nullverschiedenheit von z schon durch 1/1-, 1/10-
-    -- oder 1/100-Näherungen entdeckt werden kann, um auf diese verzichten zu
+    -- oder 1/100-Näherungen entdeckt werden kann, auf diese verzichten zu
     -- können.
     foundApartness <- go [1,10,100]
     if foundApartness then return $ Just zInv else do

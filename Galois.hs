@@ -66,9 +66,9 @@ data GaloisInfo r a = MkGaloisInfo
     , primitiveMinpoly  :: Poly r     -- ^ Minimalpolynom des primitiven Elements
     , primitiveCombo    :: [Integer]  -- ^ Zahlen /lambda_i/ wie bei 'pseudoResolvent'
     , rationalExprs     :: [Poly r]   -- ^ Zeugen der Rationalität der Nullstellen
-                                    -- im primitiven Element
-    , primitiveConjs    :: [a]        -- ^ die galoisch Konjugierten des primitiven Elements
-    , groupElts         :: [[Int]]    -- ^ die Element der Galoisgruppe
+                                      --   ausgedrückt als Polynome im primitiven Element
+    , primitiveConjs    :: [a]        -- ^ die galoissch Konjugierten des primitiven Elements
+    , groupElts         :: [[Int]]    -- ^ die Elemente der Galoisgruppe
     } deriving (Show)
 
 -- | Bestimmt die Galoisgruppe eines normierten separablen Polynoms.
