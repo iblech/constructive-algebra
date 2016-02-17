@@ -1,6 +1,9 @@
 -- | Dieses Modul stellt Funktionen zur Faktorisierung von rationalen Polynomen
 -- zur Verfügung; das sind hauptsächlich 'isIrreducible' und
 -- 'irreducibleFactors'.
+--
+-- TODO: Reduziere modulo Primzahlen, um schneller Irreduzibilität entscheiden
+-- zu können.
 {-# LANGUAGE PatternGuards #-}
 module Factoring where
 
