@@ -5,7 +5,7 @@
 -- mit den Elementen der Galoisgruppe aus.
 {-# LANGUAGE TupleSections, PatternGuards #-}
 module Galois
-    ( linearResolvent, galoisGroup, primitiveElement, pseudoResolvent, check_Galois, Galois.demo )
+    ( linearResolvent, galoisGroup, primitiveElement, pseudoResolvent, formatGaloisInfo, check_Galois, Galois.demo )
     where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)
