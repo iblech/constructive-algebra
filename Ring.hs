@@ -192,7 +192,7 @@ class (Ring a, Ring (RealSubring a)) => HasConjugation a where
     -- Ist vordefiniert über 'realPart'; wenn das zu einer
     -- nicht-terminierenden Rekursion führt, muss die Instanz eine geeignete
     -- andere Definition gebeen.
-    imagPart  :: (HasConjugation a) => a -> RealSubring a
+    imagPart  :: a -> RealSubring a
     imagPart = negate . realPart . (imagUnit *)
 
 -- | Berechnet das Betragsquadrat einer Zahl /z/, also

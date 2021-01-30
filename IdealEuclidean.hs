@@ -28,7 +28,8 @@ idealNormalize :: (IdealField a) => Poly a -> Nondet a (Poly a)
 idealNormalize f = do
     as <- idealCanonCoeffs f
     if null as then error "IdealEuclidean.idealNormalize: aufs Nullpolynom angewendet" else do
-    Just r <- idealRecip (last as)
+    r_ <- idealRecip (last as)
+    let Just r = r_
     return . MkPoly $ map (r *) as
 
 -- | Monadische Version von 'dropWhile': Entfernt so lange Elemente aus der
@@ -51,7 +52,8 @@ idealQuotRem f g = do
     as <- idealCanonCoeffs f
     bs <- idealCanonCoeffs g
     if length as < length bs then return (zero, f) else do
-    Just u <- idealRecip (last bs)
+    u_ <- idealRecip (last bs)
+    let Just u = u_
     let q' = (last as * u) .* (iX^(genericLength as - genericLength bs))
     (q,r) <- idealQuotRem (f - q' * g) g
     return (q + q', r)

@@ -48,7 +48,7 @@ import RingMorphism
 -- Operationen, die den Kontrollfluss beeinflussen (wie beispielsweise
 -- 'forkIO'), verbieten wir. (Denn was würde so ein Algorithmus bedeuten?)
 newtype R a = R { runR :: IO a }
-    deriving (Functor,Monad)
+    deriving (Functor,Applicative,Monad)
 
 -- | /unsafeRunR m/ lässt die nicht-deterministische Operation /m/ laufen
 -- und gibt ihr Ergebnis zurück.
