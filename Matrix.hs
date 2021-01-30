@@ -174,8 +174,8 @@ deleteRow a (MkMatrix matrix)
     where
     ((0,0), (n,m)) = bounds matrix
     f (i,j)
-	| i  < a    = (i,j)
-	| i >= a    = (i+1,j)
+        | i  < a    = (i,j)
+        | i >= a    = (i+1,j)
         | otherwise = undefined  -- kann nicht eintreten
 
 -- | /deleteColumn i m/ ist diejenige Untermatrix von /m/, die aus /m/ durch
@@ -232,4 +232,4 @@ instance (ReifyNat n, ReifyNat m, Arbitrary a) => Arbitrary (Matrix n m a) where
 prettyMatrix :: (ReifyNat n, ReifyNat m, Show a) => Matrix n m a -> String
 prettyMatrix m =
     concat . intersperse "\n" $ flip map [0..numRows m - 1] $ \i ->
-	concat . intersperse " " $ map (printf "%-10s" . show . (m !!) . (i,)) [0..numCols m - 1]
+        concat . intersperse " " $ map (printf "%-10s" . show . (m !!) . (i,)) [0..numCols m - 1]

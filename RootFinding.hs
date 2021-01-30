@@ -382,23 +382,23 @@ roots' inj f =
     go i j (cs:css)
         -- Wenn die Nullstellen noch nicht isoliert sind: Weiter machen!
         -- Aber keine Approximation ausgeben.
-	| length cs /= n
-	= go i j css
+        | length cs /= n
+        = go i j css
 
         -- Wenn die Nullstellen isoliert sind und die Fehlerschranke der
         -- aktuellen Approximation der i-ten Nullstelle kleiner oder gleich 2^(-j)
         -- ist, können wir diese ausgeben und uns dann auf die Suche nach einer
         -- 2^(-(j+1))-Approximation begeben.
-	| fst (cs !! i) <= 1 / 2^fromInteger j
-	= snd (cs !! i) : go i (j + 1) (cs:css)
+        | fst (cs !! i) <= 1 / 2^fromInteger j
+        = snd (cs !! i) : go i (j + 1) (cs:css)
 
         -- Schließlich kann der Fall eintreten, dass die Nullstellen zwar schon
         -- isoliert sind, aber die Zelle noch zu groß für eine
         -- 1/j-Approximation sind. Dann müssen wir einfach die restlichen
         -- Iterationen in 'css' untersuchen.
         -- XXX: Meine ich 1/2^j?
-	| otherwise
-	= go i j css 
+        | otherwise
+        = go i j css 
     go _ _ _ = undefined  -- kann nicht eintreten
 
 -- | Zu einem gegebenen separablen Polynom und einem Suchradius gibt
@@ -418,10 +418,10 @@ subdivisions radius f =
     -- Iterationspunkt zurück.
     go :: (SubComplex(a)) => Rational -> [(Poly a, Cell)] -> [[(Rational, ComplexRational)]]
     go r cs = map ((r,) . mid . snd) cs : merge (map (uncurry process) cs)
-	where
-	process :: (SubComplex(a)) => Poly a -> Cell -> [[(Rational, ComplexRational)]]
-	process _  (Cell0 z0) = repeat [(0, fromComplexRational z0)]
-	process f' c          = go (r/2) $ debug (show c) $ divide f' c
+        where
+        process :: (SubComplex(a)) => Poly a -> Cell -> [[(Rational, ComplexRational)]]
+        process _  (Cell0 z0) = repeat [(0, fromComplexRational z0)]
+        process f' c          = go (r/2) $ debug (show c) $ divide f' c
     mid (Cell0 z0)    = fromComplexRational $ z0
     mid (Cell1 z0 z1) = fromComplexRational $ (z0 + z1) / fromInteger 2
     mid (Cell2 z0 z1) = fromComplexRational $ (z0 + z1) / fromInteger 2

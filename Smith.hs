@@ -42,9 +42,9 @@ makeZeroInFirstRow j mtx@(MkMatrix arr) = MkMatrix (arr // updates) `asTypeOf` m
     -- Terminierung nicht gewährleistet!
     (u,v,s,t) = gcd' (arr ! (0,0)) (arr ! (0,j))
     updates   = do
-	i <- [0..n]
-	let (x,y) = (arr ! (i,0), arr ! (i,j))
-	[ ((i,0), u*x + v*y), ((i,j), s*y - t*x) ]
+        i <- [0..n]
+        let (x,y) = (arr ! (i,0), arr ! (i,j))
+        [ ((i,0), u*x + v*y), ((i,j), s*y - t*x) ]
     ((0,0),(n,_)) = bounds arr
 -- Korrektheitsbeweis für den Fall, dass y0 := arr ! (0,j) nicht null ist:
 -- a) Transformation hat Determinante 1: (us + vt) d = usd - vtd = ux0 + vy0 = d
@@ -102,12 +102,12 @@ divisors [] = []
 divisors as = go (length as - 1) as
     where
     go i bs
-	| i == 0    = head bs : divisors (tail bs)
-	| otherwise = go (i-1) $ d : splice (i-1) p (tail bs)
-	where
-	(u,v,s,t) = gcd (head bs) (bs P.!! i)
-	d         = u*head bs + v*bs P.!! i
-	p         = d*s*t
+        | i == 0    = head bs : divisors (tail bs)
+        | otherwise = go (i-1) $ d : splice (i-1) p (tail bs)
+        where
+        (u,v,s,t) = gcd (head bs) (bs P.!! i)
+        d         = u*head bs + v*bs P.!! i
+        p         = d*s*t
 
 -- | /splice i x ys/ ersetzt in /ys/ das Element an einer Stelle /i ≥ 0/ durch /x/.
 -- Dazu muss /ys/ mindestens /i+1/ Elemente enthalten.

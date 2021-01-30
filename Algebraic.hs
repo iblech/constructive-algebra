@@ -135,10 +135,10 @@ maybeInvert (MkAlg z) = unsafeRunR $ do
     -- unser epsilon (= minimum bounds) kleiner als nötig, weswegen es dann
     -- magnitudeZeroTestR schwieriger hat.
     bounds = 1 : map f (tail bs)
-	where
-	f b
-	    | b == zero = unit  -- sinngemäß unendlich
-	    | otherwise = normUpperBound (head bs) * normUpperBound (unit/b) / fromIntegral k
+        where
+        f b
+            | b == zero = unit  -- sinngemäß unendlich
+            | otherwise = normUpperBound (head bs) * normUpperBound (unit/b) / fromIntegral k
 
     -- Das Inverse von z als algebraische Zahl.
     -- Wird nur verwendet, wenn die Invertierbarkeit auch wirklich nachgewiesen

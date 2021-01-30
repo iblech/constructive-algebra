@@ -24,8 +24,8 @@ data ComplexRational = !Rational :+: !Rational
 
 instance Show ComplexRational where
     show (x :+: y)
-	| y == 0    = show x
-	| otherwise = "(" ++ show x ++ "+i" ++ show y ++ ")"
+        | y == 0    = show x
+        | otherwise = "(" ++ show x ++ "+i" ++ show y ++ ")"
 
 instance Ring ComplexRational where
     (x :+: y) + (x' :+: y') = (x + x') :+: (y + y')
@@ -50,7 +50,7 @@ instance HasConjugation ComplexRational where
 
 instance Field ComplexRational where
     recip (x :+: y)
-	| sq == 0   = Nothing
+        | sq == 0   = Nothing
         | otherwise = Just $ (x/sq) :+: (-y/sq)
       where sq = x^2 + y^2
 

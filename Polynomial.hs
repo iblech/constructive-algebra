@@ -78,11 +78,11 @@ instance (Ring a, Eq a, Show a) => Show (Poly a) where
       vars = "" : "X" : map (("X^" ++) . show) [(2::Integer)..]
       mult x v
         | x == zero = ""
-	| x == unit = if null v then "1" else v
-	| otherwise = show x ++ (if null v then "" else "*" ++ v)
+        | x == unit = if null v then "1" else v
+        | otherwise = show x ++ (if null v then "" else "*" ++ v)
       addZero s
-	| null s    = "0"
-	| otherwise = s
+        | null s    = "0"
+        | otherwise = s
 
 instance (Ring a, Eq a) => Eq (Poly a) where
     p == q = canonCoeffs p == canonCoeffs q
@@ -90,9 +90,9 @@ instance (Ring a, Eq a) => Eq (Poly a) where
 instance (Ring a) => Ring (Poly a) where
     MkPoly xs + MkPoly ys = simplify $ MkPoly (zipWithDefault (+) zero xs ys)
     MkPoly xs * MkPoly ys = simplify . MkPoly $ go xs ys
-	where
-	go []     _  = []
-	go (a:as) bs = zipWithDefault (+) zero (map (a *) bs) (zero:go as bs)
+        where
+        go []     _  = []
+        go (a:as) bs = zipWithDefault (+) zero (map (a *) bs) (zero:go as bs)
     negate = fmap negate
     fromInteger = MkPoly . (:[]) . fromInteger
     zero = MkPoly []

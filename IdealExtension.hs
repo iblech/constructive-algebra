@@ -59,7 +59,7 @@ module IdealExtension
     ) where
 
 import Prelude hiding (gcd, quotRem, (+), (*), (-), (/), (^), negate, recip, fromInteger)
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Maybe
 import Text.Printf
@@ -145,11 +145,6 @@ fromBase = S . Poly.fromBase
 -- künstliche Nullstelle von /p/.
 adjointedRoot :: (Field k) => ISE k s
 adjointedRoot = S iX
-
--- Nötig, um die importierte Monadinstanz von /Either (Poly k)/ nutzen zu
--- können.
-instance Error (Poly k, Poly k) where
-    strMsg msg = error $ "Error (Poly k): " ++ show msg
 
 instance (Field k) => IdealField (ISE k s) where
     -- Die Umgebung enthält das aktuelle Moduluspolynom /p/.
@@ -264,3 +259,5 @@ demo = do
     putStrLn $
         "Für die zweite Rechnung wurde dabei ein Neustart benötigt,\n" ++
         "denn 3 ist eine Nullstelle von f."
+
+-- XXX (nach Upgrade zu GHC 8.10.3): Funktioniert throwError so, wie es soll?

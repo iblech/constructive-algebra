@@ -21,7 +21,7 @@ module Complex
     )
     where
 
-import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real, catch)
+import Prelude hiding ((+), (*), (/), (-), (^), fromInteger, fromRational, recip, negate, Real)
 import Control.Monad (liftM, liftM2)
 import Control.Exception
 import Data.IORef
@@ -415,11 +415,11 @@ apartnessBound z = go 10
     -- besseren Laufzeiten.
     where
     go i = do
-	q <- approx i z
+        q <- approx i z
         -- Ist |q| >= 3/i?
-	if q /= zero && norm (unit/q) (fromInteger i / 3)
-	    then return i
-	    else go (2*i)
+        if q /= zero && norm (unit/q) (fromInteger i / 3)
+            then return i
+            else go (2*i)
             -- /go (2*i)/ ist der Praxis (zum Beispiel für
             -- /cf (goldenRatio + sqrt2)/) schneller als /go (i+1)/.
             -- Semantisch ist beides okay.

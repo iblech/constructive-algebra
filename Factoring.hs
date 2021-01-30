@@ -72,22 +72,22 @@ isIrreducible' f
         let contentInv = 1 / Poly.content f
         -- alle Auswahlen von Nullstellen; wobei wir kleine Auswahlen
         -- zuerst überprüfen wollen.
-	xs <- sortBy (\xs ys -> length xs `compare` length ys) $ subsequences zeros
+        xs <- sortBy (\xs ys -> length xs `compare` length ys) $ subsequences zeros
         -- ...und triviale bzw. unnötige gar nicht.
-	guard $ not $ null xs
-	guard $ length xs <= fromIntegral n `div` 2
+        guard $ not $ null xs
+        guard $ length xs <= fromIntegral n `div` 2
 
-	debug ("` bearbeite Faktor: " ++ show (map unsafeApprox xs)) $ do
-	let p = product $ map ((iX -) . Poly.fromBase) xs
-	Just p' <- [isApproxIntegerPoly (fromRational contentInv .* p)]
+        debug ("` bearbeite Faktor: " ++ show (map unsafeApprox xs)) $ do
+        let p = product $ map ((iX -) . Poly.fromBase) xs
+        Just p' <- [isApproxIntegerPoly (fromRational contentInv .* p)]
         -- Da wir nicht isIntegerPoly, sondern nur isApproxIntegerPoly
         -- verwendet haben, kann es sein, dass contentInv * p doch gar
         -- kein ganzzahliges Polynom ist. Daher machen wir mithilfe der
         -- Polynomdivision...
-	let (q,r) = f `quotRem` fmap fromInteger p'
+        let (q,r) = f `quotRem` fmap fromInteger p'
         -- ...noch die Probe:
         guard $ r == zero
-	return (fmap fromInteger p', q)
+        return (fmap fromInteger p', q)
     where
     zeros     = roots f
     n         = degree f

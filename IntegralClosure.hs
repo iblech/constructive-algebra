@@ -20,7 +20,6 @@ module IntegralClosure
 import Prelude hiding (fromInteger, fromRational, (+), (*), (-), (^), (/), negate)
 import Complex hiding (goldenRatio, sqrt2)
 import qualified Complex as C
-import qualified Polynomial as Poly
 import Polynomial as Poly
 import Matrix hiding ((!!))
 import Ring
@@ -82,8 +81,8 @@ instance (RingMorphism m, HasAnnihilatingPolynomials (Domain m)) => Ring (IC m) 
     MkIC x p * MkIC x' p' = MkIC (x * x') (prodAnnihilator p p')
 
     negate (MkIC x p) = MkIC (negate x) (MkNormedPoly (MkPoly as))
-	where
-	as = reverse $ zipWith (*) (reverse $ canonCoeffs' p) (cycle [unit,negate unit])
+        where
+        as = reverse $ zipWith (*) (reverse $ canonCoeffs' p) (cycle [unit,negate unit])
 
     fromInteger i = MkIC (fromInteger i) (MkNormedPoly (iX - fromInteger i))
 
@@ -125,11 +124,11 @@ sumAnnihilator f g =
     elts = [arr ij kl | ij <- inds, kl <- inds ]
     arr (i,j) (k,l) = arr1 (i,j) (k,l) + arr2 (i,j) (k,l)
     arr1 (i,j) (k,l)
-	| i < n - 1 = if (k,l) == (i+1,j) then unit else zero
-	| otherwise = if l == j then negate (xs !! k) else zero
+        | i < n - 1 = if (k,l) == (i+1,j) then unit else zero
+        | otherwise = if l == j then negate (xs !! k) else zero
     arr2 (i,j) (k,l)
-	| j < m - 1 = if (k,l) == (i,j+1) then unit else zero
-	| otherwise = if k == i then negate (ys !! l) else zero
+        | j < m - 1 = if (k,l) == (i,j+1) then unit else zero
+        | otherwise = if k == i then negate (ys !! l) else zero
     inds = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]
     (n,m)   = (length xs - 1, length ys - 1)
     (xs,ys) = (canonCoeffs' f, canonCoeffs' g)
@@ -158,14 +157,14 @@ prodAnnihilator f g =
     where
     elts = [arr ij kl | ij <- inds, kl <- inds ]
     arr (i,j) (k,l)
-	| i < n - 1  && j < m - 1
-	= if (k,l) == (i+1,j+1) then unit else zero
-	| i == n - 1 && j < m - 1
-	= if l == j + 1 then negate (xs !! k) else zero
-	| i < n - 1  && j == m - 1
-	= if k == i + 1 then negate (ys !! l) else zero
-	| i == n - 1 && j == m - 1
-	= xs !! k * ys !! l
+        | i < n - 1  && j < m - 1
+        = if (k,l) == (i+1,j+1) then unit else zero
+        | i == n - 1 && j < m - 1
+        = if l == j + 1 then negate (xs !! k) else zero
+        | i < n - 1  && j == m - 1
+        = if k == i + 1 then negate (ys !! l) else zero
+        | i == n - 1 && j == m - 1
+        = xs !! k * ys !! l
         | otherwise
         = undefined  -- kann nicht eintreten
     inds = [ (i,j) | i <- [0..n-1], j <- [0..m-1] ]

@@ -21,7 +21,7 @@ floor' z = go y
     -- Invariante: a ist eine ganzzahlige untere Schranke an z.
     -- Wir haben die größte solche Schranke zu ermitteln.
     go a
-        | floor (x - 1 / fromInteger n) == floor (x + 1 / fromInteger n)
+        | floor (x - 1 / fromInteger n) == (floor (x + 1 / fromInteger n) :: Integer)
         = floor (x - 1 / fromInteger n)
         | fromInteger (a + 1) <= z
         = go (a + 1)
@@ -37,7 +37,7 @@ unsafeFloor z = unsafeRunR $ go 3  -- Optimierung, man könnte auch bei 1 starte
         x <- approx n z :: R Rational
         -- z liegt echt zwischen x-1/n und x+1/n.
         -- Liegt zwischen den Intervallgrenzen eine ganze Zahl?
-        if floor (x - 1 / fromInteger n) == floor (x + 1 / fromInteger n)
+        if floor (x - 1 / fromInteger n) == (floor (x + 1 / fromInteger n) :: Integer)
             then return $ floor (x - 1 / fromInteger n)
             else go (2*n)
 
