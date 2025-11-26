@@ -10,7 +10,7 @@
 --
 -- für alle /n >= 0/. Siehe
 -- <http://www.haskell.org/haskellwiki/Type_arithmetic>.
-{-# LANGUAGE EmptyDataDecls, RankNTypes #-}
+{-# LANGUAGE EmptyDataDecls #-}
 module TypeLevelNat
     ( Z, S, N0, N1, N2, N3, N4
     , ReifyNat(..), reflectNat, reflectPositiveNat
@@ -19,6 +19,7 @@ module TypeLevelNat
     ) where
 
 import Prelude hiding (pred,succ)
+import Data.Kind (Type)
 import Nat
 import Proxy
 import Testing
@@ -47,7 +48,7 @@ type N4 = S N3
 
 -- | Klasse, um natürliche Zahlen der Typebene in Werte zu wandeln.
 -- Das Gegenstück ist 'reflectNat'.
-class ReifyNat n where
+class ReifyNat (n :: Type) where
     -- | Gibt den zur Zahl /n/ gehörigen Wert zurück.
     reifyNat :: Proxy n -> Nat
 
