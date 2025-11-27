@@ -4,7 +4,7 @@
 --
 -- TODO: Reduziere modulo Primzahlen, um schneller Irreduzibilität entscheiden
 -- zu können.
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards, NondecreasingIndentation #-}
 module Factoring where
 
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd)

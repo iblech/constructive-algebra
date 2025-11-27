@@ -1,6 +1,6 @@
 -- | Dieses Modul stellt die komplexen Zahlen (und nebenbei auch die reellen
 -- Zahlen) bereit.
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, DeriveFunctor, FlexibleContexts, UndecidableInstances, EmptyDataDecls, PatternGuards #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, DeriveFunctor, FlexibleContexts, UndecidableInstances, EmptyDataDecls, PatternGuards, NondecreasingIndentation #-}
 module Complex
     ( -- * Monade für nicht-deterministische Rechnungen
       R(..), unsafeRunR

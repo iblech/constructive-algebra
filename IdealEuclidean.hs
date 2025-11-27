@@ -1,6 +1,6 @@
 -- | Dieses Modul stellt den euklidischen Algorithmus in Ringen der Form /k[X]/
 -- bereit, wobei /k/ ein ideeller Körper, also eine Instanz von 'IdealField', ist.
-{-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards, StandaloneDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, PatternGuards, StandaloneDeriving, NondecreasingIndentation #-}
 module IdealEuclidean
     ( idealQuotRem, idealGCD, idealNormedGCD
     , idealCanonCoeffs, idealDegree, idealNormalize

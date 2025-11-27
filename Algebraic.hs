@@ -8,7 +8,7 @@
 -- null oder invertierbar, wobei die Inversen explizit konstruierbar sind).
 {-# LANGUAGE CPP, FlexibleContexts, FlexibleInstances,
     GADTs, GeneralizedNewtypeDeriving, PatternGuards, StandaloneDeriving,
-    TypeFamilies, UndecidableInstances #-}
+    TypeFamilies, UndecidableInstances, NondecreasingIndentation #-}
 module Algebraic
     ( -- * Typen
       Alg(..), Algebraic.fromBase

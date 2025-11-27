@@ -42,7 +42,7 @@
 --
 -- (In Kommentaren notieren wir den Faktorring mit einem umgekehrten
 -- Schrägstrich, da sich der richtige Strich nicht vor Haddock verstecken lässt.)
-{-# LANGUAGE TypeFamilies, FlexibleContexts, GeneralizedNewtypeDeriving, RankNTypes, FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts, GeneralizedNewtypeDeriving, RankNTypes, FlexibleInstances, NondecreasingIndentation #-}
 module IdealExtension
     ( -- * Monade für ideelle Berechnungen
       Ideal, runIdeal, restart
@@ -59,6 +59,7 @@ module IdealExtension
     ) where
 
 import Prelude hiding (gcd, quotRem, (+), (*), (-), (/), (^), negate, recip, fromInteger)
+import Control.Monad (liftM)
 import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Maybe
