@@ -59,6 +59,7 @@ module IdealExtension
     ) where
 
 import Prelude hiding (gcd, quotRem, (+), (*), (-), (/), (^), negate, recip, fromInteger)
+import Control.Monad (liftM)
 import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Maybe
