@@ -17,7 +17,7 @@
 --
 -- Einige Typklassenvoraussetzungen sehen in der HTML-Dokumentation schlimmer
 -- aus als im Code, in denen sie mit einem CPP-Makro abgekürzt sind.
-{-# LANGUAGE PatternGuards, TupleSections, CPP, FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE PatternGuards, TupleSections, CPP, FlexibleContexts, TypeFamilies, NondecreasingIndentation #-}
 module RootFinding
     ( -- * Zur algebraischen Windungszahl
       signChanges, signChanges'
