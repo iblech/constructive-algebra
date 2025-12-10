@@ -222,7 +222,7 @@ leadingCoeff = last . canonCoeffs
 derivative :: (Ring a) => Poly a -> Poly a
 derivative (MkPoly xs) 
     | null xs   = MkPoly []
-    | otherwise = simplify . MkPoly $ zipWith (*) (tail xs) $ map fromInteger [1..]
+    | otherwise = simplify . MkPoly $ zipWith (*) (drop 1 xs) $ map fromInteger [1..]
 
 -- | Berechnet den Inhalt eines nicht-verschwindenden Polynoms über den
 -- rationalen Zahlen.

@@ -17,7 +17,7 @@
 --
 -- Einige Typklassenvoraussetzungen sehen in der HTML-Dokumentation schlimmer
 -- aus als im Code, in denen sie mit einem CPP-Makro abgekürzt sind.
-{-# LANGUAGE PatternGuards, TupleSections, CPP, FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE PatternGuards, TupleSections, CPP, FlexibleContexts, TypeFamilies, NondecreasingIndentation #-}
 module RootFinding
     ( -- * Zur algebraischen Windungszahl
       signChanges, signChanges'
@@ -428,7 +428,7 @@ subdivisions radius f =
     -- Mischt eine endliche Liste von (verallgemeinerten) Iteriertenlisten
     -- zusammen.
     merge :: [[[a]]] -> [[a]]
-    merge xsss = concat (map head xsss) : merge (map tail xsss)
+    merge xsss = concat (map head xsss) : merge (map (drop 1) xsss)
     -- Wir nehmen also die ersten Iterierten der gegebenen endlich vielen
     -- Iterationsfolgen, dann die zweiten Iterierten, die dritten...
 

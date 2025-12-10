@@ -5,15 +5,17 @@
 module RingMorphism where
 
 import Prelude hiding (fromInteger)
+import Data.Kind
+
 import Proxy
 import Ring
 
 -- | Klasse für Ringhomomorphismen.
 class (Ring (Domain m), Ring (Codomain m)) => RingMorphism m where
     -- | Der Quellring des Ringmorphismus.
-    type Domain   m :: *
+    type Domain   m :: Type
     -- | Der Zielring des Ringmorphismus.
-    type Codomain m :: *
+    type Codomain m :: Type
     -- | Der eigentliche Morphismus.
     mor :: Proxy m -> Domain m -> Codomain m
 

@@ -8,7 +8,7 @@
 -- null oder invertierbar, wobei die Inversen explizit konstruierbar sind).
 {-# LANGUAGE CPP, FlexibleContexts, FlexibleInstances,
     GADTs, GeneralizedNewtypeDeriving, PatternGuards, StandaloneDeriving,
-    TypeFamilies, UndecidableInstances #-}
+    TypeFamilies, UndecidableInstances, NondecreasingIndentation #-}
 module Algebraic
     ( -- * Typen
       Alg(..), Algebraic.fromBase
@@ -134,7 +134,7 @@ maybeInvert (MkAlg z) = unsafeRunR $ do
     -- Als Preis dafür, dass wir hier keine j-ten Wurzeln berechnen, wird
     -- unser epsilon (= minimum bounds) kleiner als nötig, weswegen es dann
     -- magnitudeZeroTestR schwieriger hat.
-    bounds = 1 : map f (tail bs)
+    bounds = 1 : map f (drop 1 bs)
         where
         f b
             | b == zero = unit  -- sinngemäß unendlich

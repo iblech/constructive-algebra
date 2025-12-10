@@ -42,7 +42,7 @@
 --
 -- (In Kommentaren notieren wir den Faktorring mit einem umgekehrten
 -- Schrägstrich, da sich der richtige Strich nicht vor Haddock verstecken lässt.)
-{-# LANGUAGE TypeFamilies, FlexibleContexts, GeneralizedNewtypeDeriving, RankNTypes, FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts, GeneralizedNewtypeDeriving, RankNTypes, FlexibleInstances, NondecreasingIndentation #-}
 module IdealExtension
     ( -- * Monade für ideelle Berechnungen
       Ideal, runIdeal, restart
@@ -59,10 +59,11 @@ module IdealExtension
     ) where
 
 import Prelude hiding (gcd, quotRem, (+), (*), (-), (/), (^), negate, recip, fromInteger)
-import Control.Monad.Except
+import Control.Monad
 import Control.Monad.Reader
 import Data.Maybe
 import Text.Printf
+import Data.Kind
 
 import Algebraic as A
 import Complex
@@ -114,7 +115,7 @@ runIdeal m x0 f = case runReaderT m x0 of
 -- der Berechnung zulässt.
 class (Ring a, Monad (Nondet a)) => IdealField a where
     -- | Monade, in der 'idealRecip' seine Werte annimmt.
-    type Nondet a :: * -> *
+    type Nondet a :: Type -> Type
 
     -- | /idealRecip x/ bestimmt, ob /x/ entweder null (Rückgabewert
     -- /Nothing/) oder invertierbar (Rückgabewert /Just y/, mit /y/ dem

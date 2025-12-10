@@ -226,7 +226,7 @@ instance (ReifyNat n, ReifyNat m, Arbitrary a) => Arbitrary (Matrix n m a) where
         r = do
             xs <- replicateM (n*m) arbitrary
             return . MkMatrix $ listArray ((0,0), (n-1,m-1)) xs
-        (n,m) = (numRows &&& numCols) . (undefined :: Gen a -> a) $ r
+        (n,m) = (numRows &&& numCols) . (undefined :: Gen b -> b) $ r
 
 -- | Formatiert eine Matrix (für Debugging-Zwecke).
 prettyMatrix :: (ReifyNat n, ReifyNat m, Show a) => Matrix n m a -> String

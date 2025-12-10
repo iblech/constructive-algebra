@@ -12,7 +12,7 @@ primes = primesTMWE ()
 primesTMWE :: () -> [Integer]
 primesTMWE () = 2:3:5:7: gaps 11 wheel (join $ roll 11 wheel primes')
   where
-    primes' = 11: gaps 13 (tail wheel) (join $ roll 11 wheel primes')
+    primes' = 11: gaps 13 (drop 1 wheel) (join $ roll 11 wheel primes')
     join ((x:xs): ~(ys:zs:t))  = x : union xs (union ys zs)    
                                        `union` join (pairs t)  
     pairs ((x:xs):ys:t)        = (x : union xs ys) : pairs t

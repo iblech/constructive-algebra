@@ -204,7 +204,7 @@ pseudoResolvent (x:y:zs) =
     -- modulo dem Minimalpolynom von t betrachten, denn es ist je nur relevant,
     -- dass die Einsetzung von t zu x bzw. y führt. Das führt zu kleineren
     -- Polynomen, ist also im Hinblick auf spätere Verwendung effizienter.
-    in (1 : lambda : tail as, t, reduce (hX `compose` hU) : reduce (hY `compose` hU) : hs)
+    in (1 : lambda : drop 1 as, t, reduce (hX `compose` hU) : reduce (hY `compose` hU) : hs)
 
 -- in der Praxis fürs Testen zu langsam
 props_pseudoResolvent :: [Property]
@@ -231,7 +231,7 @@ pseudoResolvent'
     -> ([Integer], Alg QinC, [Poly Rational])  -- ^ /(lambdas,t,hs)/
 pseudoResolvent' xs f = (lambdas', t, hs')
     where
-    (lambdas,t,hs) = pseudoResolvent (tail xs)
+    (lambdas,t,hs) = pseudoResolvent (drop 1 xs)
     lambdas'       = 0:lambdas
     hs'            = negate (sum hs + Poly.fromBase a) : hs
         where a = (!! 1) . reverse . canonCoeffs' $ f

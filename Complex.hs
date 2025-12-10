@@ -1,6 +1,6 @@
 -- | Dieses Modul stellt die komplexen Zahlen (und nebenbei auch die reellen
 -- Zahlen) bereit.
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, DeriveFunctor, FlexibleContexts, UndecidableInstances, EmptyDataDecls, PatternGuards #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, DeriveFunctor, FlexibleContexts, UndecidableInstances, EmptyDataDecls, PatternGuards, NondecreasingIndentation #-}
 module Complex
     ( -- * Monade für nicht-deterministische Rechnungen
       R(..), unsafeRunR
@@ -29,6 +29,7 @@ import Data.Maybe
 import System.IO
 import System.IO.Unsafe
 import Text.Printf
+import Data.Kind
 
 import ComplexRational
 import Field
@@ -93,7 +94,7 @@ newtype Approx ex = MkApprox { unApprox :: PositiveNat -> R ex }
 -- normierter Räume beheben.
 class HasDenseSubset a where
     -- | Dicht liegende Teilmenge, durch die approximiert werden soll
-    type DenseSubset a :: *
+    type DenseSubset a :: Type
 
     -- | /approx n z/ soll eine Näherung von /z/ bestimmen, die vom wahren Wert im
     -- Betrag um weniger (<) als /n^(-1)/ abweicht. Wiederholte Auswertungen

@@ -19,6 +19,8 @@ module TypeLevelNat
     ) where
 
 import Prelude hiding (pred,succ)
+import Data.Kind
+
 import Nat
 import Proxy
 import Testing
@@ -47,7 +49,7 @@ type N4 = S N3
 
 -- | Klasse, um natürliche Zahlen der Typebene in Werte zu wandeln.
 -- Das Gegenstück ist 'reflectNat'.
-class ReifyNat n where
+class ReifyNat (n :: Type) where
     -- | Gibt den zur Zahl /n/ gehörigen Wert zurück.
     reifyNat :: Proxy n -> Nat
 

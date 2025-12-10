@@ -20,6 +20,7 @@ import Prelude hiding ((+), (-), (*), (/), (^), negate, recip, fromRational, quo
 import qualified Prelude as P
 import qualified Data.Complex as C
 import Data.Ratio
+import Data.Kind
 
 import Nat
 import Proxy
@@ -174,7 +175,7 @@ class (Ring a) => HasRationalEmbedding a where
 class (Ring a, Ring (RealSubring a)) => HasConjugation a where
     -- | Zugehöriger Unterring der reellen Elemente, also solcher, die von
     -- der komplexen Konjugation invariant gelassen werden.
-    type RealSubring a :: *
+    type RealSubring a :: Type
 
     -- | Konjugiert ein Ringelement.
     conjugate :: a -> a

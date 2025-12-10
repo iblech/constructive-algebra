@@ -17,6 +17,7 @@ module SimpleExtension
 import Prelude hiding ((+), (*), (/), (-), (^), negate, fromInteger, fromRational, recip, signum, sum, product, quotRem, gcd, Real)
 import Data.Maybe
 import Text.Printf
+import Data.Kind
 
 import Algebraic
 import Complex hiding (fromBase)
@@ -35,7 +36,7 @@ import Testing
 -- Programmierung auf Typniveau die Funktion 'reflectPoly', die wir aber nicht
 -- benötigen und daher auch nicht implementiert haben.
 class (Ring (BaseRing p)) => ReifyPoly p where
-    type BaseRing p :: *
+    type BaseRing p :: Type
     -- | Gibt das zu /p/ gehörige Polynom auf Wertebene zurück.
     reifyPoly :: Proxy p -> Poly (BaseRing p)
 
