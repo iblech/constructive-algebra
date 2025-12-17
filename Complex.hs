@@ -76,7 +76,7 @@ unsafeRunR = unsafePerformIO . runR
 --
 -- Ansonsten ist der Approximationsalgorithmus keinen Beschränkungen
 -- unterworfen. Insbesondere darf er beliebige nicht-deterministische Prozesse
--- anstoßen, und kann bei der wiederholten Fragen nach einer /n^(-1)/-Näherung
+-- anstoßen, und kann bei wiederholten Fragen nach einer /n^(-1)/-Näherung
 -- jedes Mal ein anderes Resultat liefern.
 newtype Approx ex = MkApprox { unApprox :: PositiveNat -> R ex }
     deriving (Functor)
